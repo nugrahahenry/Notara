@@ -1,0 +1,37 @@
+// lib/types.ts
+// Definisi tipe data untuk seluruh aplikasi Notara
+// "Types" itu kayak blueprint/cetakan — semua bagian kode wajib ikut bentuk ini
+
+export interface Folder {
+  id: string;
+  name: string;       // "Basis Data", "AI & Machine Learning", dll
+  color: string;      // Kode warna hex: "#8B5CF6"
+  icon: string;       // Emoji: "📁", "🧠", "📐", dll
+  created_at: string;
+}
+
+export interface Summary {
+  id: string;
+  folder_id: string | null;  // null = belum dimasukkan ke folder manapun
+  title: string;             // Judul otomatis dari AI
+  file_name: string | null;  // Nama file audio yang diupload
+  duration_sec: number | null; // Durasi audio dalam detik
+  transcript: string;        // Transkrip lengkap dari Groq Whisper
+  summary: string;           // Rangkuman markdown dari Groq Llama
+  word_count: number | null; // Jumlah kata transkrip (info tambahan)
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  summary_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+// Tipe untuk membuat folder baru (tanpa id & created_at — itu diisi Supabase otomatis)
+export type CreateFolderInput = Omit<Folder, 'id' | 'created_at'>;
+
+// Tipe untuk menyimpan rangkuman baru
+export type CreateSummaryInput = Omit<Summary, 'id' | 'created_at'>;
