@@ -156,6 +156,38 @@ body {
   animation-name: slideInFromTop;
 }
 
+/* Toast: slide in from bottom */
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in-from-bottom-5 {
+  animation-name: slideInFromBottom;
+}
+
+/* zoom-in-95 for modals */
+@keyframes zoomIn95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.zoom-in-95 {
+  animation-name: zoomIn95;
+}
+
 /* Login page: scroll overflow fix */
 .login-scroll {
   overflow-y: auto;

@@ -177,6 +177,74 @@ export async function deleteSummary(id: string): Promise<boolean> {
   return true;
 }
 
+/** Mengaktifkan atau menonaktifkan status berbagi publik untuk rangkuman */
+export async function toggleSummaryPublic(
+  id: string,
+  isPublic: boolean,
+  slug?: string | null
+): Promise<{ is_public: boolean; public_slug: string | null } | null> {
+  const { data, error } = await supabase
+    .from('summaries')
+    .update({
+      is_public: isPublic,
+      public_slug: isPublic ? (slug || Math.random().toString(36).substring(2, 10)) : null
+    })
+    .eq('id', id)
+    .select('is_public, public_slug')
+    .single();
+
+  if (error) {
+    console.error('Error toggling public status:', error.message);
+    return null;
+  }
+  return data;
+}
+
+/** Mengambil rangkuman publik berdasarkan slug unik */
+export async function getSummaryBySlug(slug: string): Promise<Summary | null> {
+  const { data, error } = await supabase
+    .from('summaries')
+    .select('*')
+    .eq('public_slug', slug)
+    .eq('is_public', true)
+    .single();
+
+  if (error) {
+    console.error('Error fetching summary by slug:', error.message);
+    return null;
+  }
+  return data;
+}
+
+/** Menyalin (Fork) rangkuman publik ke koleksi pengguna aktif */
+export async function forkSummary(
+  summary: Summary,
+  userId: string
+): Promise<Summary | null> {
+  const { data, error } = await supabase
+    .from('summaries')
+    .insert({
+      folder_id: null,
+      title: `${summary.title} (Salinan)`,
+      file_name: summary.file_name,
+      duration_sec: summary.duration_sec,
+      transcript: summary.transcript,
+      summary: summary.summary,
+      word_count: summary.word_count,
+      is_public: false,
+      public_slug: null,
+      user_id: userId
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error forking summary:', error.message);
+    return null;
+  }
+  return data;
+}
+
 // ─────────────────────────────────────────────
 // HELPER
 // ─────────────────────────────────────────────

@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS summaries (
   summary TEXT NOT NULL,
   word_count INTEGER,
   created_at TIMESTAMPTZ DEFAULT now(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_public BOOLEAN DEFAULT false,
+  public_slug TEXT UNIQUE
 );
 
 -- 3. TABEL CHAT MESSAGES
@@ -54,6 +56,11 @@ USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own summaries"
 ON summaries FOR ALL
 USING (auth.uid() = user_id);
+
+-- Kebijakan RLS baru agar rangkuman publik dapat dilihat oleh siapa saja tanpa login
+CREATE POLICY "Public summaries are viewable by everyone"
+ON summaries FOR SELECT
+USING (is_public = true);
 
 -- 7. POLICY: CHAT MESSAGES
 -- Pengguna hanya dapat mengakses pesan obrolan jika rangkuman tersebut miliknya sendiri

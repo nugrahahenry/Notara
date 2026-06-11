@@ -29,20 +29,30 @@ function LoginForm() {
     setTimeout(() => setLoginToast(prev => ({ ...prev, show: false })), 3500);
   };
 
-  // Check URL query parameters for errors & sessionStorage flags
+  // Check URL query parameters & sessionStorage flags on mount
   useEffect(() => {
+    // ─── PENTING: bersihkan login_success flag jika kita ada di halaman login ───
+    // Ini mencegah toast 'selamat datang' muncul jika user cancel lalu login ulang
+    sessionStorage.removeItem('login_success');
+
+    // ─── Cek error dari callback URL ─────────────────────────────────────────
     const errorParam = searchParams.get('error');
     if (errorParam === 'auth-code-exchange-failed') {
-      setErrorMsg('Gagal menyinkronkan sesi login dari Google. Silakan coba lagi.');
+      setErrorMsg('Gagal memproses sesi dari Google. Silakan coba lagi.');
+    } else if (errorParam === 'oauth-error') {
+      setErrorMsg('Terjadi kesalahan saat login dengan Google. Silakan coba lagi.');
     }
+    // Jika cancelled=1 → user sengaja klik Batal, tidak perlu tampilkan error
 
-    // Show logout success toast if coming from dashboard logout
+    // ─── Toast logout sukses (dari dashboard) ────────────────────────────────
     const logoutFlag = sessionStorage.getItem('logout_success');
     if (logoutFlag) {
       sessionStorage.removeItem('logout_success');
       setTimeout(() => showLoginToast('Berhasil keluar dari Notara. Sampai jumpa! 👋', true), 300);
     }
-  }, [searchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   // Google OAuth Login
   const handleGoogleLogin = async () => {
@@ -51,14 +61,27 @@ function LoginForm() {
       setErrorMsg(null);
       setSuccessMsg(null);
       
+      // Set flag BEFORE OAuth redirect — sessionStorage persists across
+      // cross-origin navigations in the same tab (Google → back to Notara)
+      sessionStorage.setItem('login_success', '1');
+
+      const redirectVal = searchParams.get('redirect') || '';
+      const redirectTo = redirectVal
+        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectVal)}`
+        : `${window.location.origin}/auth/callback`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // If OAuth fails before redirecting, clear the flag
+        sessionStorage.removeItem('login_success');
+        throw error;
+      }
     } catch (err: any) {
       console.error('Google login error:', err);
       setErrorMsg(err.message || 'Terjadi kesalahan saat masuk menggunakan Google.');
@@ -79,6 +102,12 @@ function LoginForm() {
       setErrorMsg(null);
       setSuccessMsg(null);
 
+      const redirectVal = searchParams.get('redirect') || '';
+      const emailRedirectTo = redirectVal
+        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectVal)}`
+        : `${window.location.origin}/auth/callback`;
+      const nextParam = redirectVal || '/';
+
       if (isSignUp) {
         // Sign Up Flow
         const { data, error } = await supabase.auth.signUp({
@@ -88,7 +117,7 @@ function LoginForm() {
             data: {
               full_name: fullName,
             },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo,
           },
         });
 
@@ -104,7 +133,7 @@ function LoginForm() {
         } else if (data.session) {
           // Direct session after sign-up (email confirmation disabled)
           sessionStorage.setItem('login_success', '1');
-          router.replace('/');
+          router.replace(nextParam);
         }
       } else {
         // Sign In Flow
@@ -117,7 +146,7 @@ function LoginForm() {
 
         if (data.session) {
           sessionStorage.setItem('login_success', '1');
-          router.replace('/');
+          router.replace(nextParam);
         }
       }
     } catch (err: any) {

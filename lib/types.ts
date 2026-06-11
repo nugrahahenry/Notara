@@ -21,6 +21,8 @@ export interface Summary {
   summary: string;           // Rangkuman markdown dari Groq Llama
   word_count: number | null; // Jumlah kata transkrip (info tambahan)
   created_at: string;
+  is_public?: boolean;       // Status publik share link
+  public_slug?: string | null; // Slug unik untuk share link (8 karakter alphanumeric)
   user_id?: string;          // UUID owner (dari auth.users) — wajib saat insert, opsional saat baca
 }
 

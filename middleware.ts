@@ -27,25 +27,38 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Menjalankan getUser() untuk melakukan sinkronisasi session cookie
+  // IMPORTANT: getUser() wajib dipanggil untuk menyinkronkan session cookie
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const url = request.nextUrl.clone();
+  const isLoginPage = url.pathname === '/login';
+  const isAuthRoute = url.pathname.startsWith('/auth/');
+  const isPublicShareRoute = url.pathname.startsWith('/s/');
 
-  // Jika user belum login, redirect ke /login (kecuali dia sudah di /login atau di /auth/*)
+  // Jika user belum login, redirect ke /login (kecuali sudah di /login, /auth/*, atau /s/*)
   if (!user) {
-    if (url.pathname !== '/login' && !url.pathname.startsWith('/auth/')) {
+    if (!isLoginPage && !isAuthRoute && !isPublicShareRoute) {
       url.pathname = '/login';
       return NextResponse.redirect(url);
     }
   }
 
-  // Jika user sudah login dan mencoba mengakses /login, redirect ke halaman utama "/"
-  if (user && url.pathname === '/login') {
-    url.pathname = '/';
-    return NextResponse.redirect(url);
+  // Jika user sudah login dan mencoba ke /login:
+  // PENGECUALIAN: jika ada error atau cancelled query param (user baru klik Batal),
+  // biarkan mereka tetap di /login agar bisa lihat pesannya
+  if (user && isLoginPage) {
+    const hasError = url.searchParams.has('error');
+    const hasCancelled = url.searchParams.has('cancelled');
+
+    if (!hasError && !hasCancelled) {
+      // Normal case: sudah login, arahkan ke dashboard
+      url.pathname = '/';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+    // Jika ada error/cancelled param, biarkan tetap di /login (jangan redirect)
   }
 
   return supabaseResponse;
@@ -54,10 +67,10 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Cocokkan semua path request kecuali yang dimulai dengan:
+     * Cocokkan semua path kecuali:
      * - _next/static (file statis Next.js)
-     * - _next/image (optimasi gambar Next.js)
-     * - favicon.ico (file favicon)
+     * - _next/image  (optimasi gambar Next.js)
+     * - favicon.ico
      * - File gambar statis (.svg, .png, .jpg, .jpeg, .gif, .webp)
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
