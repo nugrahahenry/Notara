@@ -24,10 +24,10 @@ export async function getFolders(): Promise<Folder[]> {
 }
 
 /** Buat folder baru */
-export async function createFolder(input: CreateFolderInput): Promise<Folder | null> {
+export async function createFolder(input: CreateFolderInput, userId: string): Promise<Folder | null> {
   const { data, error } = await supabase
     .from('folders')
-    .insert(input)
+    .insert({ ...input, user_id: userId })
     .select()
     .single();
 
@@ -118,10 +118,10 @@ export async function getSummaryById(id: string): Promise<Summary | null> {
 }
 
 /** Simpan rangkuman baru ke database */
-export async function createSummary(input: CreateSummaryInput): Promise<Summary | null> {
+export async function createSummary(input: CreateSummaryInput, userId: string): Promise<Summary | null> {
   const { data, error } = await supabase
     .from('summaries')
-    .insert(input)
+    .insert({ ...input, user_id: userId })
     .select()
     .single();
 

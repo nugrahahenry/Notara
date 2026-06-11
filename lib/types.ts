@@ -8,6 +8,7 @@ export interface Folder {
   color: string;      // Kode warna hex: "#8B5CF6"
   icon: string;       // Emoji: "📁", "🧠", "📐", dll
   created_at: string;
+  user_id?: string;   // UUID owner (dari auth.users) — wajib saat insert, opsional saat baca
 }
 
 export interface Summary {
@@ -20,6 +21,7 @@ export interface Summary {
   summary: string;           // Rangkuman markdown dari Groq Llama
   word_count: number | null; // Jumlah kata transkrip (info tambahan)
   created_at: string;
+  user_id?: string;          // UUID owner (dari auth.users) — wajib saat insert, opsional saat baca
 }
 
 export interface ChatMessage {

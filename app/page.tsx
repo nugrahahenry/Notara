@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef, DragEvent, ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   UploadCloud, FileAudio, FileText, Sparkles, Brain, 
   Check, Loader2, Clipboard, AlertCircle, Trash2, ArrowLeft, BookOpen,
   Plus, FolderPlus, Folder, Edit3, X, ChevronRight, ChevronDown, MoreVertical,
-  Calendar, FileSignature, ArrowUpRight, Menu, MessageSquare, Send, Search
+  Calendar, FileSignature, ArrowUpRight, Menu, MessageSquare, Send, Search, LogOut
 } from 'lucide-react';
 import {
   getFolders,
@@ -24,6 +25,8 @@ import {
   clearChatMessages
 } from '@/lib/db';
 import type { Folder as FolderType, Summary as SummaryType, ChatMessage } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 // ==========================================
 // CLIENT AUDIO PROCESSING UTILITIES (WAV Encoder & Slicer)
@@ -145,6 +148,9 @@ const formatFileSize = (bytes: number): string => {
 // ==========================================
 
 export default function Home() {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [showUserDropdown, setShowUserDropdown] = useState<boolean>(false);
   const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -289,14 +295,16 @@ export default function Home() {
   const [studySeconds, setStudySeconds] = useState<number>(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Focus Timer useEffect
+  // Focus Timer useEffect — scoped per user account
   useEffect(() => {
     if (!selectedSummary) {
       setStudySeconds(0);
       return;
     }
 
-    const storageKey = `study_time_${selectedSummary.id}`;
+    // Key includes userId so timer is isolated per account on the same device
+    const userId = user?.id ?? 'anonymous';
+    const storageKey = `study_time_${userId}_${selectedSummary.id}`;
     const initialTime = parseInt(localStorage.getItem(storageKey) || '0', 10);
     setStudySeconds(initialTime);
 
@@ -309,7 +317,7 @@ export default function Home() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [selectedSummary]);
+  }, [selectedSummary, user?.id]);
 
   // Synchronize chosenSaveFolderId with activeFolderId on sidebar navigation
   useEffect(() => {
@@ -626,25 +634,88 @@ export default function Home() {
     });
   };
 
-  // Load Initial Folders & Summaries
+  // Load User & listen to auth state changes
   useEffect(() => {
-    async function loadData() {
+    let active = true;
+
+    async function checkUser() {
       try {
-        const [fetchedFolders, fetchedSummaries] = await Promise.all([
-          getFolders(),
-          getAllSummaries()
-        ]);
-        setFolders(fetchedFolders);
-        setSummaries(fetchedSummaries);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (active) {
+          if (user) {
+            setUser(user);
+            // Load database data
+            const [fetchedFolders, fetchedSummaries] = await Promise.all([
+              getFolders(),
+              getAllSummaries()
+            ]);
+            if (active) {
+              setFolders(fetchedFolders);
+              setSummaries(fetchedSummaries);
+
+              // ✅ Show login success toast (flag set by login page)
+              const loginFlag = sessionStorage.getItem('login_success');
+              if (loginFlag) {
+                sessionStorage.removeItem('login_success');
+                const name = user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Notara';
+                setTimeout(() => {
+                  showToast(`Selamat datang kembali, ${name}! 👋`, 'success');
+                }, 300);
+              }
+            }
+          } else {
+            router.replace('/login');
+          }
+        }
       } catch (err: any) {
-        console.error(err);
-        setError('Gagal memuat data dari database Supabase. Pastikan koneksi dan env vars sudah benar.');
+        console.error('Error checking user/data:', err);
+        setError('Gagal memuat data dari database. Pastikan koneksi internet stabil.');
       } finally {
-        setIsDataLoading(false);
+        if (active) {
+          setIsDataLoading(false);
+        }
       }
     }
-    loadData();
-  }, []);
+
+    checkUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!active) return;
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        setIsDataLoading(true);
+        try {
+          const [fetchedFolders, fetchedSummaries] = await Promise.all([
+            getFolders(),
+            getAllSummaries()
+          ]);
+          if (active) {
+            setFolders(fetchedFolders);
+            setSummaries(fetchedSummaries);
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          if (active) {
+            setIsDataLoading(false);
+          }
+        }
+      } else {
+        setFolders([]);
+        setSummaries([]);
+        setSelectedSummary(null);
+        router.replace('/login');
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   // Sync loading step timeline
   useEffect(() => {
@@ -1214,7 +1285,7 @@ export default function Home() {
         transcript: pendingSummary.transcript,
         summary: pendingSummary.summary,
         word_count: pendingSummary.word_count,
-      });
+      }, user?.id || '');
 
       if (newSummary) {
         setSummaries(prev => [newSummary, ...prev]);
@@ -1809,7 +1880,7 @@ export default function Home() {
         name: inlineFolderName,
         color: inlineFolderColor,
         icon: inlineFolderIcon
-      });
+      }, user?.id || '');
       if (newFolder) {
         setFolders(prev => [...prev, newFolder]);
         setChosenSaveFolderId(newFolder.id);
@@ -1846,7 +1917,7 @@ export default function Home() {
           name: folderName,
           color: folderColor,
           icon: folderIcon
-        });
+        }, user?.id || '');
         if (newFolder) {
           setFolders(prev => [...prev, newFolder]);
           showToast('Mata kuliah baru berhasil dibuat! 📁', 'success');
@@ -2751,16 +2822,78 @@ export default function Home() {
             {/* Mobile Chat Toggle */}
             <button
               onClick={() => setIsChatOpenMobile(true)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-md md:hidden"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-md md:hidden cursor-pointer"
             >
               <MessageSquare className="h-3.5 w-3.5" />
               <span>Chat AI</span>
             </button>
 
-            <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold flex items-center gap-1">
+            <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold flex items-center gap-1 hidden sm:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               Connected
             </span>
+
+            {/* USER PROFILE DROPDOWN */}
+            {user && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  className="relative h-8 w-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white border border-white/10 hover:ring-2 hover:ring-violet-500 transition-all outline-none cursor-pointer"
+                  title={user.user_metadata?.full_name || user.email || 'User Menu'}
+                >
+                  {user.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt="Avatar"
+                      className="h-full w-full rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span>
+                      {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </button>
+
+                {showUserDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40 cursor-default" 
+                      onClick={() => setShowUserDropdown(false)} 
+                    />
+                    <div className="absolute right-0 mt-2.5 w-64 bg-[#0F0E17] border border-white/[0.08] backdrop-blur-xl shadow-2xl p-4 rounded-2xl flex flex-col space-y-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Akun Masuk</span>
+                        <span className="text-sm font-bold text-white mt-1 truncate">
+                          {user.user_metadata?.full_name || 'Pengguna Notara'}
+                        </span>
+                        <span className="text-xs text-zinc-500 truncate mt-0.5">
+                          {user.email}
+                        </span>
+                      </div>
+                      <div className="border-t border-white/[0.04]"></div>
+                      <button
+                        onClick={async () => {
+                          setShowUserDropdown(false);
+                          await supabase.auth.signOut();
+                          // Set flag so login page can show logout success toast
+                          sessionStorage.setItem('logout_success', '1');
+                          setUser(null);
+                          setFolders([]);
+                          setSummaries([]);
+                          setSelectedSummary(null);
+                          router.replace('/login');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 rounded-xl transition-all cursor-pointer text-left"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Keluar dari Notara</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </header>
 
