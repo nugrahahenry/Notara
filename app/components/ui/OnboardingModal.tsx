@@ -6,7 +6,7 @@ import { NotaraLogo } from '../brand/NotaraLogo';
 // ─────────────────────────────────────────────────────────────
 // OnboardingModal — Survei Onboarding Interaktif Notara
 // Multi-step wizard dengan desain glassmorphism premium
-// Step 1: Peran → Step 2: Kampus & Jurusan → Step 3: Sumber Info → Step 4: AI Sync
+// Step 1: Peran → Step 2: Detail Institusi → Step 3: Sumber Info → Step 4: AI Sync
 // ─────────────────────────────────────────────────────────────
 
 interface OnboardingData {
@@ -23,9 +23,11 @@ interface OnboardingModalProps {
 
 const ROLES = [
   { id: 'mahasiswa', emoji: '🎓', label: 'Mahasiswa', desc: 'Pelajar aktif di perguruan tinggi', color: '#8B5CF6', bg: 'from-violet-500/20 to-purple-600/20', border: 'border-violet-500/40' },
-  { id: 'dosen', emoji: '🏫', label: 'Dosen / Pengajar', desc: 'Tenaga pendidik & peneliti', color: '#3B82F6', bg: 'from-blue-500/20 to-indigo-600/20', border: 'border-blue-500/40' },
-  { id: 'profesional', emoji: '💼', label: 'Profesional', desc: 'Bekerja di industri & bisnis', color: '#10B981', bg: 'from-emerald-500/20 to-teal-600/20', border: 'border-emerald-500/40' },
-  { id: 'lainnya', emoji: '🌟', label: 'Lainnya', desc: 'Pelajar mandiri & penasaran', color: '#F59E0B', bg: 'from-amber-500/20 to-orange-600/20', border: 'border-amber-500/40' },
+  { id: 'pelajar', emoji: '📚', label: 'Pelajar SMA/SMK', desc: 'Siswa tingkat sekolah menengah', color: '#EC4899', bg: 'from-pink-500/20 to-rose-600/20', border: 'border-pink-500/40' },
+  { id: 'dosen', emoji: '🏫', label: 'Dosen / Pengajar', desc: 'Pendidik, akademisi, & peneliti', color: '#3B82F6', bg: 'from-blue-500/20 to-indigo-600/20', border: 'border-blue-500/40' },
+  { id: 'profesional', emoji: '💼', label: 'Profesional', desc: 'Praktisi industri & bisnis', color: '#10B981', bg: 'from-emerald-500/20 to-teal-600/20', border: 'border-emerald-500/40' },
+  { id: 'kreator', emoji: '🎬', label: 'Konten Kreator', desc: 'Pembuat konten & influencer', color: '#EF4444', bg: 'from-red-500/20 to-orange-600/20', border: 'border-red-500/40' },
+  { id: 'lainnya', emoji: '🌟', label: 'Mandiri / Penasaran', desc: 'Belajar mandiri & eksplorasi', color: '#F59E0B', bg: 'from-amber-500/20 to-orange-600/20', border: 'border-amber-500/40' },
 ];
 
 const SOURCES = [
@@ -44,6 +46,78 @@ const AI_SYNCING_STEPS = [
   '🎯 Personalisasi siap!',
 ];
 
+const getCardDetails = (roleId: string) => {
+  switch (roleId) {
+    case 'mahasiswa':
+      return {
+        title: 'KARTU MAHASISWA',
+        gradient: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(99, 102, 241, 0.15) 100%)',
+        border: 'rgba(139, 92, 246, 0.35)',
+        label1: 'Universitas',
+        label2: 'Program Studi',
+        placeholder1: 'Nama Universitas (mis. Universitas Indonesia)',
+        placeholder2: 'Program Studi / Jurusan (opsional)',
+        showFields: true,
+      };
+    case 'pelajar':
+      return {
+        title: 'KARTU PELAJAR',
+        gradient: 'linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(244, 63, 94, 0.15) 100%)',
+        border: 'rgba(236, 72, 153, 0.35)',
+        label1: 'Sekolah',
+        label2: 'Kelas / Tingkat',
+        placeholder1: 'Nama Sekolah (mis. SMAN 8 Jakarta)',
+        placeholder2: 'Kelas / Tingkat (opsional, mis. Kelas 12)',
+        showFields: true,
+      };
+    case 'dosen':
+      return {
+        title: 'KARTU PENGAJAR',
+        gradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(29, 78, 216, 0.15) 100%)',
+        border: 'rgba(59, 130, 246, 0.35)',
+        label1: 'Institusi Mengajar',
+        label2: 'Fakultas / Bidang',
+        placeholder1: 'Nama Universitas / Institusi (mis. ITB)',
+        placeholder2: 'Fakultas / Bidang Studi (opsional)',
+        showFields: true,
+      };
+    case 'profesional':
+      return {
+        title: 'ID CARD PROFESIONAL',
+        gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(20, 184, 166, 0.15) 100%)',
+        border: 'rgba(16, 185, 129, 0.35)',
+        label1: 'Perusahaan (opsional)',
+        label2: 'Posisi / Bidang',
+        placeholder1: 'Nama Perusahaan (opsional, mis. PT GoTo)',
+        placeholder2: 'Posisi / Bidang Kerja (opsional, mis. UX Designer)',
+        showFields: true,
+      };
+    case 'kreator':
+      return {
+        title: 'CREATOR PASS',
+        gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(249, 115, 22, 0.15) 100%)',
+        border: 'rgba(239, 68, 68, 0.35)',
+        label1: 'Platform Utama',
+        label2: 'Niche / Topik',
+        placeholder1: 'Platform Utama (mis. YouTube, TikTok, Blog)',
+        placeholder2: 'Niche / Topik Konten (opsional, mis. Edukasi, Tech)',
+        showFields: true,
+      };
+    case 'lainnya':
+    default:
+      return {
+        title: 'NEXUS MEMBER PASS',
+        gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.15) 100%)',
+        border: 'rgba(245, 158, 11, 0.35)',
+        label1: '',
+        label2: '',
+        placeholder1: '',
+        placeholder2: '',
+        showFields: false,
+      };
+  }
+};
+
 export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>({ role: '', university: '', major: '', find_source: '' });
@@ -58,12 +132,12 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
     return () => clearTimeout(t);
   }, []);
 
-  // Focus university input on step 2
+  // Focus input on step 2 (if showing inputs)
   useEffect(() => {
-    if (step === 2) {
+    if (step === 2 && getCardDetails(data.role).showFields) {
       setTimeout(() => universityRef.current?.focus(), 400);
     }
-  }, [step]);
+  }, [step, data.role]);
 
   // AI syncing animation
   useEffect(() => {
@@ -87,7 +161,12 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
 
   const handleRoleSelect = (roleId: string) => {
     setData(prev => ({ ...prev, role: roleId }));
-    setTimeout(() => setStep(2), 280);
+    // If 'lainnya' (Mandiri / Penasaran), skip step 2 details and go directly to step 3
+    if (roleId === 'lainnya') {
+      setTimeout(() => setStep(3), 280);
+    } else {
+      setTimeout(() => setStep(2), 280);
+    }
   };
 
   const handleSourceSelect = (sourceId: string) => {
@@ -96,15 +175,36 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
   };
 
   const handleStep2Next = () => {
-    if (!data.university.trim()) {
+    // Note: Institution field (university) is optional for Profesional, but required for others if filling Step 2.
+    // However, to keep it extremely smooth, we let them skip or proceed.
+    // If they hit next without input on university but it is Student/School/Teacher/Creator, we prompt focus once.
+    // But since the user requested skip option, they can use skip.
+    if (data.role !== 'profesional' && !data.university.trim()) {
       universityRef.current?.focus();
       return;
     }
     setStep(3);
   };
 
+  const handleSkip = () => {
+    if (step === 1) {
+      // Skip all: set data to empty and go directly to Step 4
+      setData({ role: 'lainnya', university: '', major: '', find_source: '' });
+      setStep(4);
+    } else if (step === 2) {
+      // Skip step 2 details, proceed to step 3
+      setData(prev => ({ ...prev, university: '', major: '' }));
+      setStep(3);
+    } else if (step === 3) {
+      // Skip step 3, proceed to Step 4
+      setData(prev => ({ ...prev, find_source: '' }));
+      setStep(4);
+    }
+  };
+
   const progressPct = ((step - 1) / 3) * 100;
   const firstName = userName?.split(' ')[0] || 'Teman';
+  const cardDetails = getCardDetails(data.role);
 
   return (
     <div
@@ -130,7 +230,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
           border: '1px solid rgba(139, 92, 246, 0.25)',
           borderRadius: '24px',
           width: '100%',
-          maxWidth: '560px',
+          maxWidth: '580px',
           padding: '2.5rem',
           boxShadow: '0 0 80px rgba(139, 92, 246, 0.15), 0 32px 64px rgba(0,0,0,0.6)',
           transform: isVisible && !isExiting ? 'scale(1) translateY(0)' : 'scale(0.94) translateY(16px)',
@@ -144,14 +244,48 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
         <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: '160px', height: '160px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
         {/* ─── Header ─── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', position: 'relative', zIndex: 10 }}>
           <NotaraLogo variant="icon" size={36} animated motionState={step === 4 ? 'thinking' : 'idle'} showGlow />
           <div>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', color: '#A78BFA', textTransform: 'uppercase' }}>Selamat Datang</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#F8FAFC', lineHeight: 1.2 }}>Halo, {firstName}! 👋</div>
           </div>
-          <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'rgba(248,250,252,0.4)', fontWeight: 500 }}>
-            {step < 4 ? `${step} / 3` : '✦'}
+          
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {step < 4 && (
+              <button
+                onClick={handleSkip}
+                style={{
+                  background: 'rgba(139, 92, 246, 0.1)',
+                  border: '1px solid rgba(139, 92, 246, 0.2)',
+                  borderRadius: '99px',
+                  padding: '0.35rem 0.85rem',
+                  color: '#A78BFA',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                  e.currentTarget.style.color = '#C084FC';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)';
+                  e.currentTarget.style.color = '#A78BFA';
+                }}
+              >
+                Lewati →
+              </button>
+            )}
+            <div style={{ fontSize: '0.75rem', color: 'rgba(248,250,252,0.4)', fontWeight: 500 }}>
+              {step < 4 ? `${step} / 3` : '✦'}
+            </div>
           </div>
         </div>
 
@@ -181,8 +315,8 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                   key={role.id}
                   onClick={() => handleRoleSelect(role.id)}
                   style={{
-                    background: `linear-gradient(135deg, ${role.bg.replace('from-', '').replace('to-', '').split(' ')[0].replace(/\//g, '')} 0%, transparent 100%)`,
-                    border: `1px solid ${role.border.replace('border-', '')}`,
+                    background: `linear-gradient(135deg, rgba(20,13,50,0.4) 0%, transparent 100%)`,
+                    border: `1px solid rgba(255,255,255,0.08)`,
                     borderRadius: '16px',
                     padding: '1.1rem 1rem',
                     cursor: 'pointer',
@@ -192,17 +326,19 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                     overflow: 'hidden',
                   }}
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.04) translateY(-2px)';
+                    (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.03) translateY(-2px)';
                     (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 24px ${role.color}22`;
                     (e.currentTarget as HTMLButtonElement).style.borderColor = role.color + '70';
+                    (e.currentTarget as HTMLButtonElement).style.background = `linear-gradient(135deg, ${role.color}15 0%, transparent 100%)`;
                   }}
                   onMouseLeave={e => {
                     (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1) translateY(0)';
                     (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = '';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                    (e.currentTarget as HTMLButtonElement).style.background = `linear-gradient(135deg, rgba(20,13,50,0.4) 0%, transparent 100%)`;
                   }}
                 >
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem', lineHeight: 1 }}>{role.emoji}</div>
+                  <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem', lineHeight: 1 }}>{role.emoji}</div>
                   <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.2rem' }}>{role.label}</div>
                   <div style={{ fontSize: '0.72rem', color: 'rgba(248,250,252,0.45)', lineHeight: 1.4 }}>{role.desc}</div>
                 </button>
@@ -211,55 +347,73 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
           </div>
         )}
 
-        {/* ─── STEP 2: Kampus & Jurusan ─── */}
-        {step === 2 && (
+        {/* ─── STEP 2: Detail Institusi (Dinamis) ─── */}
+        {step === 2 && cardDetails.showFields && (
           <div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.4rem' }}>Dari mana kamu belajar?</h2>
-              <p style={{ fontSize: '0.85rem', color: 'rgba(248,250,252,0.5)' }}>Opsional — bantu kami memahami konteks akademikmu.</p>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.4rem' }}>Informasi tambahan</h2>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(248,250,252,0.5)' }}>
+                {data.role === 'profesional' 
+                  ? 'Opsional — beri tahu kami detail bidang pekerjaanmu.'
+                  : 'Bantu kami menyesuaikan saran pembelajaran untuk institusimu.'}
+              </p>
             </div>
 
-            {/* Virtual Student Card Preview */}
+            {/* Virtual Identity Card Preview */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(59,130,246,0.15) 100%)',
-              border: '1px solid rgba(139,92,246,0.3)',
+              background: cardDetails.gradient,
+              border: `1px solid ${cardDetails.border}`,
               borderRadius: '16px',
               padding: '1.25rem',
-              marginBottom: '1.25rem',
+              marginBottom: '1.5rem',
               position: 'relative',
               overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
             }}>
               {/* Card decorative pattern */}
-              <div style={{ position: 'absolute', top: 0, right: 0, width: '80px', height: '80px', background: 'radial-gradient(circle, rgba(139,92,246,0.25) 0%, transparent 70%)', pointerEvents: 'none' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: 0, right: 0, width: '90px', height: '90px', background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1rem',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(139,92,246,0.3)',
+                }}>
                   {ROLES.find(r => r.id === data.role)?.emoji || '🎓'}
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#F8FAFC' }}>{firstName}</div>
-                  <div style={{ fontSize: '0.68rem', color: '#A78BFA' }}>{ROLES.find(r => r.id === data.role)?.label || 'Pengguna'}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#F8FAFC' }}>{userName || 'Henry'}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#A78BFA', fontWeight: 600, letterSpacing: '0.05em' }}>
+                    {cardDetails.title}
+                  </div>
                 </div>
                 <div style={{ marginLeft: 'auto' }}>
                   <NotaraLogo variant="icon" size={24} />
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: data.university ? '#F8FAFC' : 'rgba(248,250,252,0.3)', transition: 'color 0.2s' }}>
-                  {data.university || 'Universitas Anda...'}
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: data.university ? '#F8FAFC' : 'rgba(248,250,252,0.35)', transition: 'color 0.2s' }}>
+                  {data.university || `${cardDetails.label1}...`}
                 </div>
-                <div style={{ fontSize: '0.72rem', color: data.major ? 'rgba(167,139,250,0.8)' : 'rgba(248,250,252,0.2)', transition: 'color 0.2s' }}>
-                  {data.major || 'Program Studi / Bidang'}
+                <div style={{ fontSize: '0.72rem', color: data.major ? 'rgba(167,139,250,0.9)' : 'rgba(248,250,252,0.25)', transition: 'color 0.2s', fontWeight: 500 }}>
+                  {data.major || cardDetails.label2}
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.75rem' }}>
               <input
                 ref={universityRef}
                 type="text"
                 value={data.university}
                 onChange={e => setData(prev => ({ ...prev, university: e.target.value }))}
-                placeholder="Nama Universitas (mis. Universitas Indonesia)"
+                placeholder={cardDetails.placeholder1}
                 style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(139,92,246,0.25)',
@@ -270,16 +424,24 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                   outline: 'none',
                   width: '100%',
                   boxSizing: 'border-box',
-                  transition: 'border-color 0.2s',
+                  transition: 'all 0.2s',
                 }}
-                onFocus={e => e.currentTarget.style.borderColor = 'rgba(139,92,246,0.6)'}
-                onBlur={e => e.currentTarget.style.borderColor = 'rgba(139,92,246,0.25)'}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = 'rgba(139,92,246,0.6)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                  e.currentTarget.style.boxShadow = '0 0 10px rgba(139,92,246,0.15)';
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'rgba(139,92,246,0.25)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               />
               <input
                 type="text"
                 value={data.major}
                 onChange={e => setData(prev => ({ ...prev, major: e.target.value }))}
-                placeholder="Program Studi / Jurusan (opsional)"
+                placeholder={cardDetails.placeholder2}
                 style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(139,92,246,0.25)',
@@ -290,10 +452,18 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                   outline: 'none',
                   width: '100%',
                   boxSizing: 'border-box',
-                  transition: 'border-color 0.2s',
+                  transition: 'all 0.2s',
                 }}
-                onFocus={e => e.currentTarget.style.borderColor = 'rgba(139,92,246,0.6)'}
-                onBlur={e => e.currentTarget.style.borderColor = 'rgba(139,92,246,0.25)'}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = 'rgba(139,92,246,0.6)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                  e.currentTarget.style.boxShadow = '0 0 10px rgba(139,92,246,0.15)';
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'rgba(139,92,246,0.25)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               />
             </div>
 
@@ -305,6 +475,14 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
               >
                 ← Kembali
+              </button>
+              <button
+                onClick={handleSkip}
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '0.75rem 1.25rem', color: 'rgba(248,250,252,0.45)', fontSize: '0.875rem', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 500 }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(248,250,252,0.7)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.color = 'rgba(248,250,252,0.45)'; }}
+              >
+                Lewati
               </button>
               <button
                 onClick={handleStep2Next}
@@ -344,7 +522,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                     gap: '0.4rem',
                   }}
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.05) translateY(-2px)';
+                    (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.04) translateY(-2px)';
                     (e.currentTarget as HTMLButtonElement).style.borderColor = source.color + '60';
                     (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 20px ${source.color}20`;
                     (e.currentTarget as HTMLButtonElement).style.background = `linear-gradient(135deg, ${source.color}12, transparent)`;
@@ -361,14 +539,33 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setStep(2)}
-              style={{ background: 'none', border: 'none', color: 'rgba(248,250,252,0.4)', fontSize: '0.8rem', cursor: 'pointer', padding: '0.25rem', transition: 'color 0.2s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(248,250,252,0.7)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(248,250,252,0.4)')}
-            >
-              ← Kembali
-            </button>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                onClick={() => {
+                  // If role was lainnya, we skipped step 2, so back goes to step 1
+                  if (data.role === 'lainnya') {
+                    setStep(1);
+                  } else {
+                    setStep(2);
+                  }
+                }}
+                style={{ background: 'none', border: 'none', color: 'rgba(248,250,252,0.4)', fontSize: '0.8rem', cursor: 'pointer', padding: '0.5rem 0', transition: 'color 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'rgba(248,250,252,0.7)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(248,250,252,0.4)')}
+              >
+                ← Kembali
+              </button>
+
+              <button
+                onClick={handleSkip}
+                style={{ background: 'none', border: 'none', color: 'rgba(167, 139, 250, 0.6)', fontSize: '0.8rem', cursor: 'pointer', padding: '0.5rem 0', transition: 'color 0.2s', fontWeight: 600 }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#C084FC')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(167, 139, 250, 0.6)')}
+              >
+                Lewati langkah ini →
+              </button>
+            </div>
           </div>
         )}
 
@@ -385,7 +582,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                 className="onboarding-ai-sync-logo"
               />
             </div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.3.rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.5rem' }}>
               Neural Nexus sedang bersiap...
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'rgba(248,250,252,0.45)', marginBottom: '2.5rem' }}>

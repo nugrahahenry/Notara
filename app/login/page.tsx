@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, Zap, MessageSquare, FolderGit2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { NotaraLogo } from '../components/brand/NotaraLogo';
+import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
 
 // Helper to detect offensive names
 const containsDirtyWord = (name: string): boolean => {
@@ -82,6 +83,9 @@ function LoginForm() {
   // Toast state for logout success notification
   const [loginToast, setLoginToast] = useState<{ show: boolean; message: string; isSuccess: boolean }>({ show: false, message: '', isSuccess: true });
 
+  // Full-screen logout success state
+  const [showLogoutSuccess, setShowLogoutSuccess] = useState<boolean>(false);
+
   // Show toast briefly, then dismiss
   const showLoginToast = (message: string, isSuccess = true) => {
     setLoginToast({ show: true, message, isSuccess });
@@ -109,7 +113,7 @@ function LoginForm() {
     const logoutFlag = sessionStorage.getItem('logout_success');
     if (logoutFlag) {
       sessionStorage.removeItem('logout_success');
-      setTimeout(() => showLoginToast('Berhasil keluar dari Notara. Sampai jumpa! 👋', true), 300);
+      setShowLogoutSuccess(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -601,6 +605,13 @@ function LoginForm() {
           </div>
         </div>
       </div>
+
+      {showLogoutSuccess && (
+        <LoginSuccessScreen
+          type="logout"
+          onDismiss={() => setShowLogoutSuccess(false)}
+        />
+      )}
     </main>
   );
 }

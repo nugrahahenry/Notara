@@ -15,6 +15,8 @@ import { NotaraLogo } from './components/brand/NotaraLogo';
 import { StarryBackground } from './components/ui/StarryBackground';
 import { OnboardingModal } from './components/ui/OnboardingModal';
 import { DashboardTour, DEFAULT_TOUR_STEPS } from './components/ui/DashboardTour';
+import { LoginSuccessScreen } from './components/ui/LoginSuccessScreen';
+import { VersionUpdateBanner } from './components/ui/VersionUpdateBanner';
 import {
   getFolders,
   createFolder,
@@ -298,11 +300,13 @@ export default function Home() {
     onConfirm: () => {}
   });
 
-  // Custom Toast State
+  // Custom Toast State — Enhanced with subtitle & action
   const [toast, setToast] = useState<{
     isOpen: boolean;
     message: string;
+    subtitle?: string;
     type: 'success' | 'delete' | 'info';
+    action?: { label: string; onClick: () => void };
   }>({
     isOpen: false,
     message: '',
@@ -347,7 +351,7 @@ export default function Home() {
   // Keamanan Dua Faktor (2FA) States (Sprint 13)
   const [showMfaModal, setShowMfaModal] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'security'>('profile');
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'security' | 'app'>('profile');
   const [editingName, setEditingName] = useState<string>('');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState<boolean>(false);
   const [mfaEnabled, setMfaEnabled] = useState<boolean>(false);
@@ -386,6 +390,10 @@ export default function Home() {
   // Onboarding & Dashboard Tour States
   const [showOnboardingModal, setShowOnboardingModal] = useState<boolean>(false);
   const [showDashboardTour, setShowDashboardTour] = useState<boolean>(false);
+
+  // Full-screen login success states
+  const [showLoginSuccess, setShowLoginSuccess] = useState<boolean>(false);
+  const [isFirstTimeLogin, setIsFirstTimeLogin] = useState<boolean>(false);
 
   // Persistent Desktop Chat Panel State
   useEffect(() => {
@@ -859,7 +867,7 @@ export default function Home() {
       if (verifyError) throw verifyError;
       
       setMfaSuccess('Keamanan Dua Faktor (2FA) berhasil diaktifkan!');
-      showToast('2FA berhasil diaktifkan! 🔒', 'success');
+      showToast('2FA berhasil diaktifkan! 🔐', 'success');
       setMfaVerificationCode('');
       
       if (user) {
@@ -997,7 +1005,8 @@ export default function Home() {
               // ─── CHECK ONBOARDING STATUS ───
               // Show onboarding modal if user hasn't completed it yet
               const profile = await getUserProfile(user.id);
-              if (profile && !profile.is_onboarded && active) {
+              const loginFlag = sessionStorage.getItem('login_success');
+              if (profile && !profile.is_onboarded && active && !loginFlag) {
                 setTimeout(() => setShowOnboardingModal(true), 1500);
               }
             }
@@ -1031,11 +1040,6 @@ export default function Home() {
         // This is the most reliable way to detect a fresh login vs page refresh
         if (event === 'SIGNED_IN') {
           sessionStorage.setItem('login_success', '1');
-          // Check onboarding on fresh login
-          const profile = await getUserProfile(currentUser.id);
-          if (profile && !profile.is_onboarded) {
-            setTimeout(() => setShowOnboardingModal(true), 1500);
-          }
         }
 
         setIsDataLoading(true);
@@ -1071,18 +1075,27 @@ export default function Home() {
     };
   }, [router]);
 
-  // Show login success toast when loading is done
+  // Show login success screen when data loading is complete
   useEffect(() => {
-    if (!isDataLoading && user) {
-      const loginFlag = sessionStorage.getItem('login_success');
-      if (loginFlag) {
-        sessionStorage.removeItem('login_success');
-        const name = user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Pengguna';
-        setTimeout(() => {
-          showToast(`Selamat datang kembali, ${name}! 👋`, 'success');
-        }, 500);
+    async function checkLoginSuccess() {
+      if (!isDataLoading && user) {
+        const loginFlag = sessionStorage.getItem('login_success');
+        if (loginFlag) {
+          sessionStorage.removeItem('login_success');
+          try {
+            const profile = await getUserProfile(user.id);
+            const isFirst = profile ? !profile.is_onboarded : true;
+            setIsFirstTimeLogin(isFirst);
+            setShowLoginSuccess(true);
+          } catch (e) {
+            console.error('Error checking onboarding for login screen:', e);
+            setIsFirstTimeLogin(false);
+            setShowLoginSuccess(true);
+          }
+        }
       }
     }
+    checkLoginSuccess();
   }, [isDataLoading, user]);
 
   // Sync loading step timeline
@@ -2979,6 +2992,23 @@ export default function Home() {
         />
       )}
 
+      {/* ─── FULL-SCREEN LOGIN SUCCESS SCREEN ─── */}
+      {showLoginSuccess && (
+        <LoginSuccessScreen
+          userName={user?.user_metadata?.full_name || user?.email || 'Pengguna'}
+          isFirstTime={isFirstTimeLogin}
+          type="login"
+          onDismiss={() => {
+            setShowLoginSuccess(false);
+            if (isFirstTimeLogin) {
+              setTimeout(() => {
+                setShowOnboardingModal(true);
+              }, 300);
+            }
+          }}
+        />
+      )}
+
       {/* ─── DASHBOARD GUIDED TOUR ─── */}
       {showDashboardTour && (
         <DashboardTour
@@ -3553,24 +3583,36 @@ export default function Home() {
         )}
 
         {/* SIDEBAR FOOTER */}
-        <div className="p-3 border-t border-white/[0.04] bg-black/10 shrink-0">
-          {isSidebarOpen ? (
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 rounded-xl transition-all cursor-pointer text-left"
-            >
-              <LogOut className="h-4 w-4 shrink-0" />
-              <span>Keluar</span>
-            </button>
-          ) : (
-            <button
-              onClick={handleLogout}
-              className="h-9 w-9 mx-auto flex items-center justify-center rounded-xl text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 transition-all cursor-pointer"
-              title="Keluar"
-            >
-              <LogOut className="h-4 w-4 shrink-0" />
-            </button>
+        <div className="border-t border-white/[0.04] bg-black/10 shrink-0">
+          {/* Version Badge — shown when sidebar is expanded */}
+          {isSidebarOpen && (
+            <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+              <span className="text-[10px] font-bold text-zinc-600 tracking-widest uppercase">Notara</span>
+              <span className="text-[10px] font-mono font-bold text-violet-500/60 bg-violet-500/10 border border-violet-500/15 rounded-full px-2 py-0.5">
+                v0.0.05
+              </span>
+              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" title="Versi terkini" />
+            </div>
           )}
+          <div className="p-3">
+            {isSidebarOpen ? (
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 rounded-xl transition-all cursor-pointer text-left"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span>Keluar</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="h-9 w-9 mx-auto flex items-center justify-center rounded-xl text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 transition-all cursor-pointer"
+                title="Keluar"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+              </button>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -3792,7 +3834,7 @@ export default function Home() {
                   <div className="text-center max-w-xl mx-auto mb-8 relative">
                     <span className="px-3.5 py-1.5 rounded-full bg-violet-500/5 border border-violet-500/15 text-violet-300 text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 mb-6">
                       <Sparkles className="h-3 w-3 text-violet-400" />
-                      COMPANION KULIAH
+                      NEURAL NEXUS
                     </span>
                     <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-4 leading-tight">
                       Reduksi Kuliah 1 Jam <br />
@@ -4620,8 +4662,8 @@ export default function Home() {
                         <NotaraLogo variant="icon" size={16} />
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-white leading-none">Asisten Kuliah AI</h4>
-                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">Study Q&A</span>
+                        <h4 className="text-xs font-black text-white leading-none">Neural Nexus</h4>
+                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">AI Learning Companion</span>
                       </div>
                     </div>
                     
@@ -5070,51 +5112,189 @@ export default function Home() {
         </div>
       )}
 
-      {/* CUSTOM PREMIUM TOAST NOTIFICATION */}
-      {toast.isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm animate-in slide-in-from-bottom-5 duration-300">
-          <div className={`p-4 rounded-2xl border backdrop-blur-md shadow-2xl flex items-start gap-3 relative overflow-hidden ${
-            toast.type === 'success' 
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' 
-              : toast.type === 'delete'
-                ? 'bg-rose-500/10 border-rose-500/20 text-rose-300'
-                : 'bg-violet-500/10 border-violet-500/20 text-violet-300'
-          }`}>
-            <div className="absolute bottom-0 left-0 h-1 bg-current w-full" style={{
-              animationName: 'shimmer',
-              animationDuration: '3s',
-              animationIterationCount: '1',
-              animationTimingFunction: 'linear'
-            }} />
-            
-            <div className={`h-6 w-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
-              toast.type === 'success' 
-                ? 'bg-emerald-500/20 text-emerald-400' 
-                : toast.type === 'delete'
-                  ? 'bg-rose-500/20 text-rose-400'
-                  : 'bg-violet-500/20 text-violet-400'
-            }`}>
-              {toast.type === 'success' ? '✓' : toast.type === 'delete' ? '🗑️' : 'ℹ️'}
-            </div>
-            
-            <div className="flex-1 font-sans select-none">
-              <p className="text-xs font-bold text-white leading-none">
-                {toast.type === 'success' ? 'Berhasil!' : toast.type === 'delete' ? 'Terhapus!' : 'Informasi'}
-              </p>
-              <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">
-                {toast.message}
-              </p>
-            </div>
-            
-            <button 
-              onClick={() => setToast(prev => ({ ...prev, isOpen: false }))}
-              className="text-zinc-500 hover:text-white p-0.5"
+      {/* ════════════════════════════════════════════════════════
+          PREMIUM TOAST NOTIFICATION — Center-bottom, dramatic 
+          ════════════════════════════════════════════════════════ */}
+      {toast.isOpen && (() => {
+        const cfg = {
+          success: {
+            emoji: '✦',
+            label: 'Berhasil!',
+            iconGrad: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            border: 'rgba(16,185,129,0.35)',
+            glow: 'rgba(16,185,129,0.18)',
+            ring: 'rgba(16,185,129,0.12)',
+            bar: '#10B981',
+            barGhost: 'rgba(16,185,129,0.15)',
+          },
+          delete: {
+            emoji: '🗑',
+            label: 'Dihapus',
+            iconGrad: 'linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)',
+            border: 'rgba(244,63,94,0.35)',
+            glow: 'rgba(244,63,94,0.18)',
+            ring: 'rgba(244,63,94,0.10)',
+            bar: '#F43F5E',
+            barGhost: 'rgba(244,63,94,0.15)',
+          },
+          info: {
+            emoji: 'ℹ',
+            label: 'Info',
+            iconGrad: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
+            border: 'rgba(139,92,246,0.35)',
+            glow: 'rgba(139,92,246,0.18)',
+            ring: 'rgba(139,92,246,0.10)',
+            bar: '#8B5CF6',
+            barGhost: 'rgba(139,92,246,0.15)',
+          },
+        }[toast.type];
+
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: '28px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 99990,
+              width: 'calc(100% - 48px)',
+              maxWidth: '420px',
+              animation: 'notara-toast-premium-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both',
+            }}
+          >
+            <div
+              style={{
+                background: 'linear-gradient(145deg, rgba(18,12,40,0.97) 0%, rgba(10,8,28,0.97) 100%)',
+                border: `1px solid ${cfg.border}`,
+                borderRadius: '20px',
+                boxShadow: `0 0 0 1px rgba(255,255,255,0.04), 0 8px 40px rgba(0,0,0,0.55), 0 0 60px ${cfg.glow}`,
+                overflow: 'hidden',
+                position: 'relative',
+              }}
             >
-              <X className="h-3.5 w-3.5" />
-            </button>
+              {/* Gradient top edge */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                background: `linear-gradient(90deg, transparent, ${cfg.bar}, transparent)`,
+              }} />
+
+              <div style={{ padding: '16px 18px 14px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                {/* Animated icon with pulsing rings */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{
+                    position: 'absolute', inset: '-6px', borderRadius: '50%',
+                    border: `1px solid ${cfg.ring}`,
+                    animation: 'notara-toast-ring 2s ease-in-out infinite',
+                  }} />
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '50%',
+                    background: cfg.iconGrad,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '16px',
+                    boxShadow: `0 4px 16px ${cfg.glow}`,
+                  }}>
+                    {cfg.emoji}
+                  </div>
+                </div>
+
+                {/* Text content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    fontSize: '13px', fontWeight: 800, color: '#F8FAFC',
+                    margin: 0, letterSpacing: '-0.01em',
+                  }}>
+                    {cfg.label}
+                  </p>
+                  <p style={{
+                    fontSize: '12px', color: 'rgba(248,250,252,0.6)',
+                    margin: '3px 0 0', lineHeight: 1.5,
+                  }}>
+                    {toast.message}
+                  </p>
+                  {toast.subtitle && (
+                    <p style={{
+                      fontSize: '11px', color: 'rgba(248,250,252,0.38)',
+                      margin: '2px 0 0', lineHeight: 1.4,
+                    }}>
+                      {toast.subtitle}
+                    </p>
+                  )}
+                  {toast.action && (
+                    <button
+                      onClick={() => { toast.action!.onClick(); setToast(p => ({ ...p, isOpen: false })); }}
+                      style={{
+                        marginTop: '8px',
+                        background: cfg.bar,
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '5px 12px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: '#fff',
+                        cursor: 'pointer',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      {toast.action.label}
+                    </button>
+                  )}
+                </div>
+
+                {/* Dismiss */}
+                <button
+                  onClick={() => setToast(p => ({ ...p, isOpen: false }))}
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '8px',
+                    width: '28px', height: '28px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: 'rgba(248,250,252,0.4)',
+                    fontSize: '14px', flexShrink: 0,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.12)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'rgba(248,250,252,0.9)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'rgba(248,250,252,0.4)';
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Auto-dismiss progress bar */}
+              <div style={{ height: '3px', background: cfg.barGhost }}>
+                <div style={{
+                  height: '100%',
+                  background: cfg.bar,
+                  animation: 'notara-toast-progress 3s linear forwards',
+                  transformOrigin: 'left',
+                }} />
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      <style>{`
+        @keyframes notara-toast-premium-enter {
+          0% { opacity: 0; transform: translateX(-50%) translateY(32px) scale(0.92); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+        }
+        @keyframes notara-toast-ring {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.18); opacity: 0; }
+        }
+        @keyframes notara-toast-progress {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
+
 
       {/* SEARCH COMMAND PALETTE MODAL (Sprint 6) */}
       {showSearchModal && (
@@ -5959,7 +6139,17 @@ export default function Home() {
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                🔒 Keamanan 2FA
+                🔒 Keamanan
+              </button>
+              <button
+                onClick={() => setSettingsTab('app')}
+                className={`flex-1 py-2 rounded-lg transition-all duration-200 ${
+                  settingsTab === 'app'
+                    ? 'bg-violet-600 text-white shadow shadow-violet-500/10'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                ✦ Aplikasi
               </button>
             </div>
 
@@ -6028,7 +6218,7 @@ export default function Home() {
                     </button>
                   </div>
                 </div>
-              ) : (
+              ) : settingsTab === 'security' ? (
                 /* TAB 2: TOTP Keamanan 2FA */
                 <div className="space-y-4">
                   {mfaError && (
@@ -6165,6 +6355,67 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+              ) : (
+                /* TAB 3: APP INFO */
+                <div className="space-y-4 text-left">
+                  {/* Version Card */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border border-violet-500/15">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                        <NotaraLogo variant="icon" size={20} showGlow />
+                      </div>
+                      <div>
+                        <p className="text-xs font-extrabold text-white">Notara</p>
+                        <p className="text-[11px] text-zinc-500 font-mono">Versi v0.0.05 — Early Testing</p>
+                      </div>
+                      <span className="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-2.5 py-1">
+                        ✓ Terkini
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 text-[11px] text-zinc-500 font-medium">
+                      <div className="flex items-center justify-between">
+                        <span>Platform</span>
+                        <span className="text-zinc-400">Web App (Next.js 16)</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Database</span>
+                        <span className="text-zinc-400">Supabase</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>AI Engine</span>
+                        <span className="text-zinc-400">Gemini Pro</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Update Mode</span>
+                        <span className="text-zinc-400">Auto (Focus Check)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Re-trigger onboarding */}
+                  <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
+                    <p className="text-xs font-bold text-zinc-300 mb-1">Survei Akademik</p>
+                    <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">Perbarui informasi universitas, jurusan, dan peranmu di Notara.</p>
+                    <button
+                      onClick={() => {
+                        setShowSettingsModal(false);
+                        setTimeout(() => setShowOnboardingModal(true), 300);
+                      }}
+                      className="w-full py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      ✦ Isi Ulang Survei
+                    </button>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={() => setShowSettingsModal(false)}
+                      className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -6264,6 +6515,10 @@ export default function Home() {
         ref={particleCanvasRef}
         className="fixed inset-0 pointer-events-none z-[9999]"
       />
+
+      {/* ─── VERSION UPDATE BANNER ─── */}
+      {/* Detects new Vercel deployments on window focus — shows update prompt */}
+      <VersionUpdateBanner appVersion="v0.0.05" />
 
     </div>
   );
