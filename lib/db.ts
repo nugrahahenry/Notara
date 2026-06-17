@@ -625,3 +625,60 @@ export async function leaveStudyGroup(
   }
   return true;
 }
+
+// ─────────────────────────────────────────────
+// ONBOARDING PROFILE OPERATIONS
+// ─────────────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  role: string | null;
+  university: string | null;
+  major: string | null;
+  find_source: string | null;
+  is_onboarded: boolean;
+}
+
+/** Mengambil profil pengguna aktif */
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching user profile:', error.message);
+    return null;
+  }
+  return data as UserProfile;
+}
+
+/** Menyimpan hasil kuesioner onboarding & menandai user sudah onboarded */
+export async function saveOnboardingData(
+  userId: string,
+  payload: {
+    role: string;
+    university: string;
+    major: string;
+    find_source: string;
+  }
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      ...payload,
+      is_onboarded: true,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Error saving onboarding data:', error.message);
+    return false;
+  }
+  return true;
+}
+

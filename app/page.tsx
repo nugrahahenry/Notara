@@ -9,9 +9,12 @@ import {
   Calendar, FileSignature, ArrowUpRight, Menu, MessageSquare, Send, Search, LogOut,
   Shield, QrCode, Key, Share2, Globe, Lock, Copy, ExternalLink,
   Mic, MicOff, Users, UserPlus, Link2, Crown, Hash,
-  ImageDown, Smartphone, Square, Download, Clock
+  ImageDown, Smartphone, Square, Download, Clock, Settings
 } from 'lucide-react';
 import { NotaraLogo } from './components/brand/NotaraLogo';
+import { StarryBackground } from './components/ui/StarryBackground';
+import { OnboardingModal } from './components/ui/OnboardingModal';
+import { DashboardTour, DEFAULT_TOUR_STEPS } from './components/ui/DashboardTour';
 import {
   getFolders,
   createFolder,
@@ -38,7 +41,9 @@ import {
   getChatThreads,
   createChatThread,
   deleteChatThread,
-  renameChatThread
+  renameChatThread,
+  getUserProfile,
+  saveOnboardingData
 } from '@/lib/db';
 import type { Folder as FolderType, Summary as SummaryType, ChatMessage, StudyGroup, ChatThread } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
@@ -341,6 +346,10 @@ export default function Home() {
 
   // Keamanan Dua Faktor (2FA) States (Sprint 13)
   const [showMfaModal, setShowMfaModal] = useState<boolean>(false);
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'security'>('profile');
+  const [editingName, setEditingName] = useState<string>('');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState<boolean>(false);
   const [mfaEnabled, setMfaEnabled] = useState<boolean>(false);
   const [mfaFactors, setMfaFactors] = useState<any[]>([]);
   const [mfaQrCode, setMfaQrCode] = useState<string>('');
@@ -373,6 +382,10 @@ export default function Home() {
   const [isGeneratingCard, setIsGeneratingCard] = useState<boolean>(false);
   const [shareCardFormat, setShareCardFormat] = useState<'story' | 'square'>('story');
   const shareCardRef = useRef<HTMLDivElement>(null);
+
+  // Onboarding & Dashboard Tour States
+  const [showOnboardingModal, setShowOnboardingModal] = useState<boolean>(false);
+  const [showDashboardTour, setShowDashboardTour] = useState<boolean>(false);
 
   // Persistent Desktop Chat Panel State
   useEffect(() => {
@@ -701,6 +714,62 @@ export default function Home() {
     return timer;
   };
 
+  const handleLogout = async () => {
+    setShowUserDropdown(false);
+    setShowSettingsModal(false);
+    await supabase.auth.signOut();
+    // Set flag so login page can show logout success toast
+    sessionStorage.setItem('logout_success', '1');
+    setUser(null);
+    setFolders([]);
+    setSummaries([]);
+    setSelectedSummary(null);
+    router.replace('/login');
+  };
+
+  // Handle onboarding survey completion — save data, start guided tour
+  const handleOnboardingComplete = async (onboardingData: { role: string; university: string; major: string; find_source: string }) => {
+    setShowOnboardingModal(false);
+    if (user) {
+      await saveOnboardingData(user.id, onboardingData);
+    }
+    // Start guided tour shortly after modal closes
+    setTimeout(() => setShowDashboardTour(true), 500);
+  };
+
+
+  const handleUpdateProfile = async () => {
+    try {
+      setIsUpdatingProfile(true);
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: editingName }
+      });
+      if (error) throw error;
+      showToast('Profil berhasil diperbarui!', 'success');
+      // Update local state metadata
+      setUser(prev => prev ? {
+        ...prev,
+        user_metadata: {
+          ...prev.user_metadata,
+          full_name: editingName
+        }
+      } : null);
+    } catch (err: any) {
+      console.error('Update profile error:', err);
+      showToast(err.message || 'Gagal memperbarui profil.', 'delete');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const openSettings = () => {
+    if (user) {
+      setEditingName(user.user_metadata?.full_name || '');
+    }
+    setSettingsTab('profile');
+    setShowSettingsModal(true);
+  };
+
   const triggerConfirm = (
     title: string,
     message: string,
@@ -925,15 +994,11 @@ export default function Home() {
                 }
               }
 
-              // Show login success toast (flag set by login page before redirect)
-              const loginFlag = sessionStorage.getItem('login_success');
-              if (loginFlag) {
-                sessionStorage.removeItem('login_success');
-                const name = user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Pengguna';
-                // Delay slightly to ensure UI is ready before showing toast
-                setTimeout(() => {
-                  showToast(`Selamat datang kembali, ${name}! 👋`, 'success');
-                }, 600);
+              // ─── CHECK ONBOARDING STATUS ───
+              // Show onboarding modal if user hasn't completed it yet
+              const profile = await getUserProfile(user.id);
+              if (profile && !profile.is_onboarded && active) {
+                setTimeout(() => setShowOnboardingModal(true), 1500);
               }
             }
           } else {
@@ -965,14 +1030,12 @@ export default function Home() {
         // SIGNED_IN fires when user actively logs in (both Google OAuth & email)
         // This is the most reliable way to detect a fresh login vs page refresh
         if (event === 'SIGNED_IN') {
-          const loginFlag = sessionStorage.getItem('login_success');
-          if (loginFlag) {
-            sessionStorage.removeItem('login_success');
+          sessionStorage.setItem('login_success', '1');
+          // Check onboarding on fresh login
+          const profile = await getUserProfile(currentUser.id);
+          if (profile && !profile.is_onboarded) {
+            setTimeout(() => setShowOnboardingModal(true), 1500);
           }
-          const name = currentUser.user_metadata?.full_name?.split(' ')[0] || currentUser.email?.split('@')[0] || 'Pengguna';
-          setTimeout(() => {
-            showToast(`Selamat datang kembali, ${name}! 👋`, 'success');
-          }, 600);
         }
 
         setIsDataLoading(true);
@@ -1007,6 +1070,20 @@ export default function Home() {
       subscription.unsubscribe();
     };
   }, [router]);
+
+  // Show login success toast when loading is done
+  useEffect(() => {
+    if (!isDataLoading && user) {
+      const loginFlag = sessionStorage.getItem('login_success');
+      if (loginFlag) {
+        sessionStorage.removeItem('login_success');
+        const name = user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Pengguna';
+        setTimeout(() => {
+          showToast(`Selamat datang kembali, ${name}! 👋`, 'success');
+        }, 500);
+      }
+    }
+  }, [isDataLoading, user]);
 
   // Sync loading step timeline
   useEffect(() => {
@@ -2891,9 +2968,25 @@ export default function Home() {
   return (
     <div className="flex h-screen w-screen bg-[#08070B] text-zinc-100 font-sans overflow-hidden">
       
-      {/* Background Ambient Glows */}
-      <div className="absolute top-0 right-0 w-[450px] h-[450px] bg-violet-600/5 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute bottom-0 left-0 w-[550px] h-[550px] bg-indigo-600/5 rounded-full blur-[150px] pointer-events-none -z-10" />
+      {/* Dynamic Starry Space Background */}
+      <StarryBackground />
+
+      {/* ─── ONBOARDING SURVEY MODAL (First-time users) ─── */}
+      {showOnboardingModal && user && (
+        <OnboardingModal
+          userName={user.user_metadata?.full_name || user.email || 'Pengguna'}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
+
+      {/* ─── DASHBOARD GUIDED TOUR ─── */}
+      {showDashboardTour && (
+        <DashboardTour
+          steps={DEFAULT_TOUR_STEPS}
+          onComplete={() => setShowDashboardTour(false)}
+          onSkip={() => setShowDashboardTour(false)}
+        />
+      )}
 
       {/* MOBILE SIDEBAR OVERLAY */}
       {sidebarOpen && (
@@ -3041,7 +3134,7 @@ export default function Home() {
             </div>
 
             {/* Folders Section */}
-            <div>
+            <div data-tour="sidebar-folders">
               <div className="flex items-center justify-between px-3 mb-2">
                 <h3 className="text-[9px] font-bold text-zinc-500 tracking-widest uppercase">Mata Kuliah</h3>
                 <button 
@@ -3460,15 +3553,25 @@ export default function Home() {
         )}
 
         {/* SIDEBAR FOOTER */}
-        {isSidebarOpen ? (
-          <div className="p-4 border-t border-white/[0.04] bg-black/10 text-center shrink-0">
-            <p className="text-[9px] text-zinc-600 font-semibold">Notara v2.1 • Henry</p>
-          </div>
-        ) : (
-          <div className="h-12 border-t border-white/[0.04] bg-black/10 flex items-center justify-center shrink-0">
-            <span className="text-[9px] text-zinc-700 font-bold">N.</span>
-          </div>
-        )}
+        <div className="p-3 border-t border-white/[0.04] bg-black/10 shrink-0">
+          {isSidebarOpen ? (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 rounded-xl transition-all cursor-pointer text-left"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              <span>Keluar</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="h-9 w-9 mx-auto flex items-center justify-center rounded-xl text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 transition-all cursor-pointer"
+              title="Keluar"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+            </button>
+          )}
+        </div>
       </aside>
 
       {/* RIGHT COLUMN AREA */}
@@ -3543,13 +3646,21 @@ export default function Home() {
               Connected
             </span>
 
-            {/* USER PROFILE DROPDOWN */}
+            {/* USER PROFILE & SETTINGS ACTIONS */}
             {user && (
-              <div className="relative">
+              <div data-tour="global-search" className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  onClick={openSettings}
+                  className="h-8 w-8 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer flex items-center justify-center text-zinc-400"
+                  title="Pengaturan Akun"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={openSettings}
                   className="relative h-8 w-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white border border-white/10 hover:ring-2 hover:ring-violet-500 transition-all outline-none cursor-pointer"
-                  title={user.user_metadata?.full_name || user.email || 'User Menu'}
+                  title={user.user_metadata?.full_name || user.email || 'Profil Saya'}
                 >
                   {user.user_metadata?.avatar_url ? (
                     <img
@@ -3564,67 +3675,6 @@ export default function Home() {
                     </span>
                   )}
                 </button>
-
-                {showUserDropdown && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40 cursor-default" 
-                      onClick={() => setShowUserDropdown(false)} 
-                    />
-                    <div className="absolute right-0 mt-2.5 w-64 bg-[#0F0E17] border border-white/[0.08] backdrop-blur-xl shadow-2xl p-4 rounded-2xl flex flex-col space-y-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Akun Masuk</span>
-                        <span className="text-sm font-bold text-white mt-1 truncate">
-                          {user.user_metadata?.full_name || 'Pengguna Notara'}
-                        </span>
-                        <span className="text-xs text-zinc-500 truncate mt-0.5">
-                          {user.email}
-                        </span>
-                      </div>
-                      <div className="border-t border-white/[0.04]"></div>
-                      <button
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          setShowMfaModal(true);
-                          setMfaError(null);
-                          setMfaSuccess(null);
-                          if (!mfaEnabled) {
-                            setMfaQrCode('');
-                            setMfaSecret('');
-                            setMfaFactorId('');
-                          }
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/[0.04] active:bg-white/[0.08] rounded-xl transition-all cursor-pointer text-left"
-                      >
-                        <Shield className="h-4 w-4 text-violet-400" />
-                        <span>Keamanan 2FA</span>
-                        {mfaEnabled && (
-                          <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Aktif
-                          </span>
-                        )}
-                      </button>
-                      <div className="border-t border-white/[0.04]"></div>
-                      <button
-                        onClick={async () => {
-                          setShowUserDropdown(false);
-                          await supabase.auth.signOut();
-                          // Set flag so login page can show logout success toast
-                          sessionStorage.setItem('logout_success', '1');
-                          setUser(null);
-                          setFolders([]);
-                          setSummaries([]);
-                          setSelectedSummary(null);
-                          router.replace('/login');
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 rounded-xl transition-all cursor-pointer text-left"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span>Keluar dari Notara</span>
-                      </button>
-                    </div>
-                  </>
-                )}
               </div>
             )}
           </div>
@@ -3787,6 +3837,7 @@ export default function Home() {
                 {!isRecordingMode ? (
                   /* UPLOAD INTERFACE */
                   <div 
+                    data-tour="upload-area"
                     onDragEnter={handleDrag}
                     onDragOver={handleDrag}
                     onDragLeave={handleDrag}
@@ -4551,7 +4602,7 @@ export default function Home() {
               />
             )}
 
-            <div className={`fixed inset-y-0 right-0 z-40 bg-[#0F0E17] flex flex-col transition-all duration-300 md:static md:translate-x-0 ${
+            <div data-tour="chat-panel" className={`fixed inset-y-0 right-0 z-40 bg-[#0F0E17] flex flex-col transition-all duration-300 md:static md:translate-x-0 ${
               isChatOpenMobile 
                 ? 'w-80 translate-x-0 border-l border-white/[0.04]' 
                 : 'translate-x-full'
@@ -4739,8 +4790,8 @@ export default function Home() {
 
                       {chatMessages.length === 0 ? (
                         <div className="flex gap-2.5 items-start max-w-[85%]">
-                          <div className="h-6 w-6 rounded-full bg-violet-600/10 border border-violet-500/20 text-violet-400 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
-                            N
+                          <div className="h-6 w-6 shrink-0 flex items-center justify-center">
+                            <NotaraLogo variant="icon" size={24} />
                           </div>
                           <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed font-sans">
                             {selectedSummary 
@@ -4758,8 +4809,8 @@ export default function Home() {
                             </div>
                           ) : (
                             <div key={msg.id} className="flex gap-2.5 items-start max-w-[85%] animate-in slide-in-from-left-2 duration-200">
-                              <div className="h-6 w-6 rounded-full bg-violet-600/10 border border-violet-500/20 text-violet-400 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
-                                N
+                              <div className="h-6 w-6 shrink-0 flex items-center justify-center">
+                                <NotaraLogo variant="icon" size={24} animated={msg.content === ''} motionState="thinking" />
                               </div>
                               <div className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed select-text break-words w-full">
                                 {msg.content ? (
@@ -5859,176 +5910,263 @@ export default function Home() {
         </div>
       )}
 
-      {/* 2FA SETTINGS MODAL (Sprint 13) */}
-      {showMfaModal && (
-
+      {/* SETTINGS MODAL */}
+      {showSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans">
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" 
             onClick={() => {
-              if (!mfaLoading) setShowMfaModal(false);
+              if (!mfaLoading && !isUpdatingProfile) setShowSettingsModal(false);
             }} 
           />
           
-          <div className="relative w-full max-w-md rounded-3xl bg-zinc-950/80 border border-white/[0.08] backdrop-blur-2xl p-6 shadow-2xl shadow-violet-950/10 space-y-6 animate-in zoom-in-95 duration-200 z-50 overflow-hidden">
+          <div className="relative w-full max-w-md rounded-3xl bg-zinc-950/80 border border-white/[0.08] backdrop-blur-2xl p-6 shadow-2xl shadow-violet-950/10 flex flex-col space-y-5 animate-in zoom-in-95 duration-200 z-50 overflow-hidden">
             {/* Top gradient highlight border */}
             <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-violet-500 via-fuchsia-500 to-indigo-500" />
             {/* Background glowing orb */}
             <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-24 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
 
+            {/* Title */}
             <div className="relative flex items-center gap-3 text-left">
               <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
-                <Shield className="h-5 w-5" />
+                <Settings className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="text-sm font-extrabold text-white tracking-wide">
-                  Keamanan Dua Faktor (2FA)
+                  Pengaturan Notara
                 </h3>
-                <span className="text-[9px] text-zinc-500 font-bold block mt-0.5 tracking-wider">PROTEKSI AKUN TOTP</span>
+                <span className="text-[9px] text-zinc-500 font-bold block mt-0.5 tracking-wider">PROFIL & KEAMANAN AKUN</span>
               </div>
             </div>
 
-            <hr className="border-white/5" />
+            {/* Tab Selectors */}
+            <div className="flex bg-white/[0.02] border border-white/[0.04] p-1 rounded-xl text-xs font-bold shrink-0">
+              <button
+                onClick={() => setSettingsTab('profile')}
+                className={`flex-1 py-2 rounded-lg transition-all duration-200 ${
+                  settingsTab === 'profile'
+                    ? 'bg-violet-600 text-white shadow shadow-violet-500/10'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                👤 Profil
+              </button>
+              <button
+                onClick={() => setSettingsTab('security')}
+                className={`flex-1 py-2 rounded-lg transition-all duration-200 ${
+                  settingsTab === 'security'
+                    ? 'bg-violet-600 text-white shadow shadow-violet-500/10'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                🔒 Keamanan 2FA
+              </button>
+            </div>
 
-            {mfaError && (
-              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 flex items-center gap-2.5 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
-                <span>{mfaError}</span>
-              </div>
-            )}
+            {/* Tab Contents */}
+            <div className="flex-1 overflow-y-auto max-h-[400px] pr-1 scrollbar-thin">
+              {settingsTab === 'profile' ? (
+                /* TAB 1: PROFILE FORM */
+                <div className="space-y-4 text-left">
+                  {user && (
+                    <div className="flex items-center gap-4 bg-white/[0.01] border border-white/[0.03] p-3 rounded-2xl">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-base font-bold text-white border border-white/10 shrink-0">
+                        {user.user_metadata?.avatar_url ? (
+                          <img
+                            src={user.user_metadata.avatar_url}
+                            alt="Avatar"
+                            className="h-full w-full rounded-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <span>
+                            {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Email Terdaftar</p>
+                        <p className="text-sm font-semibold text-white truncate mt-0.5">{user.email}</p>
+                      </div>
+                    </div>
+                  )}
 
-            {mfaSuccess && (
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2.5 text-left animate-in fade-in slide-in-from-top-2 duration-200">
-                <Check className="h-4 w-4 shrink-0 text-emerald-400" />
-                <span>{mfaSuccess}</span>
-              </div>
-            )}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Nama Lengkap</label>
+                    <input
+                      type="text"
+                      placeholder="Henry Nugraha"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      disabled={isUpdatingProfile}
+                      className="w-full px-4 py-3 bg-zinc-950/60 border border-white/10 focus:border-violet-500/60 focus:ring-4 focus:ring-violet-500/10 rounded-2xl text-xs transition-all duration-200 outline-none text-zinc-200"
+                    />
+                  </div>
 
-            {/* CASE 1: 2FA is already active */}
-            {mfaEnabled ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/15 flex items-start gap-3.5 text-left">
-                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 mt-1 shrink-0 animate-pulse" />
-                  <div className="text-xs text-zinc-300 leading-relaxed">
-                    <p className="font-extrabold text-emerald-400 tracking-wide text-xs">Autentikasi 2FA Aktif</p>
-                    <p className="mt-1.5 text-[11px] text-zinc-400 font-medium leading-relaxed">Akun Anda saat ini dilindungi oleh aplikasi authenticator. Setiap login baru atau akses dashboard di perangkat lain wajib memverifikasi kode 6-digit.</p>
+                  <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
+                    <button
+                      onClick={handleLogout}
+                      className="px-4 py-2 mr-auto rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 font-bold text-xs transition-all duration-200 cursor-pointer flex items-center gap-1.5"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Keluar</span>
+                    </button>
+
+                    <button
+                      onClick={() => setShowSettingsModal(false)}
+                      disabled={isUpdatingProfile}
+                      className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 disabled:opacity-50"
+                    >
+                      Tutup
+                    </button>
+                    <button
+                      onClick={handleUpdateProfile}
+                      disabled={isUpdatingProfile || !editingName.trim()}
+                      className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/20 disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
+                    >
+                      {isUpdatingProfile ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Simpan Profil'}
+                    </button>
                   </div>
                 </div>
+              ) : (
+                /* TAB 2: TOTP Keamanan 2FA */
+                <div className="space-y-4">
+                  {mfaError && (
+                    <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 flex items-center gap-2.5 text-left animate-in fade-in slide-in-from-top-2 duration-200">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                      <span>{mfaError}</span>
+                    </div>
+                  )}
 
-                <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
-                  <button
-                    onClick={() => setShowMfaModal(false)}
-                    className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200"
-                  >
-                    Tutup
-                  </button>
-                  <button
-                    onClick={handleMfaDisable}
-                    disabled={mfaLoading}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs tracking-wide shadow-md shadow-rose-950/20 disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
-                  >
-                    {mfaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Nonaktifkan 2FA'}
-                  </button>
+                  {mfaSuccess && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2.5 text-left animate-in fade-in slide-in-from-top-2 duration-200">
+                      <Check className="h-4 w-4 shrink-0 text-emerald-400" />
+                      <span>{mfaSuccess}</span>
+                    </div>
+                  )}
+
+                  {mfaEnabled ? (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/15 flex items-start gap-3.5 text-left">
+                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 mt-1 shrink-0 animate-pulse" />
+                        <div className="text-xs text-zinc-300 leading-relaxed">
+                          <p className="font-extrabold text-emerald-400 tracking-wide text-xs">Autentikasi 2FA Aktif</p>
+                          <p className="mt-1.5 text-[11px] text-zinc-400 font-medium leading-relaxed">Akun Anda saat ini dilindungi oleh aplikasi authenticator. Setiap login baru atau akses dashboard di perangkat lain wajib memverifikasi kode 6-digit.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
+                        <button
+                          onClick={() => setShowSettingsModal(false)}
+                          className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200"
+                        >
+                          Tutup
+                        </button>
+                        <button
+                          onClick={handleMfaDisable}
+                          disabled={mfaLoading}
+                          className="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs tracking-wide shadow-md shadow-rose-950/20 disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
+                        >
+                          {mfaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Nonaktifkan 2FA'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {!mfaQrCode ? (
+                        <div className="space-y-4 text-left">
+                          <p className="text-xs text-zinc-400 leading-relaxed font-medium">
+                            Autentikasi Dua Faktor (2FA) memberikan tingkat keamanan tambahan dengan meminta kode verifikasi dari aplikasi authenticator (Google Authenticator, Authy, Microsoft Authenticator) saat masuk ke Notara.
+                          </p>
+                          <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
+                            <button
+                              onClick={() => setShowSettingsModal(false)}
+                              className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200"
+                            >
+                              Tutup
+                            </button>
+                            <button
+                              onClick={handleMfaEnroll}
+                              disabled={mfaLoading}
+                              className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/20 disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
+                            >
+                              {mfaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Mulai Konfigurasi'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 text-left">
+                          <p className="text-xs text-zinc-400 leading-relaxed font-medium">
+                            Pindai kode QR di bawah ini dengan aplikasi authenticator Anda, lalu masukkan 6-digit kode verifikasi yang muncul untuk mengaktifkan.
+                          </p>
+
+                          <div className="relative p-4 bg-white/[0.02] border border-white/10 rounded-2xl flex flex-col items-center justify-center space-y-4 shadow-inner">
+                            <div className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-2 border-l-2 border-violet-500/60 rounded-tl-md" />
+                            <div className="absolute top-2.5 right-2.5 w-3.5 h-3.5 border-t-2 border-r-2 border-violet-500/60 rounded-tr-md" />
+                            <div className="absolute bottom-2.5 left-2.5 w-3.5 h-3.5 border-b-2 border-l-2 border-violet-500/60 rounded-bl-md" />
+                            <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-violet-500/60 rounded-br-md" />
+
+                            <div className="bg-white p-2.5 rounded-2xl shadow-xl shadow-black/40 w-44 h-44 flex items-center justify-center transition-all duration-300 hover:scale-[1.03]">
+                              <img 
+                                src={mfaQrCode} 
+                                alt="MFA QR Code" 
+                                className="w-full h-full object-contain select-none"
+                                draggable={false}
+                              />
+                            </div>
+                            
+                            <div className="w-full text-center">
+                              <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Kode Manual</span>
+                              <code className="text-xs font-mono bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 text-violet-300 block select-all mt-1 tracking-wide">
+                                {mfaSecret}
+                              </code>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 pt-2">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Kode Verifikasi 6-Digit</label>
+                            <div className="relative">
+                              <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                              <input
+                                type="text"
+                                maxLength={6}
+                                placeholder="000 000"
+                                value={mfaVerificationCode}
+                                onChange={(e) => setMfaVerificationCode(e.target.value.replace(/\D/g, ''))}
+                                className="w-full pl-11 pr-4 py-3.5 bg-zinc-950/60 border border-white/10 focus:border-violet-500/60 focus:ring-4 focus:ring-violet-500/10 rounded-2xl text-base transition-all duration-200 outline-none text-zinc-100 font-mono tracking-[0.4em] text-center font-bold"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
+                            <button
+                              onClick={() => {
+                                setMfaQrCode('');
+                                setMfaSecret('');
+                                setMfaFactorId('');
+                                setMfaVerificationCode('');
+                                setMfaError(null);
+                              }}
+                              disabled={mfaLoading}
+                              className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 disabled:opacity-50"
+                            >
+                              Kembali
+                            </button>
+                            <button
+                              onClick={handleMfaVerify}
+                              disabled={mfaLoading || mfaVerificationCode.length !== 6}
+                              className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/20 disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
+                            >
+                              {mfaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Aktifkan 2FA'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ) : (
-              /* CASE 2: 2FA is not active yet */
-              <div className="space-y-4">
-                {!mfaQrCode ? (
-                  /* STEP 1: Introduction */
-                  <div className="space-y-4 text-left">
-                    <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                      Autentikasi Dua Faktor (2FA) memberikan tingkat keamanan tambahan dengan meminta kode verifikasi dari aplikasi authenticator (Google Authenticator, Authy, Microsoft Authenticator) saat masuk ke Notara.
-                    </p>
-                    <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
-                      <button
-                        onClick={() => setShowMfaModal(false)}
-                        className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200"
-                      >
-                        Batal
-                      </button>
-                      <button
-                        onClick={handleMfaEnroll}
-                        disabled={mfaLoading}
-                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/20 disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
-                      >
-                        {mfaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Mulai Konfigurasi'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* STEP 2: Scan QR & Verify */
-                  <div className="space-y-4 text-left">
-                    <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                      Pindai kode QR di bawah ini dengan aplikasi authenticator Anda, lalu masukkan 6-digit kode verifikasi yang muncul untuk mengaktifkan.
-                    </p>
-
-                    {/* Premium scanner frame box */}
-                    <div className="relative p-4 bg-white/[0.02] border border-white/10 rounded-2xl flex flex-col items-center justify-center space-y-4 shadow-inner">
-                      {/* High-tech corner target markers */}
-                      <div className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-2 border-l-2 border-violet-500/60 rounded-tl-md" />
-                      <div className="absolute top-2.5 right-2.5 w-3.5 h-3.5 border-t-2 border-r-2 border-violet-500/60 rounded-tr-md" />
-                      <div className="absolute bottom-2.5 left-2.5 w-3.5 h-3.5 border-b-2 border-l-2 border-violet-500/60 rounded-bl-md" />
-                      <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-violet-500/60 rounded-br-md" />
-
-                      <div className="bg-white p-2.5 rounded-2xl shadow-xl shadow-black/40 w-44 h-44 flex items-center justify-center transition-all duration-300 hover:scale-[1.03]">
-                        <img 
-                          src={mfaQrCode} 
-                          alt="MFA QR Code" 
-                          className="w-full h-full object-contain select-none"
-                          draggable={false}
-                        />
-                      </div>
-                      
-                      <div className="w-full text-center">
-                        <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Kode Manual</span>
-                        <code className="text-xs font-mono bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 text-violet-300 block select-all mt-1 tracking-wide">
-                          {mfaSecret}
-                        </code>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 pt-2">
-                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Kode Verifikasi 6-Digit</label>
-                      <div className="relative">
-                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                        <input
-                          type="text"
-                          maxLength={6}
-                          placeholder="000 000"
-                          value={mfaVerificationCode}
-                          onChange={(e) => setMfaVerificationCode(e.target.value.replace(/\D/g, ''))}
-                          className="w-full pl-11 pr-4 py-3.5 bg-zinc-950/60 border border-white/10 focus:border-violet-500/60 focus:ring-4 focus:ring-violet-500/10 rounded-2xl text-base transition-all duration-200 outline-none text-zinc-100 font-mono tracking-[0.4em] text-center font-bold"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
-                      <button
-                        onClick={() => {
-                          setMfaQrCode('');
-                          setMfaSecret('');
-                          setMfaFactorId('');
-                          setMfaVerificationCode('');
-                          setMfaError(null);
-                        }}
-                        disabled={mfaLoading}
-                        className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 disabled:opacity-50"
-                      >
-                        Kembali
-                      </button>
-                      <button
-                        onClick={handleMfaVerify}
-                        disabled={mfaLoading || mfaVerificationCode.length !== 6}
-                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/20 disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
-                      >
-                        {mfaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Aktifkan 2FA'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}

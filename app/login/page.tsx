@@ -531,7 +531,7 @@ function LoginForm() {
                   </div>
                   <div className="h-20 overflow-y-auto text-[9.5px] p-2.5 bg-black/40 border border-white/[0.04] rounded-xl text-zinc-500 leading-relaxed scrollbar-thin select-text text-left">
                     <p className="font-bold text-zinc-400 mb-1">Syarat Penggunaan Notara AI</p>
-                    <p className="mb-1.5">Selamat datang di Notara AI Companion. Dengan mendaftar, Anda menyetujui ketentuan berikut:</p>
+                    <p className="mb-1.5">Selamat datang di Notara Neural Nexus. Dengan mendaftar, Anda menyetujui ketentuan berikut:</p>
                     <p className="mb-1.5"><strong>1. Layanan Studi:</strong> Layanan transkrip dan rangkuman ini disediakan khusus untuk membantu studi pribadi mahasiswa. Anda dilarang menggunakannya untuk aktivitas ilegal atau kecurangan akademik.</p>
                     <p className="mb-1.5"><strong>2. Kebijakan Privasi:</strong> Kami menghormati data Anda. Berkas audio dan transkrip kuliah Anda disimpan aman dan tidak akan dibagikan atau dijual ke pihak ketiga.</p>
                     <p className="mb-1.5"><strong>3. Hak Cipta Materi:</strong> Anda bertanggung jawab penuh atas hak cipta materi kuliah yang Anda unggah. Pastikan Anda memiliki izin merekam dosen yang bersangkutan.</p>

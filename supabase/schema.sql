@@ -144,6 +144,22 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT OR UPDATE ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- UPDATE policy: Users can update their own profile
+CREATE POLICY "Users can update their own profile"
+ON profiles FOR UPDATE
+USING (auth.uid() = id);
+
+-- ==========================================
+-- ONBOARDING COLUMNS (Fase 2 - Onboarding Survey)
+-- Jalankan bagian ini di SQL Editor Supabase untuk mengaktifkan fitur Onboarding
+-- ==========================================
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS university TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS major TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS find_source TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_onboarded BOOLEAN DEFAULT false;
+
 -- ==========================================
 -- STUDY GROUP SCHEMA (Sprint 16 - Phase 4.5B)
 -- Jalankan bagian ini di SQL Editor Supabase untuk mengaktifkan fitur Study Group

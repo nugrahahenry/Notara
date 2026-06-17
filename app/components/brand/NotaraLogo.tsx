@@ -132,6 +132,20 @@ export function NotaraLogo({
         strokeLinejoin="round"
       />
 
+      {/* ─── Layer 2.5: AI Sparkles (Glittering AI insights) ─── */}
+      <path 
+        className="notara-sparkle notara-sparkle-1"
+        d="M 188 100 Q 188 110 198 110 Q 188 110 188 120 Q 188 110 178 110 Q 188 110 188 100 Z"
+        fill="#F59E0B"
+        opacity="0"
+      />
+      <path 
+        className="notara-sparkle notara-sparkle-2"
+        d="M 330 200 Q 330 208 338 208 Q 330 208 330 216 Q 330 208 322 208 Q 330 208 330 200 Z"
+        fill="#A855F7"
+        opacity="0"
+      />
+
       {/* ─── Layer 3: Orbit Dot ───
            Single dot, upper-right (~1:30 clock position).
            This is a KEY brand element — always visible in static logo. */}
@@ -195,7 +209,7 @@ export function NotaraLogo({
         marginTop: 1,
         fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
       }}>
-        AI Companion
+        Neural Nexus
       </span>
     </div>
   );
