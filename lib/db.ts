@@ -3,7 +3,7 @@
 // Analogi: Ini kayak "daftar instruksi" ke petugas arsip — ambil ini, simpan itu, hapus ini
 
 import { supabase } from './supabase';
-import type { Folder, Summary, CreateFolderInput, CreateSummaryInput, ChatMessage } from './types';
+import type { Folder, Summary, CreateFolderInput, CreateSummaryInput, ChatMessage, StudyGroup, GroupMember } from './types';
 
 // ─────────────────────────────────────────────
 // FOLDER OPERATIONS
@@ -322,6 +322,231 @@ export async function clearChatMessages(summaryId: string): Promise<boolean> {
 
   if (error) {
     console.error('Error clearing chat messages:', error.message);
+    return false;
+  }
+  return true;
+}
+
+// ─────────────────────────────────────────────
+// STUDY GROUP OPERATIONS (Sprint 16)
+// ─────────────────────────────────────────────
+
+/** Ambil semua kelompok belajar yang diikuti user */
+export async function getStudyGroups(userId: string): Promise<StudyGroup[]> {
+  // Ambil group_id yang diikuti user ini
+  const { data: memberData, error: memberError } = await supabase
+    .from('group_members')
+    .select('group_id, role')
+    .eq('user_id', userId);
+
+  if (memberError || !memberData?.length) return [];
+
+  const groupIds = memberData.map(m => m.group_id);
+  const roleMap = Object.fromEntries(memberData.map(m => [m.group_id, m.role]));
+
+  const { data, error } = await supabase
+    .from('study_groups')
+    .select('*')
+    .in('id', groupIds)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching study groups:', error.message);
+    return [];
+  }
+
+  return (data || []).map(g => ({ ...g, user_role: roleMap[g.id] }));
+}
+
+/** Buat kelompok belajar baru */
+export async function createStudyGroup(
+  name: string,
+  description: string,
+  userId: string
+): Promise<StudyGroup | null> {
+  const { data: group, error: groupError } = await supabase
+    .from('study_groups')
+    .insert({ name, description, owner_id: userId })
+    .select()
+    .single();
+
+  if (groupError || !group) {
+    console.error('Error creating study group:', groupError?.message);
+    return null;
+  }
+
+  // Tambahkan pembuat sebagai owner di group_members
+  const { error: memberError } = await supabase
+    .from('group_members')
+    .insert({ group_id: group.id, user_id: userId, role: 'owner' });
+
+  if (memberError) {
+    console.error('Error adding owner to group:', memberError.message);
+  }
+
+  return { ...group, user_role: 'owner' };
+}
+
+/** Bergabung ke kelompok belajar dengan kode undangan */
+export async function joinStudyGroup(
+  inviteCode: string,
+  userId: string
+): Promise<StudyGroup | null> {
+  // Cari group berdasarkan kode undangan
+  const { data: group, error: groupError } = await supabase
+    .from('study_groups')
+    .select('*')
+    .eq('invite_code', inviteCode.trim())
+    .single();
+
+  if (groupError || !group) {
+    console.error('Kode undangan tidak ditemukan.');
+    return null;
+  }
+
+  // Cek apakah sudah menjadi anggota
+  const { data: existing } = await supabase
+    .from('group_members')
+    .select('user_id')
+    .eq('group_id', group.id)
+    .eq('user_id', userId)
+    .single();
+
+  if (existing) {
+    // Sudah anggota, kembalikan grup saja
+    return { ...group, user_role: existing ? 'member' : 'member' };
+  }
+
+  // Tambahkan user sebagai member
+  const { error: memberError } = await supabase
+    .from('group_members')
+    .insert({ group_id: group.id, user_id: userId, role: 'member' });
+
+  if (memberError) {
+    console.error('Error joining group:', memberError.message);
+    return null;
+  }
+
+  return { ...group, user_role: 'member' };
+}
+
+interface GroupMemberDbPayload {
+  group_id: string;
+  user_id: string;
+  role: 'owner' | 'member';
+  joined_at: string;
+  profiles: {
+    email: string | null;
+    full_name: string | null;
+  } | null | undefined;
+}
+
+/** Ambil daftar anggota kelompok */
+export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select(`
+      group_id,
+      user_id,
+      role,
+      joined_at,
+      profiles:user_id (
+        email,
+        full_name
+      )
+    `)
+    .eq('group_id', groupId)
+    .order('joined_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching group members:', error.message);
+    return [];
+  }
+
+  const typedData = data as unknown as GroupMemberDbPayload[];
+
+  // Make sure to map the nested profile data into the returned GroupMember array:
+  return (typedData || []).map((m) => ({
+    group_id: m.group_id,
+    user_id: m.user_id,
+    role: m.role,
+    joined_at: m.joined_at,
+    email: m.profiles?.email ?? undefined,
+    full_name: m.profiles?.full_name ?? undefined
+  }));
+}
+
+/** Bagikan folder ke kelompok belajar */
+export async function shareFolderWithGroup(
+  folderId: string,
+  groupId: string
+): Promise<boolean> {
+  // Cek apakah sudah dibagikan
+  const { data: existing } = await supabase
+    .from('group_folders')
+    .select('folder_id')
+    .eq('group_id', groupId)
+    .eq('folder_id', folderId)
+    .single();
+
+  if (existing) return true; // Sudah dibagikan
+
+  const { error } = await supabase
+    .from('group_folders')
+    .insert({ group_id: groupId, folder_id: folderId });
+
+  if (error) {
+    console.error('Error sharing folder with group:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Hentikan berbagi folder dari kelompok */
+export async function unshareFolderFromGroup(
+  folderId: string,
+  groupId: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('group_folders')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('folder_id', folderId);
+
+  if (error) {
+    console.error('Error unsharing folder:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Ambil daftar folder yang dibagikan ke kelompok */
+export async function getGroupFolders(groupId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('group_folders')
+    .select('folder_id')
+    .eq('group_id', groupId);
+
+  if (error) {
+    console.error('Error fetching group folders:', error.message);
+    return [];
+  }
+  return (data || []).map(r => r.folder_id);
+}
+
+/** Keluar dari kelompok belajar */
+export async function leaveStudyGroup(
+  groupId: string,
+  userId: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error leaving group:', error.message);
     return false;
   }
   return true;

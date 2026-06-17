@@ -39,3 +39,34 @@ export type CreateFolderInput = Omit<Folder, 'id' | 'created_at'>;
 
 // Tipe untuk menyimpan rangkuman baru
 export type CreateSummaryInput = Omit<Summary, 'id' | 'created_at'>;
+
+// ─────────────────────────────────────────────
+// STUDY GROUP TYPES (Sprint 16)
+// ─────────────────────────────────────────────
+
+export interface StudyGroup {
+  id: string;
+  name: string;
+  description?: string | null;
+  invite_code: string;
+  owner_id: string;
+  created_at: string;
+  // Computed fields (dari JOIN / aggregation di query)
+  member_count?: number;
+  user_role?: 'owner' | 'member';
+}
+
+export interface GroupMember {
+  group_id: string;
+  user_id: string;
+  role: 'owner' | 'member';
+  joined_at: string;
+  // Joined from auth.users metadata
+  email?: string;
+  full_name?: string;
+}
+
+export interface GroupFolder {
+  group_id: string;
+  folder_id: string;
+}

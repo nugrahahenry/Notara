@@ -7,7 +7,9 @@ import {
   Check, Loader2, Clipboard, AlertCircle, Trash2, ArrowLeft, BookOpen,
   Plus, FolderPlus, Folder, Edit3, X, ChevronRight, ChevronDown, MoreVertical,
   Calendar, FileSignature, ArrowUpRight, Menu, MessageSquare, Send, Search, LogOut,
-  Shield, QrCode, Key, Share2, Globe, Lock, Copy, ExternalLink
+  Shield, QrCode, Key, Share2, Globe, Lock, Copy, ExternalLink,
+  Mic, MicOff, Users, UserPlus, Link2, Crown, Hash,
+  ImageDown, Smartphone, Square, Download
 } from 'lucide-react';
 import {
   getFolders,
@@ -24,9 +26,16 @@ import {
   getChatMessages,
   createChatMessage,
   clearChatMessages,
-  toggleSummaryPublic
+  toggleSummaryPublic,
+  getStudyGroups,
+  createStudyGroup,
+  joinStudyGroup,
+  getGroupMembers,
+  shareFolderWithGroup,
+  getGroupFolders,
+  leaveStudyGroup
 } from '@/lib/db';
-import type { Folder as FolderType, Summary as SummaryType, ChatMessage } from '@/lib/types';
+import type { Folder as FolderType, Summary as SummaryType, ChatMessage, StudyGroup } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -311,6 +320,28 @@ export default function Home() {
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [mfaSuccess, setMfaSuccess] = useState<string | null>(null);
   const [showMfaChallengeBlock, setShowMfaChallengeBlock] = useState<boolean>(false);
+
+  // Voice Input (Mic) States (Sprint 15)
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [voiceNotSupported, setVoiceNotSupported] = useState<boolean>(false);
+  const speechRecognitionRef = useRef<any>(null);
+
+  // Study Group States (Sprint 16)
+  const [studyGroups, setStudyGroups] = useState<any[]>([]);
+  const [showStudyGroupModal, setShowStudyGroupModal] = useState<boolean>(false);
+  const [studyGroupTab, setStudyGroupTab] = useState<'create' | 'join'>('create');
+  const [newGroupName, setNewGroupName] = useState<string>('');
+  const [newGroupDesc, setNewGroupDesc] = useState<string>('');
+  const [joinCode, setJoinCode] = useState<string>('');
+  const [studyGroupLoading, setStudyGroupLoading] = useState<boolean>(false);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+
+  // Share Card States (Sprint 17 — Phase 4.5C)
+  const [showShareCardModal, setShowShareCardModal] = useState<boolean>(false);
+  const [isGeneratingCard, setIsGeneratingCard] = useState<boolean>(false);
+  const [shareCardFormat, setShareCardFormat] = useState<'story' | 'square'>('story');
+  const shareCardRef = useRef<HTMLDivElement>(null);
 
   // Focus Timer useEffect — scoped per user account
   useEffect(() => {
@@ -828,13 +859,15 @@ export default function Home() {
             // Check MFA status
             await checkMfaStatus(user);
             // Load database data
-            const [fetchedFolders, fetchedSummaries] = await Promise.all([
+            const [fetchedFolders, fetchedSummaries, fetchedGroups] = await Promise.all([
               getFolders(),
-              getAllSummaries()
+              getAllSummaries(),
+              getStudyGroups(user.id)
             ]);
             if (active) {
               setFolders(fetchedFolders);
               setSummaries(fetchedSummaries);
+              setStudyGroups(fetchedGroups);
 
               // Auto-select forked summary if redirected from public view
               const forkedId = localStorage.getItem('notara_selected_summary_id');
@@ -905,13 +938,15 @@ export default function Home() {
 
         setIsDataLoading(true);
         try {
-          const [fetchedFolders, fetchedSummaries] = await Promise.all([
+          const [fetchedFolders, fetchedSummaries, fetchedGroups] = await Promise.all([
             getFolders(),
-            getAllSummaries()
+            getAllSummaries(),
+            getStudyGroups(currentUser.id)
           ]);
           if (active) {
             setFolders(fetchedFolders);
             setSummaries(fetchedSummaries);
+            setStudyGroups(fetchedGroups);
           }
         } catch (err) {
           console.error(err);
@@ -2233,7 +2268,173 @@ export default function Home() {
     }
   };
 
+  // ────────────────────────────────────────────────
+  // VOICE INPUT (MIC) — Sprint 15
+  // ────────────────────────────────────────────────
+  const handleToggleMic = () => {
+    // Cek dukungan browser
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceNotSupported(true);
+      showToast('Browser Anda tidak mendukung fitur input suara. Coba gunakan Chrome.', 'delete');
+      return;
+    }
+
+    if (isListening) {
+      // Hentikan perekaman
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    // Mulai perekaman baru
+    const recognition = new SpeechRecognition();
+    speechRecognitionRef.current = recognition;
+    recognition.lang = 'id-ID';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0].transcript)
+        .join('');
+      setChatInput(transcript);
+      // Auto-resize textarea
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${Math.min(120, textareaRef.current.scrollHeight)}px`;
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      if (event.error !== 'aborted') {
+        showToast('Gagal merekam suara. Pastikan mikrofon diizinkan.', 'delete');
+      }
+    };
+
+    recognition.start();
+  };
+
+  // ────────────────────────────────────────────────
+  // STUDY GROUP HANDLERS — Sprint 16
+  // ────────────────────────────────────────────────
+  const handleCreateGroup = async () => {
+    if (!user || !newGroupName.trim()) return;
+    setStudyGroupLoading(true);
+    try {
+      const group = await createStudyGroup(newGroupName.trim(), newGroupDesc.trim(), user.id);
+      if (group) {
+        setStudyGroups(prev => [...prev, group]);
+        setNewGroupName('');
+        setNewGroupDesc('');
+        setShowStudyGroupModal(false);
+        showToast(`Kelompok "${group.name}" berhasil dibuat! 🎉 Kode undangan: ${group.invite_code}`, 'success');
+      } else {
+        throw new Error('Gagal membuat kelompok belajar.');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setStudyGroupLoading(false);
+    }
+  };
+
+  const handleJoinGroup = async () => {
+    if (!user || !joinCode.trim()) return;
+    setStudyGroupLoading(true);
+    try {
+      const group = await joinStudyGroup(joinCode.trim(), user.id);
+      if (group) {
+        setStudyGroups(prev => {
+          const exists = prev.find(g => g.id === group.id);
+          return exists ? prev : [...prev, group];
+        });
+        setJoinCode('');
+        setShowStudyGroupModal(false);
+        showToast(`Berhasil bergabung ke kelompok "${group.name}"! 👥`, 'success');
+      } else {
+        throw new Error('Kode undangan tidak valid atau kelompok tidak ditemukan.');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setStudyGroupLoading(false);
+    }
+  };
+
+  const handleLoadGroupMembers = async (groupId: string) => {
+    if (activeGroupId === groupId) {
+      setActiveGroupId(null);
+      setGroupMembers([]);
+      return;
+    }
+    setActiveGroupId(groupId);
+    const members = await getGroupMembers(groupId);
+    setGroupMembers(members);
+  };
+
+  const handleLeaveGroup = async (groupId: string, groupName: string) => {
+    if (!user) return;
+    const success = await leaveStudyGroup(groupId, user.id);
+    if (success) {
+      setStudyGroups(prev => prev.filter(g => g.id !== groupId));
+      if (activeGroupId === groupId) {
+        setActiveGroupId(null);
+        setGroupMembers([]);
+      }
+      showToast(`Berhasil keluar dari kelompok "${groupName}".`, 'success');
+    }
+  };
+
+  const handleShareFolderToGroup = async (folderId: string, groupId: string, folderName: string) => {
+    const success = await shareFolderWithGroup(folderId, groupId);
+    if (success) {
+      showToast(`Folder "${folderName}" berhasil dibagikan ke kelompok! 📁`, 'success');
+    }
+  };
+
+  // ────────────────────────────────────────────────
+  // SHARE CARD (4.5C) — Sprint 17
+  // ────────────────────────────────────────────────
+  const handleGenerateShareCard = async () => {
+    if (!selectedSummary || !shareCardRef.current) return;
+    setIsGeneratingCard(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(shareCardRef.current, {
+        backgroundColor: '#0C0A12',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement('a');
+      const safeTitle = selectedSummary.title.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 40).replace(/\s+/g, '_') || 'notara_card';
+      link.download = `notara_${safeTitle}_${shareCardFormat}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('Kartu berhasil diunduh! 🎉 Siap dibagikan ke sosmed.', 'success');
+    } catch (err) {
+      console.error('Share card error:', err);
+      showToast('Gagal membuat kartu. Coba lagi.', 'delete');
+    } finally {
+      setIsGeneratingCard(false);
+    }
+  };
+
   const handleStartRename = () => {
+
     if (!selectedSummary) return;
     setEditingTitleText(selectedSummary.title);
     setIsEditingTitle(true);
@@ -2767,7 +2968,94 @@ export default function Home() {
               </div>
             </div>
 
+            {/* ─── KELOMPOK BELAJAR (Study Groups) ─── */}
+            <div className="mt-2">
+              <div className="flex items-center justify-between px-3 mb-1.5">
+                <span className="text-[9px] font-bold text-zinc-500 tracking-widest uppercase">Kelompok Belajar</span>
+                <button
+                  onClick={() => setShowStudyGroupModal(true)}
+                  className="text-zinc-500 hover:text-violet-400 p-0.5 rounded hover:bg-white/5 transition-all duration-200"
+                  title="Buat atau Bergabung Kelompok"
+                >
+                  <Users className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <div className="space-y-0.5">
+                {studyGroups.length === 0 ? (
+                  <button
+                    onClick={() => setShowStudyGroupModal(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.02] transition-all duration-200 text-xs"
+                  >
+                    <UserPlus className="h-3 w-3 flex-shrink-0" />
+                    <span>Buat / Bergabung Kelompok</span>
+                  </button>
+                ) : (
+                  studyGroups.map(group => (
+                    <div key={group.id}>
+                      <div
+                        className={`group/sg flex items-center justify-between rounded-lg transition-all duration-200 ${
+                          activeGroupId === group.id
+                            ? 'bg-violet-900/20 text-violet-300'
+                            : 'text-zinc-400 hover:bg-white/[0.02]'
+                        }`}
+                      >
+                        <button
+                          onClick={() => handleLoadGroupMembers(group.id)}
+                          className="flex-1 flex items-center gap-2.5 px-3 py-2 text-xs text-left truncate"
+                        >
+                          <Hash className="h-3 w-3 flex-shrink-0 text-violet-500" />
+                          <span className="truncate">{group.name}</span>
+                          {group.user_role === 'owner' && (
+                            <Crown className="h-2.5 w-2.5 text-amber-400 flex-shrink-0" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleLeaveGroup(group.id, group.name)}
+                          className="hidden group-hover/sg:block text-zinc-600 hover:text-red-400 p-0.5 rounded hover:bg-white/10 mr-2 flex-shrink-0"
+                          title="Keluar dari kelompok"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      {/* Member list accordion */}
+                      {activeGroupId === group.id && groupMembers.length > 0 && (
+                        <div className="ml-6 mt-1 mb-2 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                          <div className="text-[9px] text-zinc-600 uppercase tracking-wider px-1 mb-1">
+                            {groupMembers.length} Anggota
+                          </div>
+                          {groupMembers.slice(0, 5).map(m => (
+                            <div key={m.user_id} className="flex items-center gap-2 text-[10px] text-zinc-500 px-1">
+                              <div className="h-4 w-4 rounded-full bg-violet-900/40 border border-violet-700/30 flex items-center justify-center text-[8px] text-violet-400 font-bold flex-shrink-0">
+                                {(m.email || '?').charAt(0).toUpperCase()}
+                              </div>
+                              <span className="truncate">{m.email || m.user_id.slice(0, 8)}</span>
+                              {m.role === 'owner' && <Crown className="h-2 w-2 text-amber-400 flex-shrink-0" />}
+                            </div>
+                          ))}
+                          {/* Kode undangan */}
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(group.invite_code);
+                              showToast(`Kode undangan disalin: ${group.invite_code}`, 'success');
+                            }}
+                            className="mt-2 flex items-center gap-1.5 text-[10px] text-violet-500 hover:text-violet-300 transition-colors w-full text-left px-1"
+                          >
+                            <Link2 className="h-2.5 w-2.5 flex-shrink-0" />
+                            <span>Kode: <span className="font-mono font-bold">{group.invite_code}</span></span>
+                            <Copy className="h-2 w-2 flex-shrink-0 ml-auto" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
             {/* Summaries History List */}
+
             <div>
               <h3 className="px-3 text-[9px] font-bold text-zinc-500 tracking-widest uppercase mb-2">
                 {activeFolderId === 'all' && "Semua Rangkuman"}
@@ -3261,52 +3549,55 @@ export default function Home() {
                   </div>
                 </div>
               ) : (
-                <div className="max-w-2xl mx-auto animate-in fade-in duration-300">
+                <div className="max-w-2xl mx-auto animate-in fade-in duration-300 relative">
+                  
+                  {/* Premium Ambient Dashboard Mesh Glow */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-gradient-to-tr from-violet-600/15 via-indigo-600/10 to-transparent rounded-full blur-[100px] pointer-events-none -z-10 animate-pulse-glow" />
                 
-                {/* Jumbotron banner */}
-                <div className="text-center max-w-xl mx-auto mb-8">
-                  <span className="px-3.5 py-1.5 rounded-full bg-violet-500/5 border border-violet-500/15 text-violet-300 text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 mb-6">
-                    <Sparkles className="h-3 w-3 text-violet-400" />
-                    COMPANION KULIAH
-                  </span>
-                  <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-4 leading-tight">
-                    Reduksi Kuliah 1 Jam <br />
-                    <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">Jadi Rangkuman 1 Halaman</span>
-                  </h2>
-                  <p className="text-zinc-400 text-sm leading-relaxed">
-                    Pilih antara mengunggah berkas audio/video rekaman kuliah dosen atau merekam secara langsung dari browser laptopmu sekarang.
-                  </p>
-                </div>
+                  {/* Jumbotron banner */}
+                  <div className="text-center max-w-xl mx-auto mb-8 relative">
+                    <span className="px-3.5 py-1.5 rounded-full bg-violet-500/5 border border-violet-500/15 text-violet-300 text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 mb-6">
+                      <Sparkles className="h-3 w-3 text-violet-400" />
+                      COMPANION KULIAH
+                    </span>
+                    <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-4 leading-tight">
+                      Reduksi Kuliah 1 Jam <br />
+                      <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">Jadi Rangkuman 1 Halaman</span>
+                    </h2>
+                    <p className="text-zinc-400 text-sm leading-relaxed">
+                      Pilih antara mengunggah berkas audio/video rekaman kuliah dosen atau merekam secara langsung dari browser laptopmu sekarang.
+                    </p>
+                  </div>
 
-                {/* Upload vs Recording Selector Toggle */}
-                <div className="bg-white/5 p-1 rounded-xl flex max-w-xs mx-auto mb-8 text-xs font-bold border border-white/5 shadow-inner">
-                  <button
-                    onClick={() => {
-                      setIsRecordingMode(false);
-                      clearFile();
-                    }}
-                    className={`flex-1 py-2 rounded-lg transition-all duration-200 ${
-                      !isRecordingMode 
-                        ? 'bg-violet-600 text-white shadow shadow-violet-500/15' 
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    Upload File
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsRecordingMode(true);
-                      clearFile();
-                    }}
-                    className={`flex-1 py-2 rounded-lg transition-all duration-200 ${
-                      isRecordingMode 
-                        ? 'bg-violet-600 text-white shadow shadow-violet-500/15' 
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    Rekam Suara
-                  </button>
-                </div>
+                  {/* Upload vs Recording Selector Toggle */}
+                  <div className="bg-white/[0.02] p-1 rounded-2xl flex max-w-xs mx-auto mb-8 text-xs font-bold border border-white/[0.06] shadow-xl backdrop-blur-md">
+                    <button
+                      onClick={() => {
+                        setIsRecordingMode(false);
+                        clearFile();
+                      }}
+                      className={`flex-1 py-2 rounded-xl transition-all duration-300 cursor-pointer ${
+                        !isRecordingMode 
+                          ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/20 border-t border-white/10' 
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Upload File
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsRecordingMode(true);
+                        clearFile();
+                      }}
+                      className={`flex-1 py-2 rounded-xl transition-all duration-300 cursor-pointer ${
+                        isRecordingMode 
+                          ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/20 border-t border-white/10' 
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Rekam Suara
+                    </button>
+                  </div>
 
                 {/* CONDITIONAL CONTROLLER */}
                 {!isRecordingMode ? (
@@ -3794,6 +4085,15 @@ export default function Home() {
                         </>
                       )}
 
+                      {/* Share Card (4.5C) Button */}
+                      <button
+                        onClick={() => setShowShareCardModal(true)}
+                        className="p-2.5 rounded-xl bg-white/5 hover:bg-violet-500/10 border border-white/10 hover:border-violet-500/20 text-zinc-500 hover:text-violet-400 transition-all duration-200"
+                        title="Buat Kartu untuk Sosmed"
+                      >
+                        <ImageDown className="h-4 w-4" />
+                      </button>
+
                       <button
                         onClick={(e) => handleDeleteSummary(selectedSummary.id, e)}
                         className="p-2.5 rounded-xl bg-white/5 hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/20 text-zinc-500 hover:text-rose-400 transition-all duration-200"
@@ -3803,6 +4103,7 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
+
 
                   {/* Prominent popover matkul selector & detail row */}
                   <div className="flex flex-wrap items-center gap-y-3 gap-x-5 text-xs text-zinc-400 border-t border-white/[0.04] pt-4">
@@ -4218,16 +4519,49 @@ export default function Home() {
                     }}
                     disabled={isSendingChat}
                     placeholder={
-                      selectedSummary
-                        ? (chatScope === 'summary' 
-                            ? "Tanya materi ulasan ini..." 
-                            : chatScope === 'folder' 
-                              ? `Tanya lintas materi ${activeFolder?.name || ''}...` 
-                              : "Tanya lintas seluruh rangkuman...")
-                        : "Tanya asisten global Notara..."
+                      isListening
+                        ? "🎙️ Sedang mendengarkan..."
+                        : selectedSummary
+                          ? (chatScope === 'summary' 
+                              ? "Tanya materi ulasan ini..." 
+                              : chatScope === 'folder' 
+                                ? `Tanya lintas materi ${activeFolder?.name || ''}...` 
+                                : "Tanya lintas seluruh rangkuman...")
+                          : "Tanya asisten global Notara..."
                     }
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-4 pr-10 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-violet-500/50 disabled:opacity-50 font-sans resize-none max-h-[120px] overflow-y-auto"
+                    className={`w-full bg-black/40 border rounded-2xl pl-4 pr-20 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none disabled:opacity-50 font-sans resize-none max-h-[120px] overflow-y-auto transition-colors duration-300 ${
+                      isListening 
+                        ? 'border-rose-500/50 focus:border-rose-400' 
+                        : 'border-white/10 focus:border-violet-500/50'
+                    }`}
                   />
+                  {/* Mic Button — Google-style wave animation when active */}
+                  <button
+                    type="button"
+                    onClick={handleToggleMic}
+                    disabled={isSendingChat || voiceNotSupported}
+                    className={`absolute right-10 bottom-1 p-1.5 rounded-xl transition-all active:scale-95 duration-200 flex items-center justify-center ${
+                      isListening 
+                        ? 'w-9 h-8 bg-black/50 border border-rose-500/30' 
+                        : 'text-zinc-500 hover:text-violet-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed'
+                    }`}
+                    title={isListening ? "Hentikan rekaman" : "Input suara (Bahasa Indonesia)"}
+                  >
+                    {isListening ? (
+                      /* Google-style 5-bar wave */
+                      <div className="flex items-center gap-[2px] h-5">
+                        <div className="mic-bar-1 w-[3px] rounded-full bg-rose-400" style={{height: '4px'}} />
+                        <div className="mic-bar-2 w-[3px] rounded-full bg-rose-500" style={{height: '8px'}} />
+                        <div className="mic-bar-3 w-[3px] rounded-full bg-rose-400" style={{height: '14px'}} />
+                        <div className="mic-bar-4 w-[3px] rounded-full bg-rose-500" style={{height: '6px'}} />
+                        <div className="mic-bar-5 w-[3px] rounded-full bg-rose-400" style={{height: '10px'}} />
+                      </div>
+                    ) : (
+                      <Mic className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+
+                  {/* Send Button */}
                   <button 
                     type="submit"
                     disabled={isSendingChat || !chatInput.trim()}
@@ -4244,6 +4578,7 @@ export default function Home() {
                   🚀 Notara AI — Tanya apa saja tentang materi ini
                 </p>
               </form>
+
 
             </div>
           </>
@@ -4870,8 +5205,380 @@ export default function Home() {
         </div>
       )}
 
+      {/* SHARE CARD MODAL (Sprint 17 — Phase 4.5C) */}
+      {showShareCardModal && selectedSummary && (() => {
+        // Ekstrak poin-poin utama dari summary markdown
+        const extractKeyPoints = (md: string): string[] => {
+          const lines = md.split('\n');
+          const bullets: string[] = [];
+          for (const line of lines) {
+            const match = line.match(/^[-*•]\s+(.+)/) || line.match(/^\d+\.\s+(.+)/);
+            if (match) {
+              bullets.push(match[1].replace(/\*\*/g, '').trim());
+            }
+            if (bullets.length >= 3) break;
+          }
+          if (bullets.length < 3) {
+            // Fallback: ambil kalimat pertama dari paragraf
+            const sentences = md.replace(/#+.*/g, '').replace(/\*\*/g, '').split(/\.\s+/);
+            for (const s of sentences) {
+              if (s.trim().length > 20 && bullets.length < 3) {
+                bullets.push(s.trim().slice(0, 100) + (s.length > 100 ? '...' : ''));
+              }
+            }
+          }
+          return bullets.slice(0, 3);
+        };
+        const keyPoints = extractKeyPoints(selectedSummary.summary);
+        const shareUrl = typeof window !== 'undefined' && selectedSummary.is_public && selectedSummary.public_slug
+          ? `${window.location.origin}/s/${selectedSummary.public_slug}`
+          : null;
+        const isStory = shareCardFormat === 'story';
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans">
+            <div 
+              className="absolute inset-0 bg-black/90 backdrop-blur-md animate-in fade-in duration-200" 
+              onClick={() => !isGeneratingCard && setShowShareCardModal(false)} 
+            />
+            <div className="relative w-full max-w-2xl rounded-3xl bg-[#0F0E17] border border-white/[0.05] p-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+              
+              {/* Header */}
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    <ImageDown className="h-4 w-4 text-violet-400" />
+                    Kartu Sosmed
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">Download PNG untuk Instagram Story / WhatsApp / Twitter</p>
+                </div>
+                <button onClick={() => setShowShareCardModal(false)} className="p-2 rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 transition-all">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Format selector */}
+              <div className="flex gap-2 mb-5">
+                <button
+                  onClick={() => setShareCardFormat('story')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold border transition-all duration-200 ${
+                    shareCardFormat === 'story'
+                      ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-900/30'
+                      : 'border-white/10 text-zinc-500 hover:text-zinc-300 hover:border-white/20'
+                  }`}
+                >
+                  <Smartphone className="h-3.5 w-3.5" />
+                  Story (9:16)
+                </button>
+                <button
+                  onClick={() => setShareCardFormat('square')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold border transition-all duration-200 ${
+                    shareCardFormat === 'square'
+                      ? 'bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-900/30'
+                      : 'border-white/10 text-zinc-500 hover:text-zinc-300 hover:border-white/20'
+                  }`}
+                >
+                  <Square className="h-3.5 w-3.5" />
+                  Feed (1:1)
+                </button>
+              </div>
+
+              {/* Card Preview */}
+              <div className="flex justify-center mb-5">
+                <div 
+                  ref={shareCardRef}
+                  className="relative overflow-hidden rounded-2xl flex-shrink-0"
+                  style={{
+                    width: isStory ? '270px' : '300px',
+                    height: isStory ? '480px' : '300px',
+                    background: 'linear-gradient(135deg, #0C0A12 0%, #120F20 50%, #0C0A12 100%)',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                  }}
+                >
+                  {/* Background decoration */}
+                  <div style={{
+                    position: 'absolute', top: '-60px', right: '-60px',
+                    width: '200px', height: '200px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(139,92,246,0.25) 0%, transparent 70%)',
+                  }} />
+                  <div style={{
+                    position: 'absolute', bottom: '-40px', left: '-40px',
+                    width: '160px', height: '160px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
+                  }} />
+
+                  {/* Content */}
+                  <div style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+                    
+                    {/* Notara Brand */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '14px',
+                      }}>🧠</div>
+                      <span style={{ color: '#A78BFA', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em' }}>NOTARA</span>
+                    </div>
+
+                    {/* Category badge */}
+                    {selectedSummary.folder_id && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)',
+                        borderRadius: '6px', padding: '3px 8px', marginBottom: '12px', alignSelf: 'flex-start',
+                      }}>
+                        <span style={{ color: '#A78BFA', fontSize: '10px', fontWeight: '600' }}>
+                          {folders.find(f => f.id === selectedSummary.folder_id)?.icon || '📁'} {folders.find(f => f.id === selectedSummary.folder_id)?.name || 'Kuliah'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Title */}
+                    <h2 style={{
+                      color: '#FFFFFF',
+                      fontSize: isStory ? '15px' : '14px',
+                      fontWeight: '800',
+                      lineHeight: '1.3',
+                      marginBottom: '16px',
+                      flex: isStory ? '0 0 auto' : undefined,
+                    }}>
+                      {selectedSummary.title.slice(0, 80)}{selectedSummary.title.length > 80 ? '...' : ''}
+                    </h2>
+
+                    {/* Key Points */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {keyPoints.map((point, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <div style={{
+                            width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
+                            background: `linear-gradient(135deg, ${['#8B5CF6','#6366F1','#EC4899'][i]}, ${['#6366F1','#8B5CF6','#A78BFA'][i]})`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '9px', color: 'white', fontWeight: '800',
+                          }}>
+                            {i + 1}
+                          </div>
+                          <p style={{
+                            color: '#D1D5DB',
+                            fontSize: '11px',
+                            lineHeight: '1.4',
+                            margin: 0,
+                          }}>
+                            {point.slice(0, 90)}{point.length > 90 ? '...' : ''}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '16px 0' }} />
+
+                    {/* Footer */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <p style={{ color: '#6B7280', fontSize: '9px', margin: 0 }}>Dibuat dengan</p>
+                        <p style={{ color: '#A78BFA', fontSize: '10px', fontWeight: '700', margin: 0 }}>notara.app</p>
+                      </div>
+                      {shareUrl ? (
+                        <div style={{
+                          background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)',
+                          borderRadius: '6px', padding: '4px 8px', fontSize: '9px', color: '#A78BFA', fontWeight: '600',
+                        }}>
+                          🔗 Baca Lengkap
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '9px', color: '#4B5563', fontStyle: 'italic' }}>
+                          Aktifkan link publik untuk QR
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info if not public */}
+              {!shareUrl && (
+                <div className="mb-4 p-3 bg-amber-900/10 border border-amber-700/20 rounded-xl">
+                  <p className="text-[11px] text-amber-300 font-medium">
+                    💡 <strong>Tips:</strong> Aktifkan &quot;Link Publik&quot; dari tombol Share di toolbar agar QR code terintegrasi di kartu.
+                  </p>
+                </div>
+              )}
+
+              {/* Download Button */}
+              <button
+                onClick={handleGenerateShareCard}
+                disabled={isGeneratingCard}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:from-zinc-700 disabled:to-zinc-700 text-white text-sm font-semibold transition-all active:scale-[0.98] duration-200 flex items-center justify-center gap-2 shadow-lg shadow-violet-900/30"
+              >
+                {isGeneratingCard ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Membuat kartu...</>
+                ) : (
+                  <><Download className="h-4 w-4" /> Unduh PNG — Siap Dibagikan!</>
+                )}
+              </button>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* STUDY GROUP MODAL (Sprint 16) */}
+
+      {showStudyGroupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" 
+            onClick={() => !studyGroupLoading && setShowStudyGroupModal(false)} 
+          />
+          <div className="relative w-full max-w-md rounded-3xl bg-[#0F0E17] border border-white/[0.05] p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-base font-bold text-white">Kelompok Belajar</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">Belajar bersama teman-teman</p>
+              </div>
+              <button
+                onClick={() => setShowStudyGroupModal(false)}
+                className="p-2 rounded-xl text-zinc-500 hover:text-white hover:bg-white/5 transition-all"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 p-1 bg-black/40 rounded-xl mb-5 border border-white/[0.04]">
+              <button
+                onClick={() => setStudyGroupTab('create')}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  studyGroupTab === 'create'
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                ✨ Buat Kelompok
+              </button>
+              <button
+                onClick={() => setStudyGroupTab('join')}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  studyGroupTab === 'join'
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                🔗 Bergabung
+              </button>
+            </div>
+
+            {studyGroupTab === 'create' ? (
+              /* Create Group Form */
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Nama Kelompok *</label>
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={e => setNewGroupName(e.target.value)}
+                    placeholder="cth: Kelompok Fisika A, Tim Basis Data..."
+                    maxLength={50}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-violet-500/50 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Deskripsi (opsional)</label>
+                  <textarea
+                    value={newGroupDesc}
+                    onChange={e => setNewGroupDesc(e.target.value)}
+                    placeholder="Tujuan kelompok, jadwal belajar, dll..."
+                    rows={3}
+                    maxLength={200}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-violet-500/50 transition-colors resize-none"
+                  />
+                </div>
+                <div className="p-3 bg-violet-900/10 border border-violet-700/20 rounded-xl">
+                  <p className="text-[11px] text-violet-300 font-medium">💡 Setelah membuat kelompok, kamu akan mendapat <strong>kode undangan</strong> untuk dibagikan ke teman-teman.</p>
+                </div>
+                <button
+                  onClick={handleCreateGroup}
+                  disabled={studyGroupLoading || !newGroupName.trim()}
+                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:bg-white/5 disabled:text-zinc-600 text-white text-sm font-semibold transition-all active:scale-[0.98] duration-200 flex items-center justify-center gap-2"
+                >
+                  {studyGroupLoading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Membuat...</>
+                  ) : (
+                    <><Users className="h-4 w-4" /> Buat Kelompok</>
+                  )}
+                </button>
+              </div>
+            ) : (
+              /* Join Group Form */
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Kode Undangan</label>
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value.toLowerCase())}
+                    placeholder="Masukkan kode 8 karakter..."
+                    maxLength={8}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-violet-500/50 transition-colors font-mono tracking-widest text-center uppercase"
+                  />
+                </div>
+                <div className="p-3 bg-emerald-900/10 border border-emerald-700/20 rounded-xl">
+                  <p className="text-[11px] text-emerald-300 font-medium">🔗 Minta kode undangan dari owner kelompok untuk bergabung. Kode terdiri dari 8 karakter.</p>
+                </div>
+                <button
+                  onClick={handleJoinGroup}
+                  disabled={studyGroupLoading || joinCode.trim().length < 4}
+                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-white/5 disabled:text-zinc-600 text-white text-sm font-semibold transition-all active:scale-[0.98] duration-200 flex items-center justify-center gap-2"
+                >
+                  {studyGroupLoading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Bergabung...</>
+                  ) : (
+                    <><UserPlus className="h-4 w-4" /> Bergabung Sekarang</>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Existing Groups List */}
+            {studyGroups.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-white/[0.05]">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mb-2">Kelompok Saya ({studyGroups.length})</p>
+                <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
+                  {studyGroups.map(g => (
+                    <div key={g.id} className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03]">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Hash className="h-3 w-3 text-violet-500 flex-shrink-0" />
+                        <span className="text-xs text-zinc-300 truncate">{g.name}</span>
+                        {g.user_role === 'owner' && <Crown className="h-2.5 w-2.5 text-amber-400 flex-shrink-0" />}
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(g.invite_code);
+                          showToast(`Kode disalin: ${g.invite_code}`, 'success');
+                        }}
+                        className="text-[10px] font-mono text-violet-500 hover:text-violet-300 transition-colors flex-shrink-0 ml-2"
+                        title="Salin kode undangan"
+                      >
+                        {g.invite_code}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
       {/* 2FA SETTINGS MODAL (Sprint 13) */}
       {showMfaModal && (
+
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans">
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" 
