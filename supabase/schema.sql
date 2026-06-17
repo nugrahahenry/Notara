@@ -291,6 +291,58 @@ WITH CHECK (
   )
 );
 
+-- ==========================================
+-- CHAT THREADS SCHEMA (Sprint 18 - Phase 4.5D)
+-- ==========================================
+
+-- 18. TABEL CHAT THREADS (SESI OBROLAN)
+CREATE TABLE IF NOT EXISTS chat_threads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  summary_id UUID REFERENCES summaries(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT 'Obrolan Baru',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+-- Aktifkan RLS
+ALTER TABLE chat_threads ENABLE ROW LEVEL SECURITY;
+
+-- Kebijakan RLS untuk chat_threads
+CREATE POLICY "Users can manage their own chat threads"
+ON chat_threads FOR ALL
+USING (auth.uid() = user_id);
+
+-- 19. MODIFIKASI TABEL CHAT MESSAGES
+-- Tambahkan kolom thread_id (nullable)
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS thread_id UUID REFERENCES chat_threads(id) ON DELETE CASCADE;
+
+-- Update RLS Policy untuk chat_messages agar mendukung thread access
+DROP POLICY IF EXISTS "Users can access chat for their own or shared summaries" ON chat_messages;
+
+CREATE POLICY "Users can access chat for their own or shared summaries"
+ON chat_messages FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM summaries
+    WHERE summaries.id = chat_messages.summary_id
+    AND (
+      summaries.user_id = auth.uid() OR
+      EXISTS (
+        SELECT 1 FROM group_folders gf
+        JOIN group_members gm ON gf.group_id = gm.group_id
+        WHERE gf.folder_id = summaries.folder_id
+        AND gm.user_id = auth.uid()
+      )
+    )
+  )
+  OR
+  EXISTS (
+    SELECT 1 FROM chat_threads
+    WHERE chat_threads.id = chat_messages.thread_id
+    AND chat_threads.user_id = auth.uid()
+  )
+);
+
 
 
 

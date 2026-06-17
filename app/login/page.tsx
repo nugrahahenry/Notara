@@ -3,7 +3,64 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Brain, Mail, Lock, User, ArrowRight, Loader2, Sparkles, Zap, MessageSquare, FolderGit2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, Zap, MessageSquare, FolderGit2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { NotaraLogo } from '../components/brand/NotaraLogo';
+
+// Helper to detect offensive names
+const containsDirtyWord = (name: string): boolean => {
+  const cleanName = name.toLowerCase().trim();
+  const badWords = [
+    'anjing', 'babi', 'bangsat', 'kontol', 'memek', 'jancok', 'asu', 
+    'pepek', 'perek', 'lonte', 'bajingan', 'ngentot', 'peli', 'jembut',
+    'fuck', 'shit', 'asshole', 'bitch', 'bastard', 'cunt'
+  ];
+  return badWords.some(word => cleanName.includes(word));
+};
+
+// Helper for password strength calculation
+const getPasswordStrength = (pass: string) => {
+  if (!pass) return { text: 'Sangat Lemah', color: 'bg-zinc-800' };
+  let score = 0;
+  if (pass.length >= 6) score += 1;
+  if (pass.length >= 10) score += 1;
+  if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
+  if (/[0-9]/.test(pass)) score += 1;
+  if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+
+  if (score <= 1) return { text: 'Lemah', color: 'bg-rose-500' };
+  if (score <= 3) return { text: 'Sedang', color: 'bg-amber-500' };
+  return { text: 'Kuat', color: 'bg-emerald-500' };
+};
+
+// Helper for translating Supabase Auth API error messages to user-friendly Indonesian
+const getFriendlyErrorMessage = (msg: string): string => {
+  const cleanMsg = msg.toLowerCase();
+  if (cleanMsg.includes('password should be at least 6 characters')) {
+    return 'Kata sandi terlalu pendek. Minimal harus 6 karakter.';
+  }
+  if (cleanMsg.includes('invalid email') || cleanMsg.includes('is invalid')) {
+    return 'Format email tidak valid. Silakan periksa kembali penulisan email Anda.';
+  }
+  if (cleanMsg.includes('invalid login credentials')) {
+    return 'Email atau kata sandi salah. Silakan periksa kembali. Jika baru mendaftar, pastikan Anda sudah verifikasi email terlebih dahulu.';
+  }
+  if (cleanMsg.includes('email not confirmed')) {
+    return 'Email Anda belum terverifikasi. Silakan cek kotak masuk email dan klik link verifikasi sebelum masuk.';
+  }
+  if (cleanMsg.includes('user already registered')) {
+    return 'Email ini sudah terdaftar. Silakan masuk menggunakan email ini.';
+  }
+  if (cleanMsg.includes('signup requires a valid email')) {
+    return 'Pendaftaran memerlukan email yang valid.';
+  }
+  if (cleanMsg.includes('flow_state') || cleanMsg.includes('state has already been used')) {
+    return 'Sesi login sebelumnya kedaluwarsa. Silakan coba masuk lagi.';
+  }
+  if (cleanMsg.includes('rate limit') || cleanMsg.includes('too many requests')) {
+    return 'Terlalu banyak percobaan login. Silakan tunggu beberapa menit sebelum mencoba lagi.';
+  }
+  return msg;
+};
 
 function LoginForm() {
   const router = useRouter();
@@ -13,7 +70,9 @@ function LoginForm() {
   // Form States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
   
   // Loading and Error States
   const [loading, setLoading] = useState(false);
@@ -41,6 +100,8 @@ function LoginForm() {
       setErrorMsg('Gagal memproses sesi dari Google. Silakan coba lagi.');
     } else if (errorParam === 'oauth-error') {
       setErrorMsg('Terjadi kesalahan saat login dengan Google. Silakan coba lagi.');
+    } else if (errorParam === 'session-expired') {
+      setErrorMsg('Sesi login kedaluwarsa atau sudah pernah digunakan. Silakan coba masuk kembali.');
     }
     // Jika cancelled=1 → user sengaja klik Batal, tidak perlu tampilkan error
 
@@ -97,6 +158,30 @@ function LoginForm() {
       return;
     }
 
+    // Client-side validations for Sign Up
+    if (isSignUp) {
+      if (fullName.trim().length < 2) {
+        setErrorMsg('Nama lengkap minimal harus 2 karakter.');
+        return;
+      }
+      if (containsDirtyWord(fullName)) {
+        setErrorMsg('Nama lengkap tidak boleh mengandung kata-kata kasar atau tidak pantas.');
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMsg('Kata sandi minimal harus 6 karakter.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg('Kata sandi dan konfirmasi kata sandi tidak cocok.');
+        return;
+      }
+      if (!acceptTerms) {
+        setErrorMsg('Anda harus menyetujui Syarat & Ketentuan untuk mendaftar.');
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       setErrorMsg(null);
@@ -151,13 +236,7 @@ function LoginForm() {
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      if (err.message === 'Invalid login credentials') {
-        setErrorMsg('Email atau password salah. Silakan periksa kembali.');
-      } else if (err.message === 'User already registered') {
-        setErrorMsg('Email ini sudah terdaftar. Silakan masuk saja.');
-      } else {
-        setErrorMsg(err.message || 'Terjadi kesalahan sistem. Silakan coba beberapa saat lagi.');
-      }
+      setErrorMsg(getFriendlyErrorMessage(err.message || 'Terjadi kesalahan sistem. Silakan coba beberapa saat lagi.'));
     } finally {
       setLoading(false);
     }
@@ -197,7 +276,7 @@ function LoginForm() {
           {/* Logo */}
           <div className="flex items-center space-x-3 group">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/30 ring-1 ring-violet-400/30">
-              <Brain className="w-6 h-6 text-white" />
+              <NotaraLogo variant="icon" size={24} />
             </div>
             <div>
               <span className="text-2xl font-bold tracking-tight bg-gradient-to-r from-violet-200 via-fuchsia-200 to-white bg-clip-text text-transparent">
@@ -260,7 +339,7 @@ function LoginForm() {
             {/* Header for Mobile */}
             <div className="flex flex-col items-center text-center lg:hidden space-y-2 mb-2">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/30">
-                <Brain className="w-5 h-5 text-white" />
+                <NotaraLogo variant="icon" size={20} />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-violet-200 to-white bg-clip-text text-transparent">
                 Notara
@@ -291,9 +370,14 @@ function LoginForm() {
             )}
 
             {successMsg && (
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs md:text-sm flex items-start space-x-2.5 animate-fadeIn">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>{successMsg}</span>
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs md:text-sm flex flex-col items-center text-center gap-3 animate-fadeIn">
+                <div className="h-10 w-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-950/20">
+                  <NotaraLogo variant="icon" animated={true} motionState="idle" size={20} />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-white text-sm">Pendaftaran Sukses!</h4>
+                  <p className="text-zinc-300 text-xs mt-1.5 leading-relaxed">{successMsg}</p>
+                </div>
               </div>
             )}
 
@@ -368,6 +452,106 @@ function LoginForm() {
                 </div>
               </div>
 
+              {isSignUp && (
+                <div className="space-y-1.5 animate-fadeIn">
+                  <label className="text-xs text-zinc-400 font-medium">Konfirmasi Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={loading}
+                      className="w-full pl-10 pr-4 py-3 bg-zinc-950 border border-zinc-800/80 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 rounded-xl text-sm transition-all outline-none text-zinc-200"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {isSignUp && password && (
+                <div className="space-y-1.5 animate-fadeIn p-3 rounded-2xl bg-black/30 border border-white/[0.03]">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-zinc-500 font-medium">Kekuatan Kata Sandi:</span>
+                    <span className={`font-bold ${
+                      getPasswordStrength(password).text === 'Kuat' 
+                        ? 'text-emerald-400' 
+                        : getPasswordStrength(password).text === 'Sedang' 
+                          ? 'text-amber-400' 
+                          : 'text-rose-400'
+                    }`}>
+                      {getPasswordStrength(password).text}
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-zinc-950 rounded-full overflow-hidden border border-white/[0.03]">
+                    <div 
+                      className={`h-full transition-all duration-300 ${getPasswordStrength(password).color} ${
+                        getPasswordStrength(password).text === 'Kuat' 
+                          ? 'w-full' 
+                          : getPasswordStrength(password).text === 'Sedang' 
+                            ? 'w-2/3' 
+                            : 'w-1/3'
+                      }`}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-[9px] pt-1 font-mono text-zinc-500">
+                    <div className="flex items-center gap-1">
+                      <span className={password.length >= 6 ? 'text-emerald-400 font-bold' : 'text-zinc-700 font-bold'}>
+                        {password.length >= 6 ? '✓' : '○'}
+                      </span>
+                      <span>Min. 6 karakter</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className={/[A-Z]/.test(password) && /[a-z]/.test(password) ? 'text-emerald-400 font-bold' : 'text-zinc-700 font-bold'}>
+                        {/[A-Z]/.test(password) && /[a-z]/.test(password) ? '✓' : '○'}
+                      </span>
+                      <span>Huruf besar & kecil</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className={/[0-9]/.test(password) ? 'text-emerald-400 font-bold' : 'text-zinc-700 font-bold'}>
+                        {/[0-9]/.test(password) ? '✓' : '○'}
+                      </span>
+                      <span>Angka</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-400 font-bold' : 'text-zinc-700 font-bold'}>
+                        {/[^A-Za-z0-9]/.test(password) ? '✓' : '○'}
+                      </span>
+                      <span>Simbol khusus</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isSignUp && (
+                <div className="space-y-3 animate-fadeIn bg-black/20 p-3.5 rounded-2xl border border-white/[0.03]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Syarat & Ketentuan</span>
+                    <span className="text-[9px] text-zinc-500 font-medium">Scroll untuk membaca</span>
+                  </div>
+                  <div className="h-20 overflow-y-auto text-[9.5px] p-2.5 bg-black/40 border border-white/[0.04] rounded-xl text-zinc-500 leading-relaxed scrollbar-thin select-text text-left">
+                    <p className="font-bold text-zinc-400 mb-1">Syarat Penggunaan Notara AI</p>
+                    <p className="mb-1.5">Selamat datang di Notara AI Companion. Dengan mendaftar, Anda menyetujui ketentuan berikut:</p>
+                    <p className="mb-1.5"><strong>1. Layanan Studi:</strong> Layanan transkrip dan rangkuman ini disediakan khusus untuk membantu studi pribadi mahasiswa. Anda dilarang menggunakannya untuk aktivitas ilegal atau kecurangan akademik.</p>
+                    <p className="mb-1.5"><strong>2. Kebijakan Privasi:</strong> Kami menghormati data Anda. Berkas audio dan transkrip kuliah Anda disimpan aman dan tidak akan dibagikan atau dijual ke pihak ketiga.</p>
+                    <p className="mb-1.5"><strong>3. Hak Cipta Materi:</strong> Anda bertanggung jawab penuh atas hak cipta materi kuliah yang Anda unggah. Pastikan Anda memiliki izin merekam dosen yang bersangkutan.</p>
+                    <p className="mb-1.5"><strong>4. Batasan Akun:</strong> Akun free/gratis dibatasi oleh kapasitas penyimpanan dan durasi pemrosesan tertentu yang dapat berubah sewaktu-waktu.</p>
+                  </div>
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none py-1 group text-left">
+                    <input
+                      type="checkbox"
+                      checked={acceptTerms}
+                      onChange={(e) => setAcceptTerms(e.target.checked)}
+                      disabled={loading}
+                      className="mt-0.5 rounded border-zinc-800 text-violet-600 focus:ring-violet-500 bg-zinc-950 accent-violet-600 h-3.5 w-3.5 cursor-pointer"
+                    />
+                    <span className="text-[10.5px] text-zinc-400 group-hover:text-zinc-300 transition-colors leading-tight">
+                      Saya membaca dan menyetujui Syarat & Ketentuan Notara
+                    </span>
+                  </label>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
@@ -391,13 +575,27 @@ function LoginForm() {
                   setIsSignUp(!isSignUp);
                   setErrorMsg(null);
                   setSuccessMsg(null);
+                  setConfirmPassword('');
+                  setAcceptTerms(false);
                 }}
                 disabled={loading}
-                className="text-xs md:text-sm text-zinc-400 hover:text-violet-400 font-medium transition-colors cursor-pointer outline-none"
+                className="text-xs md:text-sm text-zinc-400 font-medium transition-colors cursor-pointer outline-none group"
               >
-                {isSignUp 
-                  ? 'Sudah punya akun? Masuk di sini' 
-                  : 'Belum punya akun? Daftar gratis di sini'}
+                {isSignUp ? (
+                  <>
+                    Sudah punya akun?{' '}
+                    <span className="text-violet-400 group-hover:text-violet-300 font-semibold transition-colors ml-1">
+                      Masuk di sini
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Belum punya akun?{' '}
+                    <span className="text-violet-400 group-hover:text-violet-300 font-semibold transition-colors ml-1">
+                      Daftar gratis di sini
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           </div>

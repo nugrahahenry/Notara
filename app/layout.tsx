@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   description: "Ubah rekaman kuliah dan rapat panjang menjadi rangkuman terstruktur, daftar istilah kunci, dan prediksi soal ujian dalam hitungan detik.",
   keywords: ["AI summarizer", "transkripsi kuliah", "AI notes", "productivity student", "meeting recorder", "notulen rapat AI"],
   authors: [{ name: "Henry & Notara Team" }],
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+  },
   openGraph: {
     title: "Notara — Reduksi Audio Kuliah Jadi Rangkuman AI",
     description: "Rekam langsung atau unggah berkas audio besar. Notara memotong audio secara asinkron dan merangkum konsep kunci secara cerdas.",

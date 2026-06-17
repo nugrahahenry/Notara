@@ -3,7 +3,7 @@
 // Analogi: Ini kayak "daftar instruksi" ke petugas arsip — ambil ini, simpan itu, hapus ini
 
 import { supabase } from './supabase';
-import type { Folder, Summary, CreateFolderInput, CreateSummaryInput, ChatMessage, StudyGroup, GroupMember } from './types';
+import type { Folder, Summary, CreateFolderInput, CreateSummaryInput, ChatMessage, StudyGroup, GroupMember, ChatThread } from './types';
 
 // ─────────────────────────────────────────────
 // FOLDER OPERATIONS
@@ -272,15 +272,87 @@ export function extractTitleFromSummary(summaryText: string): string {
 }
 
 // ─────────────────────────────────────────────
-// CHAT MESSAGE OPERATIONS
+// CHAT MESSAGE & THREAD OPERATIONS
 // ─────────────────────────────────────────────
 
-/** Ambil riwayat chat berdasarkan ID rangkuman */
-export async function getChatMessages(summaryId: string): Promise<ChatMessage[]> {
+/** Ambil semua thread obrolan berdasarkan ID rangkuman (atau global jika null) */
+export async function getChatThreads(summaryId: string | null, userId: string): Promise<ChatThread[]> {
+  let query = supabase
+    .from('chat_threads')
+    .select('*')
+    .eq('user_id', userId);
+  
+  if (summaryId) {
+    query = query.eq('summary_id', summaryId);
+  } else {
+    query = query.is('summary_id', null);
+  }
+  
+  const { data, error } = await query.order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error fetching chat threads:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+/** Buat thread obrolan baru */
+export async function createChatThread(
+  summaryId: string | null,
+  userId: string,
+  title: string
+): Promise<ChatThread | null> {
+  const { data, error } = await supabase
+    .from('chat_threads')
+    .insert({
+      summary_id: summaryId,
+      user_id: userId,
+      title
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating chat thread:', error.message);
+    return null;
+  }
+  return data;
+}
+
+/** Hapus thread obrolan beserta seluruh pesannya */
+export async function deleteChatThread(threadId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('chat_threads')
+    .delete()
+    .eq('id', threadId);
+
+  if (error) {
+    console.error('Error deleting chat thread:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Ubah nama judul thread chat */
+export async function renameChatThread(threadId: string, title: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('chat_threads')
+    .update({ title })
+    .eq('id', threadId);
+
+  if (error) {
+    console.error('Error renaming chat thread:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Ambil riwayat chat berdasarkan ID thread */
+export async function getChatMessages(threadId: string): Promise<ChatMessage[]> {
   const { data, error } = await supabase
     .from('chat_messages')
     .select('*')
-    .eq('summary_id', summaryId)
+    .eq('thread_id', threadId)
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -290,9 +362,10 @@ export async function getChatMessages(summaryId: string): Promise<ChatMessage[]>
   return data || [];
 }
 
-/** Simpan chat message baru */
+/** Simpan chat message baru terhubung ke thread */
 export async function createChatMessage(
-  summaryId: string,
+  summaryId: string | null,
+  threadId: string,
   role: 'user' | 'assistant',
   content: string
 ): Promise<ChatMessage | null> {
@@ -300,6 +373,7 @@ export async function createChatMessage(
     .from('chat_messages')
     .insert({
       summary_id: summaryId,
+      thread_id: threadId,
       role,
       content
     })
@@ -313,12 +387,12 @@ export async function createChatMessage(
   return data;
 }
 
-/** Hapus riwayat chat untuk satu rangkuman */
-export async function clearChatMessages(summaryId: string): Promise<boolean> {
+/** Hapus riwayat chat untuk satu thread */
+export async function clearChatMessages(threadId: string): Promise<boolean> {
   const { error } = await supabase
     .from('chat_messages')
     .delete()
-    .eq('summary_id', summaryId);
+    .eq('thread_id', threadId);
 
   if (error) {
     console.error('Error clearing chat messages:', error.message);

@@ -3,14 +3,15 @@
 import { useState, useEffect, useRef, DragEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  UploadCloud, FileAudio, FileText, Sparkles, Brain, 
+  UploadCloud, FileAudio, FileText, Sparkles, 
   Check, Loader2, Clipboard, AlertCircle, Trash2, ArrowLeft, BookOpen,
   Plus, FolderPlus, Folder, Edit3, X, ChevronRight, ChevronDown, MoreVertical,
   Calendar, FileSignature, ArrowUpRight, Menu, MessageSquare, Send, Search, LogOut,
   Shield, QrCode, Key, Share2, Globe, Lock, Copy, ExternalLink,
   Mic, MicOff, Users, UserPlus, Link2, Crown, Hash,
-  ImageDown, Smartphone, Square, Download
+  ImageDown, Smartphone, Square, Download, Clock
 } from 'lucide-react';
+import { NotaraLogo } from './components/brand/NotaraLogo';
 import {
   getFolders,
   createFolder,
@@ -33,9 +34,13 @@ import {
   getGroupMembers,
   shareFolderWithGroup,
   getGroupFolders,
-  leaveStudyGroup
+  leaveStudyGroup,
+  getChatThreads,
+  createChatThread,
+  deleteChatThread,
+  renameChatThread
 } from '@/lib/db';
-import type { Folder as FolderType, Summary as SummaryType, ChatMessage, StudyGroup } from '@/lib/types';
+import type { Folder as FolderType, Summary as SummaryType, ChatMessage, StudyGroup, ChatThread } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -154,6 +159,26 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+// Format relative time for chat thread age description
+const formatRelativeTime = (dateStr: string): string => {
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Baru saja';
+    if (diffMins < 60) return `${diffMins}m yang lalu`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}j yang lalu`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Kemarin';
+    if (diffDays < 7) return `${diffDays} hari yang lalu`;
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  } catch (e) {
+    return 'Baru saja';
+  }
+};
+
 // ==========================================
 // HOME COMPONENT
 // ==========================================
@@ -180,6 +205,11 @@ export default function Home() {
   const [isSendingChat, setIsSendingChat] = useState<boolean>(false);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
   
+  // Chatbot Thread States
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [chatThreads, setChatThreads] = useState<ChatThread[]>([]);
+  const [showChatHistory, setShowChatHistory] = useState<boolean>(false);
+  
   // Sidebar Expansion States
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false); // Mobile sidebar open
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false); // Desktop locked expansion
@@ -188,6 +218,7 @@ export default function Home() {
   // Chatbot Drawer States
   const [isChatOpenMobile, setIsChatOpenMobile] = useState<boolean>(false); // Mobile chatbot active
   const [chatScope, setChatScope] = useState<'summary' | 'folder' | 'global'>('summary'); // Chat context scope
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState<boolean>(true); // Desktop chatbot open
   
   // Folder Selector Prominent Dropdown
   const [showFolderSelectDropdown, setShowFolderSelectDropdown] = useState<boolean>(false);
@@ -342,6 +373,14 @@ export default function Home() {
   const [isGeneratingCard, setIsGeneratingCard] = useState<boolean>(false);
   const [shareCardFormat, setShareCardFormat] = useState<'story' | 'square'>('story');
   const shareCardRef = useRef<HTMLDivElement>(null);
+
+  // Persistent Desktop Chat Panel State
+  useEffect(() => {
+    const saved = localStorage.getItem('isChatPanelOpen');
+    if (saved !== null) {
+      setIsChatPanelOpen(saved === 'true');
+    }
+  }, []);
 
   // Focus Timer useEffect — scoped per user account
   useEffect(() => {
@@ -1004,39 +1043,124 @@ export default function Home() {
     };
   }, []);
 
-  // Load chat messages when selectedSummary changes
+  // Load chat threads when selectedSummary or user changes
   useEffect(() => {
-    if (!selectedSummary) {
-      // Load initial onboarding welcome message if no summary is active
+    if (!user) return;
+    
+    const summaryId = selectedSummary ? selectedSummary.id : null;
+    const userId = user.id;
+    
+    async function loadThreads() {
+      try {
+        const threads = await getChatThreads(summaryId, userId);
+        setChatThreads(threads);
+        if (threads.length > 0) {
+          setActiveThreadId(threads[0].id);
+          setShowChatHistory(false);
+        } else {
+          setActiveThreadId(null);
+          setChatMessages([
+            {
+              id: 'welcome',
+              summary_id: summaryId,
+              thread_id: '',
+              role: 'assistant',
+              content: selectedSummary
+                ? 'Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+                : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
+              created_at: new Date().toISOString()
+            }
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to load chat threads:', err);
+      }
+    }
+    
+    loadThreads();
+  }, [selectedSummary, user]);
+
+  // Load chat messages when activeThreadId changes
+  useEffect(() => {
+    const summaryId = selectedSummary ? selectedSummary.id : null;
+    if (!activeThreadId) {
       setChatMessages([
         {
           id: 'welcome',
-          summary_id: '',
+          summary_id: summaryId,
+          thread_id: '',
           role: 'assistant',
-          content: 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
+          content: selectedSummary
+            ? 'Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+            : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
           created_at: new Date().toISOString()
         }
       ]);
       return;
     }
     
-    const summaryId = selectedSummary.id;
-    
-    async function loadChat() {
+    const threadId = activeThreadId;
+    async function loadMessages() {
       try {
-        const history = await getChatMessages(summaryId);
+        const history = await getChatMessages(threadId);
         setChatMessages(history);
       } catch (err) {
-        console.error('Failed to load chat history:', err);
+        console.error('Failed to load chat messages:', err);
       }
     }
     
-    loadChat();
-  }, [selectedSummary]);
+    loadMessages();
+  }, [activeThreadId, selectedSummary]);
+
+  // Create a new blank thread for the current scope
+  const handleCreateNewThread = () => {
+    setActiveThreadId(null);
+    setShowChatHistory(false);
+    const summaryId = selectedSummary ? selectedSummary.id : null;
+    setChatMessages([
+      {
+        id: 'welcome',
+        summary_id: summaryId,
+        thread_id: '',
+        role: 'assistant',
+        content: selectedSummary
+          ? 'Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+          : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
+        created_at: new Date().toISOString()
+      }
+    ]);
+  };
+
+  // Delete a specific chat thread
+  const handleDeleteThread = async (threadId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    triggerConfirm(
+      'Hapus Obrolan ini?',
+      'Apakah Anda yakin ingin menghapus riwayat obrolan ini secara permanen?',
+      async () => {
+        try {
+          const success = await deleteChatThread(threadId);
+          if (success) {
+            setChatThreads(prev => prev.filter(t => t.id !== threadId));
+            if (activeThreadId === threadId) {
+              setActiveThreadId(null);
+            }
+            showToast('Obrolan berhasil dihapus.', 'delete');
+          } else {
+            throw new Error('Gagal menghapus obrolan.');
+          }
+        } catch (err: any) {
+          setError(err.message);
+        }
+      }
+    );
+  };
 
   // Send message to chatbot AI with streaming response
   const handleSendChatMessage = async () => {
-    if (!chatInput.trim() || isSendingChat) return;
+    if (!chatInput.trim() || isSendingChat || !user) return;
 
     const userMessageText = chatInput.trim();
     setChatInput('');
@@ -1045,19 +1169,41 @@ export default function Home() {
     }
     setIsSendingChat(true);
 
+    let currentThreadId = activeThreadId;
+    const summaryId = selectedSummary ? selectedSummary.id : null;
+
+    // Auto-create a thread if none exists in the active view
+    if (!currentThreadId) {
+      try {
+        const title = userMessageText.slice(0, 30) + (userMessageText.length > 30 ? '...' : '');
+        const newThread = await createChatThread(summaryId, user.id, title);
+        if (newThread) {
+          currentThreadId = newThread.id;
+          setChatThreads(prev => [newThread, ...prev]);
+          setActiveThreadId(newThread.id);
+        } else {
+          throw new Error('Gagal membuat thread chat baru.');
+        }
+      } catch (err: any) {
+        console.error('Failed to auto-create thread:', err);
+        setError('Gagal memulai obrolan baru.');
+        setIsSendingChat(false);
+        return;
+      }
+    }
+
     // 1. Add user message locally and write to database
     let savedUserMsg: ChatMessage | null = null;
-    if (selectedSummary) {
-      try {
-        savedUserMsg = await createChatMessage(selectedSummary.id, 'user', userMessageText);
-      } catch (e) {
-        console.error('Failed to save user message to DB:', e);
-      }
+    try {
+      savedUserMsg = await createChatMessage(summaryId, currentThreadId, 'user', userMessageText);
+    } catch (e) {
+      console.error('Failed to save user message to DB:', e);
     }
 
     const userMessage: ChatMessage = savedUserMsg || {
       id: Math.random().toString(),
-      summary_id: selectedSummary?.id || '',
+      summary_id: summaryId,
+      thread_id: currentThreadId,
       role: 'user',
       content: userMessageText,
       created_at: new Date().toISOString()
@@ -1102,7 +1248,8 @@ export default function Home() {
     const tempAssistantId = Math.random().toString();
     const assistantPlaceholder: ChatMessage = {
       id: tempAssistantId,
-      summary_id: selectedSummary?.id || '',
+      summary_id: summaryId,
+      thread_id: currentThreadId,
       role: 'assistant',
       content: '', 
       created_at: new Date().toISOString()
@@ -1111,6 +1258,10 @@ export default function Home() {
 
     try {
       // 4. Send request to api/chat
+      const messageHistoryForApi = chatMessages
+        .filter(m => m.id !== 'welcome' && m.id !== tempAssistantId)
+        .map(m => ({ role: m.role, content: m.content }));
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -1119,7 +1270,7 @@ export default function Home() {
         body: JSON.stringify({
           message: userMessageText,
           contextTranscript,
-          history: chatMessages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+          history: [...messageHistoryForApi, { role: 'user', content: userMessageText }],
           chatScope: activeScope,
           folderName: selectedSummary ? (folders.find(f => f.id === selectedSummary.folder_id)?.name || 'Mata Kuliah') : ''
         })
@@ -1150,7 +1301,7 @@ export default function Home() {
             
             try {
               const dataObj = JSON.parse(dataStr);
-              const content = dataObj.choices?.[0]?.delta?.content || '';
+               const content = dataObj.choices?.[0]?.delta?.content || '';
               if (content) {
                 assistantText += content;
                 setChatMessages(prev => prev.map(m => 
@@ -1165,9 +1316,9 @@ export default function Home() {
       }
 
       // 6. Save completed assistant message to database
-      if (selectedSummary && assistantText.trim()) {
+      if (assistantText.trim()) {
         try {
-          const savedAssistantMsg = await createChatMessage(selectedSummary.id, 'assistant', assistantText);
+          const savedAssistantMsg = await createChatMessage(summaryId, currentThreadId, 'assistant', assistantText);
           if (savedAssistantMsg) {
             setChatMessages(prev => prev.map(m => 
               m.id === tempAssistantId ? savedAssistantMsg : m
@@ -1190,18 +1341,30 @@ export default function Home() {
     }
   };
 
-  // Clear chat history
+  // Clear chat history for the active thread
   const handleClearChat = async () => {
-    if (!selectedSummary) return;
+    if (!activeThreadId) return;
     
     triggerConfirm(
       'Hapus Riwayat Chat?',
-      'Apakah Anda yakin ingin menghapus semua pesan chat di rangkuman ini secara permanen?',
+      'Apakah Anda yakin ingin menghapus semua pesan chat di obrolan ini secara permanen?',
       async () => {
         try {
-          const success = await clearChatMessages(selectedSummary.id);
+          const success = await clearChatMessages(activeThreadId);
           if (success) {
-            setChatMessages([]);
+            const summaryId = selectedSummary ? selectedSummary.id : null;
+            setChatMessages([
+              {
+                id: 'welcome',
+                summary_id: summaryId,
+                thread_id: activeThreadId,
+                role: 'assistant',
+                content: selectedSummary
+                  ? 'Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+                  : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
+                created_at: new Date().toISOString()
+              }
+            ]);
             showToast('Riwayat chat berhasil dihapus.', 'delete');
           } else {
             throw new Error('Gagal menghapus riwayat chat.');
@@ -2754,14 +2917,8 @@ export default function Home() {
         {/* LOGO AREA */}
         {isSidebarOpen ? (
           <div className="p-4 border-b border-white/[0.04] flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-                <Brain className="h-4.5 w-4.5 text-white" />
-              </div>
-              <div className="animate-in fade-in duration-300">
-                <h1 className="text-base font-black tracking-wider text-white leading-none">NOTARA</h1>
-                <span className="text-[8px] text-violet-400 font-bold tracking-widest uppercase block mt-0.5">Companion</span>
-              </div>
+            <div className="animate-in fade-in duration-300">
+              <NotaraLogo variant="horizontal" size={36} showGlow />
             </div>
             {/* Lock Pin Button */}
             <button 
@@ -2776,10 +2933,10 @@ export default function Home() {
           <div className="h-16 border-b border-white/[0.04] flex items-center justify-center shrink-0">
             <button 
               onClick={() => setSidebarExpanded(true)}
-              className="h-9 w-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20 hover:scale-105 active:scale-95 transition-all"
+              className="hover:scale-105 active:scale-95 transition-all"
               title="Buka Menu Sidebar"
             >
-              <Brain className="h-4 w-4 text-white" />
+              <NotaraLogo variant="icon" size={32} />
             </button>
           </div>
         )}
@@ -3201,7 +3358,15 @@ export default function Home() {
                   })
                 )}
                 {filteredSummaries.length === 0 && (
-                  <p className="px-3 py-2 text-[10px] text-zinc-600 italic">Tidak ada rangkuman</p>
+                  <div className="py-10 px-4 text-center flex flex-col items-center justify-center gap-3 bg-white/[0.01] border border-white/[0.03] rounded-2xl mx-3 my-4 animate-in fade-in duration-300">
+                    <NotaraLogo variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
+                    <div>
+                      <p className="text-zinc-400 font-extrabold text-xs">Belum Ada Rangkuman</p>
+                      <p className="text-[10px] text-zinc-500 mt-1 max-w-[160px] mx-auto leading-normal">
+                        Mata kuliah ini belum memiliki berkas. Yuk, unggah berkas audio pertamamu!
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -3355,6 +3520,24 @@ export default function Home() {
               <span>Chat AI</span>
             </button>
 
+            {/* Desktop Chat Toggle */}
+            <button
+              onClick={() => {
+                const nextState = !isChatPanelOpen;
+                setIsChatPanelOpen(nextState);
+                localStorage.setItem('isChatPanelOpen', String(nextState));
+              }}
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs border transition-all active:scale-95 duration-200 cursor-pointer ${
+                isChatPanelOpen 
+                  ? 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/[0.06] hover:border-white/10' 
+                  : 'bg-violet-600 hover:bg-violet-500 text-white border-transparent shadow-md shadow-violet-500/20'
+              }`}
+              title={isChatPanelOpen ? "Sembunyikan Chat Asisten" : "Tampilkan Chat Asisten"}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>{isChatPanelOpen ? 'Tutup Chat' : 'Chat AI'}</span>
+            </button>
+
             <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold flex items-center gap-1 hidden sm:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               Connected
@@ -3470,14 +3653,15 @@ export default function Home() {
             {loading && (
               <div className="max-w-xl mx-auto text-center py-16 flex flex-col items-center justify-center animate-in fade-in duration-300">
 
-                {/* Brain Orbital Animation */}
-                <div className="relative h-28 w-28 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border border-dashed border-violet-500/25 animate-[spin_8s_linear_infinite]" />
-                  <div className="absolute inset-2 rounded-full border border-dashed border-indigo-400/40 animate-[spin_5s_linear_infinite_reverse]" />
-                  <div className="absolute inset-4 rounded-3xl bg-violet-600/15 blur-xl animate-pulse" />
-                  <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-xl border border-white/10">
-                    <Brain className="h-8 w-8 text-white animate-pulse" />
-                  </div>
+                {/* Notara Animated Logo — Orbit-to-Wave Loading */}
+                <div className="relative flex items-center justify-center">
+                  <NotaraLogo 
+                    variant="icon" 
+                    animated 
+                    motionState="loading" 
+                    size={112} 
+                    showGlow 
+                  />
                 </div>
 
                 {/* Title + Timer */}
@@ -3626,8 +3810,9 @@ export default function Home() {
 
                     {files.length === 0 ? (
                       <div className="flex flex-col items-center gap-5">
-                        <div className={`h-16 w-16 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-center text-zinc-400 transition-all duration-300 hover:scale-105 animate-float`}>
-                          <UploadCloud className={`h-8 w-8 text-violet-400 transition-all duration-300 ${dragActive ? 'animate-bounce' : ''}`} />
+                        <div className="h-16 w-16 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-center text-zinc-400 transition-all duration-300 hover:scale-105 animate-float relative group">
+                          {/* Notara Animated Logo instead of simple upload cloud */}
+                          <NotaraLogo variant="icon" animated={true} motionState={dragActive ? "loading" : "thinking"} size={36} />
                         </div>
                         <div className="space-y-1">
                           <p className="text-white font-extrabold text-sm md:text-base tracking-wide transition-all duration-200">
@@ -3721,7 +3906,7 @@ export default function Home() {
                       
                       {!isRecording && !audioBlob && (
                         <div className="relative text-xs text-zinc-500 font-bold flex items-center gap-2">
-                          <Brain className="h-4 w-4 text-violet-500 animate-pulse" />
+                          <NotaraLogo variant="icon" animated motionState="thinking" size={18} />
                           Siap merekam suara perkuliahan...
                         </div>
                       )}
@@ -4366,220 +4551,318 @@ export default function Home() {
               />
             )}
 
-            <div className={`fixed inset-y-0 right-0 z-40 w-80 md:w-96 bg-[#0F0E17] border-l border-white/[0.04] flex flex-col transition-transform duration-300 md:static md:translate-x-0 ${
-              isChatOpenMobile ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+            <div className={`fixed inset-y-0 right-0 z-40 bg-[#0F0E17] flex flex-col transition-all duration-300 md:static md:translate-x-0 ${
+              isChatOpenMobile 
+                ? 'w-80 translate-x-0 border-l border-white/[0.04]' 
+                : 'translate-x-full'
+            } ${
+              isChatPanelOpen 
+                ? 'w-80 md:w-96 md:border-l md:border-white/[0.04]' 
+                : 'w-0 md:w-0 md:border-l-0 overflow-hidden'
             }`}>
-              
-              <div className="bg-[#0C0A12]/40 px-4 py-3.5 border-b border-white/[0.04] space-y-3 shrink-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-7 w-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                      <Brain className="h-3.5 w-3.5 text-violet-400" />
+              <div className="w-80 md:w-[384px] h-full flex flex-col shrink-0">
+                
+                <div className="bg-[#0C0A12]/40 px-4 py-3.5 border-b border-white/[0.04] space-y-3 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                        <NotaraLogo variant="icon" size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-white leading-none">Asisten Kuliah AI</h4>
+                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">Study Q&A</span>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-xs font-black text-white leading-none">Asisten Kuliah AI</h4>
-                      <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">Study Q&A</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    {chatMessages.length > 0 && (
+                    
+                    <div className="flex items-center gap-1.5">
                       <button
-                        onClick={handleClearChat}
-                        className="text-zinc-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5 transition-all duration-200"
-                        title="Hapus Riwayat Chat"
+                        onClick={handleCreateNewThread}
+                        className="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-all duration-200"
+                        title="Obrolan Baru"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Plus className="h-4 w-4" />
                       </button>
-                    )}
-                    <button 
-                      onClick={() => setIsChatOpenMobile(false)}
-                      className="md:hidden text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+
+                      <button
+                        onClick={() => setShowChatHistory(!showChatHistory)}
+                        className={`p-1.5 rounded-lg transition-all duration-200 ${
+                          showChatHistory
+                            ? 'bg-violet-600/20 text-violet-400 border border-violet-500/30'
+                            : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                        }`}
+                        title="Riwayat Obrolan"
+                      >
+                        <Clock className="h-4 w-4" />
+                      </button>
+
+                      {chatMessages.length > 0 && !showChatHistory && (
+                        <button
+                          onClick={handleClearChat}
+                          className="text-zinc-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5 transition-all duration-200"
+                          title="Hapus Riwayat Chat"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      
+                      <button 
+                        onClick={() => {
+                          setIsChatOpenMobile(false);
+                          setIsChatPanelOpen(false);
+                          localStorage.setItem('isChatPanelOpen', 'false');
+                        }}
+                        className="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5 transition-all duration-200"
+                        title="Tutup Chat"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
+
+                  {showChatHistory ? (
+                    <div className="py-1 px-2.5 rounded-lg bg-violet-600/10 border border-violet-500/20 text-[9px] font-bold text-violet-300 uppercase tracking-widest text-center select-none font-mono">
+                      🕒 Riwayat Percakapan
+                    </div>
+                  ) : selectedSummary ? (
+                    <div className="bg-white/5 p-0.5 rounded-lg flex text-[9px] font-bold">
+                      <button
+                        onClick={() => setChatScope('summary')}
+                        className={`flex-1 py-1 rounded-md transition-all duration-200 ${
+                          chatScope === 'summary' 
+                            ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        🎯 Rangkuman
+                      </button>
+                      <button
+                        onClick={() => setChatScope('folder')}
+                        className={`flex-1 py-1 rounded-md transition-all duration-200 ${
+                          chatScope === 'folder' 
+                            ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        📚 Folder
+                      </button>
+                      <button
+                        onClick={() => setChatScope('global')}
+                        className={`flex-1 py-1 rounded-md transition-all duration-200 ${
+                          chatScope === 'global' 
+                            ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        🤖 Global
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="py-1 px-2.5 rounded-lg bg-white/5 text-[9px] font-bold text-violet-300 uppercase tracking-widest text-center select-none font-mono">
+                      🤖 Asisten Notara (Global)
+                    </div>
+                  )}
                 </div>
 
-                {selectedSummary ? (
-                  <div className="bg-white/5 p-0.5 rounded-lg flex text-[9px] font-bold">
-                    <button
-                      onClick={() => setChatScope('summary')}
-                      className={`flex-1 py-1 rounded-md transition-all duration-200 ${
-                        chatScope === 'summary' 
-                          ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
-                          : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      🎯 Rangkuman
-                    </button>
-                    <button
-                      onClick={() => setChatScope('folder')}
-                      className={`flex-1 py-1 rounded-md transition-all duration-200 ${
-                        chatScope === 'folder' 
-                          ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
-                          : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      📚 Folder
-                    </button>
-                    <button
-                      onClick={() => setChatScope('global')}
-                      className={`flex-1 py-1 rounded-md transition-all duration-200 ${
-                        chatScope === 'global' 
-                          ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
-                          : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      🤖 Global
-                    </button>
-                  </div>
-                ) : (
-                  <div className="py-1 px-2.5 rounded-lg bg-white/5 text-[9px] font-bold text-violet-300 uppercase tracking-widest text-center select-none font-mono">
-                    🤖 Asisten Notara (Global)
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin select-text">
-                {selectedSummary ? (
-                  <div className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-2xl text-[10px] text-zinc-500 leading-relaxed italic">
-                    {chatScope === 'summary' 
-                      ? "AI siap menjawab pertanyaan berdasarkan transkrip ini. Data siap dibaca."
-                      : chatScope === 'folder'
-                        ? `AI akan menggabungkan semua transkrip di folder "${activeFolder?.name || 'Mata Kuliah'}" untuk menjawab pertanyaan secara komprehensif.`
-                        : "AI akan menganalisis seluruh transkrip dan mata kuliah Anda untuk menjawab pertanyaan."}
-                  </div>
-                ) : (
-                  <div className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-2xl text-[10px] text-zinc-500 leading-relaxed italic">
-                    Tanya saya cara menggunakan Notara, unggah file besar hingga 150MB, atau kelola folder kuliah.
-                  </div>
-                )}
-
-                {chatMessages.length === 0 ? (
-                  <div className="flex gap-2.5 items-start max-w-[85%]">
-                    <div className="h-6 w-6 rounded-full bg-violet-600/10 border border-violet-500/20 text-violet-400 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
-                      N
-                    </div>
-                    <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed font-sans">
-                      {selectedSummary 
-                        ? "Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?"
-                        : "Halo! Saya Notara AI. Ada yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?"}
-                    </div>
-                  </div>
-                ) : (
-                  chatMessages.map((msg) => (
-                    msg.role === 'user' ? (
-                      <div key={msg.id} className="flex gap-2.5 items-start max-w-[85%] ml-auto justify-end animate-in slide-in-from-right-2 duration-200">
-                        <div className="bg-violet-600/20 border border-violet-500/25 p-3 rounded-2xl rounded-tr-none text-xs text-violet-200 leading-relaxed font-sans font-medium select-text break-words">
-                          {msg.content}
+                {showChatHistory ? (
+                  /* THREAD HISTORY VIEW */
+                  <div className="flex-1 overflow-y-auto p-4 space-y-2.5 scrollbar-thin">
+                    {chatThreads.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500 py-12 space-y-2">
+                        <NotaraLogo variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
+                        <div>
+                          <p className="text-xs font-bold text-zinc-300">Belum Ada Riwayat Chat</p>
+                          <p className="text-[10px] text-zinc-600 mt-1 max-w-[180px] mx-auto leading-normal">
+                            Mulai obrolan baru untuk menyimpan riwayat chat Anda di sini.
+                          </p>
                         </div>
                       </div>
                     ) : (
-                      <div key={msg.id} className="flex gap-2.5 items-start max-w-[85%] animate-in slide-in-from-left-2 duration-200">
-                        <div className="h-6 w-6 rounded-full bg-violet-600/10 border border-violet-500/20 text-violet-400 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
-                          N
+                      chatThreads.map((thread) => {
+                        const isSelected = activeThreadId === thread.id;
+                        return (
+                          <div
+                            key={thread.id}
+                            onClick={() => {
+                              setActiveThreadId(thread.id);
+                              setShowChatHistory(false);
+                            }}
+                            className={`group/thread flex items-center justify-between p-3 rounded-2xl cursor-pointer border transition-all duration-200 ${
+                              isSelected
+                                ? 'bg-violet-600/10 border-violet-500/30 text-white font-bold'
+                                : 'bg-white/[0.015] border-transparent hover:bg-white/[0.03] text-zinc-400'
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0 pr-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm shrink-0">💬</span>
+                                <h4 className="text-xs truncate font-semibold text-zinc-200 group-hover/thread:text-white">
+                                  {thread.title}
+                                </h4>
+                              </div>
+                              <span className="text-[9px] text-zinc-500 font-medium font-mono mt-0.5 block pl-6">
+                                {formatRelativeTime(thread.created_at)}
+                              </span>
+                            </div>
+                            
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteThread(thread.id);
+                              }}
+                              className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover/thread:opacity-100 transition-all shrink-0"
+                              title="Hapus Obrolan"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                ) : (
+                  /* ACTIVE CHAT MESSAGES VIEW */
+                  <>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin select-text">
+                      {selectedSummary ? (
+                        <div className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-2xl text-[10px] text-zinc-500 leading-relaxed italic">
+                          {chatScope === 'summary' 
+                            ? "AI siap menjawab pertanyaan berdasarkan transkrip ini. Data siap dibaca."
+                            : chatScope === 'folder'
+                              ? `AI akan menggabungkan semua transkrip di folder "${activeFolder?.name || 'Mata Kuliah'}" untuk menjawab pertanyaan secara komprehensif.`
+                              : "AI akan menganalisis seluruh transkrip dan mata kuliah Anda untuk menjawab pertanyaan."}
                         </div>
-                        <div className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed select-text break-words w-full">
-                          {msg.content ? (
-                            <div className="prose prose-invert max-w-none text-zinc-300 select-text leading-relaxed text-xs space-y-2">
-                              {renderMarkdown(msg.content)}
+                      ) : (
+                        <div className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-2xl text-[10px] text-zinc-500 leading-relaxed italic">
+                          Tanya saya cara menggunakan Notara, unggah file besar hingga 150MB, atau kelola folder kuliah.
+                        </div>
+                      )}
+
+                      {chatMessages.length === 0 ? (
+                        <div className="flex gap-2.5 items-start max-w-[85%]">
+                          <div className="h-6 w-6 rounded-full bg-violet-600/10 border border-violet-500/20 text-violet-400 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
+                            N
+                          </div>
+                          <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed font-sans">
+                            {selectedSummary 
+                              ? "Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?"
+                              : "Halo! Saya Notara AI. Ada yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?"}
+                          </div>
+                        </div>
+                      ) : (
+                        chatMessages.map((msg) => (
+                          msg.role === 'user' ? (
+                            <div key={msg.id} className="flex gap-2.5 items-start max-w-[85%] ml-auto justify-end animate-in slide-in-from-right-2 duration-200">
+                              <div className="bg-violet-600/20 border border-violet-500/25 p-3 rounded-2xl rounded-tr-none text-xs text-violet-200 leading-relaxed font-sans font-medium select-text break-words">
+                                {msg.content}
+                              </div>
                             </div>
                           ) : (
-                            <span className="flex items-center gap-1.5 text-zinc-500 italic">
-                              <Loader2 className="h-3 w-3 animate-spin text-violet-400" />
-                              Notara sedang mengetik...
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  ))
-                )}
-              </div>
+                            <div key={msg.id} className="flex gap-2.5 items-start max-w-[85%] animate-in slide-in-from-left-2 duration-200">
+                              <div className="h-6 w-6 rounded-full bg-violet-600/10 border border-violet-500/20 text-violet-400 flex-shrink-0 flex items-center justify-center text-[10px] font-bold">
+                                N
+                              </div>
+                              <div className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed select-text break-words w-full">
+                                {msg.content ? (
+                                  <div className="prose prose-invert max-w-none text-zinc-300 select-text leading-relaxed text-xs space-y-2">
+                                    {renderMarkdown(msg.content)}
+                                  </div>
+                                ) : (
+                                  <span className="flex items-center gap-1.5 text-zinc-500 italic">
+                                    <Loader2 className="h-3 w-3 animate-spin text-violet-400" />
+                                    Notara sedang mengetik...
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        ))
+                      )}
+                    </div>
 
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendChatMessage();
-                }}
-                className="p-4 border-t border-white/[0.04] bg-[#0C0A12]/40 shrink-0"
-              >
-                <div className="relative flex items-end">
-                  <textarea
-                    ref={textareaRef}
-                    rows={1}
-                    value={chatInput}
-                    onChange={handleChatInputChange}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                    <form 
+                      onSubmit={(e) => {
                         e.preventDefault();
                         handleSendChatMessage();
-                      }
-                    }}
-                    disabled={isSendingChat}
-                    placeholder={
-                      isListening
-                        ? "🎙️ Sedang mendengarkan..."
-                        : selectedSummary
-                          ? (chatScope === 'summary' 
-                              ? "Tanya materi ulasan ini..." 
-                              : chatScope === 'folder' 
-                                ? `Tanya lintas materi ${activeFolder?.name || ''}...` 
-                                : "Tanya lintas seluruh rangkuman...")
-                          : "Tanya asisten global Notara..."
-                    }
-                    className={`w-full bg-black/40 border rounded-2xl pl-4 pr-20 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none disabled:opacity-50 font-sans resize-none max-h-[120px] overflow-y-auto transition-colors duration-300 ${
-                      isListening 
-                        ? 'border-rose-500/50 focus:border-rose-400' 
-                        : 'border-white/10 focus:border-violet-500/50'
-                    }`}
-                  />
-                  {/* Mic Button — Google-style wave animation when active */}
-                  <button
-                    type="button"
-                    onClick={handleToggleMic}
-                    disabled={isSendingChat || voiceNotSupported}
-                    className={`absolute right-10 bottom-1 p-1.5 rounded-xl transition-all active:scale-95 duration-200 flex items-center justify-center ${
-                      isListening 
-                        ? 'w-9 h-8 bg-black/50 border border-rose-500/30' 
-                        : 'text-zinc-500 hover:text-violet-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed'
-                    }`}
-                    title={isListening ? "Hentikan rekaman" : "Input suara (Bahasa Indonesia)"}
-                  >
-                    {isListening ? (
-                      /* Google-style 5-bar wave */
-                      <div className="flex items-center gap-[2px] h-5">
-                        <div className="mic-bar-1 w-[3px] rounded-full bg-rose-400" style={{height: '4px'}} />
-                        <div className="mic-bar-2 w-[3px] rounded-full bg-rose-500" style={{height: '8px'}} />
-                        <div className="mic-bar-3 w-[3px] rounded-full bg-rose-400" style={{height: '14px'}} />
-                        <div className="mic-bar-4 w-[3px] rounded-full bg-rose-500" style={{height: '6px'}} />
-                        <div className="mic-bar-5 w-[3px] rounded-full bg-rose-400" style={{height: '10px'}} />
+                      }}
+                      className="p-4 border-t border-white/[0.04] bg-[#0C0A12]/40 shrink-0"
+                    >
+                      <div className="relative flex items-end">
+                        <textarea
+                          ref={textareaRef}
+                          rows={1}
+                          value={chatInput}
+                          onChange={handleChatInputChange}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendChatMessage();
+                            }
+                          }}
+                          disabled={isSendingChat}
+                          placeholder={
+                            isListening
+                              ? "🎙️ Sedang mendengarkan..."
+                              : selectedSummary
+                                ? (chatScope === 'summary' 
+                                    ? "Tanya materi ulasan ini..." 
+                                    : chatScope === 'folder' 
+                                      ? `Tanya lintas materi ${activeFolder?.name || ''}...` 
+                                      : "Tanya lintas seluruh rangkuman...")
+                                : "Tanya asisten global Notara..."
+                          }
+                          className={`w-full bg-black/40 border rounded-2xl pl-4 pr-20 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none disabled:opacity-50 font-sans resize-none max-h-[120px] overflow-y-auto transition-colors duration-300 ${
+                            isListening 
+                              ? 'border-rose-500/50 focus:border-rose-400' 
+                              : 'border-white/10 focus:border-violet-500/50'
+                          }`}
+                        />
+                        {/* Mic Button — Google-style wave animation when active */}
+                        <button
+                          type="button"
+                          onClick={handleToggleMic}
+                          disabled={isSendingChat || voiceNotSupported}
+                          className={`absolute right-10 bottom-1 p-1.5 rounded-xl transition-all active:scale-95 duration-200 flex items-center justify-center ${
+                            isListening 
+                              ? 'w-9 h-8 bg-black/50 border border-rose-500/30' 
+                              : 'text-zinc-500 hover:text-violet-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed'
+                          }`}
+                          title={isListening ? "Hentikan rekaman" : "Input suara (Bahasa Indonesia)"}
+                        >
+                          {isListening ? (
+                            /* Google-style 5-bar wave */
+                            <div className="flex items-center gap-[2px] h-5">
+                              <div className="mic-bar-1 w-[3px] rounded-full bg-rose-400" style={{height: '4px'}} />
+                              <div className="mic-bar-2 w-[3px] rounded-full bg-rose-500" style={{height: '8px'}} />
+                              <div className="mic-bar-3 w-[3px] rounded-full bg-rose-400" style={{height: '14px'}} />
+                              <div className="mic-bar-4 w-[3px] rounded-full bg-rose-500" style={{height: '6px'}} />
+                              <div className="mic-bar-5 w-[3px] rounded-full bg-rose-400" style={{height: '10px'}} />
+                            </div>
+                          ) : (
+                            <Mic className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+
+                        {/* Send Button */}
+                        <button 
+                          type="submit"
+                          disabled={isSendingChat || !chatInput.trim()}
+                          className="absolute right-2 bottom-1.5 p-2 rounded-xl bg-violet-600 text-white disabled:bg-white/5 disabled:text-zinc-600 transition-all active:scale-95 duration-200"
+                        >
+                          {isSendingChat ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                        </button>
                       </div>
-                    ) : (
-                      <Mic className="h-3.5 w-3.5" />
-                    )}
-                  </button>
+                      <p className="text-[9px] text-center text-zinc-600 mt-2.5 font-medium">
+                        🚀 Notara AI — Tanya apa saja tentang materi ini
+                      </p>
+                    </form>
+                  </>
+                )}
 
-                  {/* Send Button */}
-                  <button 
-                    type="submit"
-                    disabled={isSendingChat || !chatInput.trim()}
-                    className="absolute right-2 bottom-1.5 p-2 rounded-xl bg-violet-600 text-white disabled:bg-white/5 disabled:text-zinc-600 transition-all active:scale-95 duration-200"
-                  >
-                    {isSendingChat ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Send className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                </div>
-                <p className="text-[9px] text-center text-zinc-600 mt-2.5 font-medium">
-                  🚀 Notara AI — Tanya apa saja tentang materi ini
-                </p>
-              </form>
-
-
+              </div>
             </div>
           </>
 

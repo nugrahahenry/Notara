@@ -3,6 +3,20 @@
 :root {
   --background: #08070B;
   --foreground: #zinc-100;
+
+  /* ── Notara Brand Tokens ── */
+  --notara-bg: #09090B;
+  --notara-bg-panel: #111122;
+  --notara-bg-glass: #161622;
+  --notara-border: #27272A;
+  --notara-violet: #8B5CF6;
+  --notara-purple: #A855F7;
+  --notara-indigo: #312E81;
+  --notara-blue: #2563EB;
+  --notara-cyan: #38BDF8;
+  --notara-text: #F8FAFC;
+  --notara-text-muted: #A1A1AA;
+  --notara-text-soft: #CBD5E1;
 }
 
 @theme inline {

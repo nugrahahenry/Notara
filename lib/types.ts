@@ -26,9 +26,18 @@ export interface Summary {
   user_id?: string;          // UUID owner (dari auth.users) — wajib saat insert, opsional saat baca
 }
 
+export interface ChatThread {
+  id: string;
+  summary_id: string | null;
+  title: string;
+  created_at: string;
+  user_id: string;
+}
+
 export interface ChatMessage {
   id: string;
-  summary_id: string;
+  summary_id: string | null;
+  thread_id: string;
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
