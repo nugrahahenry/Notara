@@ -386,7 +386,9 @@ ON subscriptions FOR SELECT
 USING (auth.uid() = user_id);
 
 -- Tambah kolom subscription_tier ke profiles
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro'));
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'free';
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_subscription_tier_check;
+ALTER TABLE profiles ADD CONSTRAINT profiles_subscription_tier_check CHECK (subscription_tier IN ('free', 'pro', 'max'));
 
 -- 21. FUNCTION handle_payment_callback (SECURITY DEFINER untuk memotong RLS oleh Webhook Midtrans)
 CREATE OR REPLACE FUNCTION public.handle_payment_callback(
@@ -412,8 +414,12 @@ BEGIN
       current_period_end = CASE WHEN p_status = 'success' THEN now() + interval '30 days' ELSE current_period_end END
     WHERE order_id = p_order_id;
 
-    -- Tentukan tier profiles berdasarkan status pembayaran
-    v_tier := CASE WHEN p_status = 'success' THEN 'pro' ELSE 'free' END;
+    -- Tentukan tier profiles berdasarkan status pembayaran dan order_id
+    v_tier := CASE 
+      WHEN p_status = 'success' AND p_order_id LIKE 'NOTARA-MAX-%' THEN 'max'
+      WHEN p_status = 'success' THEN 'pro'
+      ELSE 'free' 
+    END;
 
     -- Update tier langganan di profil pengguna
     UPDATE public.profiles

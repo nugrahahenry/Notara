@@ -639,7 +639,7 @@ export interface UserProfile {
   major: string | null;
   find_source: string | null;
   is_onboarded: boolean;
-  subscription_tier: 'free' | 'pro';
+  subscription_tier: 'free' | 'pro' | 'max';
 }
 
 export interface Subscription {
@@ -743,7 +743,7 @@ export async function upsertSubscription(
 /** Memperbarui tier langganan di profil user */
 export async function updateUserSubscriptionTier(
   userId: string,
-  tier: 'free' | 'pro'
+  tier: 'free' | 'pro' | 'max'
 ): Promise<boolean> {
   const { error } = await supabase
     .from('profiles')

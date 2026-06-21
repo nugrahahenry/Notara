@@ -9,7 +9,7 @@ import {
   Calendar, FileSignature, ArrowUpRight, Menu, MessageSquare, Send, Search, LogOut,
   Shield, QrCode, Key, Share2, Globe, Lock, Copy, ExternalLink,
   Mic, MicOff, Users, UserPlus, Link2, Crown, Hash,
-  ImageDown, Smartphone, Square, Download, Clock, Settings
+  ImageDown, Smartphone, Square, Download, Clock, Settings, RefreshCw
 } from 'lucide-react';
 import { NotaraLogo } from './components/brand/NotaraLogo';
 import { StarryBackground } from './components/ui/StarryBackground';
@@ -221,7 +221,6 @@ export default function Home() {
   // Sidebar Expansion States
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false); // Mobile sidebar open
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false); // Desktop locked expansion
-  const [isHoveringSidebar, setIsHoveringSidebar] = useState<boolean>(false); // Desktop hover expansion
   
   // Chatbot Drawer States
   const [isChatOpenMobile, setIsChatOpenMobile] = useState<boolean>(false); // Mobile chatbot active
@@ -397,11 +396,12 @@ export default function Home() {
   const [isFirstTimeLogin, setIsFirstTimeLogin] = useState<boolean>(false);
 
   // Subscription & Billing States (Phase 5)
-  const [profileTier, setProfileTier] = useState<'free' | 'pro'>('free');
+  const [profileTier, setProfileTier] = useState<'free' | 'pro' | 'max'>('free');
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [billingLoading, setBillingLoading] = useState<boolean>(false);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+  const [ignorePendingSub, setIgnorePendingSub] = useState<boolean>(false);
 
   // Persistent Desktop Chat Panel State
   useEffect(() => {
@@ -735,6 +735,7 @@ export default function Home() {
     setShowSettingsModal(false);
     await supabase.auth.signOut();
     // Set flag so login page can show logout success toast
+    localStorage.setItem('logout_success', '1');
     sessionStorage.setItem('logout_success', '1');
     setUser(null);
     setFolders([]);
@@ -797,13 +798,15 @@ export default function Home() {
     }
   };
 
-  const handleUpgradeToPro = async () => {
+  const handleUpgrade = async (tier: 'pro' | 'max') => {
     if (isProcessingPayment) return;
     setIsProcessingPayment(true);
     setBillingError(null);
     try {
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
       });
       const data = await response.json();
       if (!response.ok || data.error) {
@@ -814,8 +817,9 @@ export default function Home() {
 
       if (token.startsWith('mock-snap-token-')) {
         // Mode Mock: Simulasikan pembayaran sukses offline
-        console.log('[Billing UI] Simulasikan pembayaran dummy...');
+        console.log(`[Billing UI] Simulasikan pembayaran dummy untuk ${tier}...`);
         const orderId = data.order_id;
+        const grossAmount = tier === 'max' ? '99000.00' : '49000.00';
         const webhookResponse = await fetch('/api/webhooks/billing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -823,7 +827,7 @@ export default function Home() {
             order_id: orderId,
             transaction_status: 'settlement',
             status_code: '200',
-            gross_amount: '49000.00',
+            gross_amount: grossAmount,
             signature_key: 'dummy',
             payment_type: 'gopay'
           })
@@ -831,7 +835,7 @@ export default function Home() {
         const webhookData = await webhookResponse.json();
         if (webhookResponse.ok && webhookData.status === 'success') {
           await loadBillingData();
-          showToast('Pembayaran berhasil! Notara Pro Anda telah aktif. 🎉', 'success');
+          showToast(`Pembayaran berhasil! Notara ${tier === 'max' ? 'Max' : 'Pro'} Anda telah aktif. 🎉`, 'success');
         } else {
           throw new Error('Gagal memproses verifikasi sukses pembayaran.');
         }
@@ -840,7 +844,7 @@ export default function Home() {
         if (typeof window !== 'undefined' && (window as any).snap) {
           (window as any).snap.pay(token, {
             onSuccess: async (result: any) => {
-              showToast('Pembayaran berhasil! Akun Pro Anda aktif. 🎉', 'success');
+              showToast(`Pembayaran berhasil! Akun ${tier === 'max' ? 'Max' : 'Pro'} Anda aktif. 🎉`, 'success');
               await loadBillingData();
             },
             onPending: async (result: any) => {
@@ -860,7 +864,7 @@ export default function Home() {
         }
       }
     } catch (err: any) {
-      console.error('Upgrade Pro error:', err);
+      console.error(`Upgrade ${tier} error:`, err);
       setBillingError(err.message || 'Gagal memulai transaksi pembayaran.');
     } finally {
       setIsProcessingPayment(false);
@@ -893,6 +897,7 @@ export default function Home() {
   const openSettings = () => {
     if (user) {
       setEditingName(user.user_metadata?.full_name || '');
+      setIgnorePendingSub(false);
       loadBillingData();
     }
     setSettingsTab('profile');
@@ -1200,8 +1205,9 @@ export default function Home() {
   useEffect(() => {
     async function checkLoginSuccess() {
       if (!isDataLoading && user) {
-        const loginFlag = sessionStorage.getItem('login_success');
+        const loginFlag = localStorage.getItem('login_success') || sessionStorage.getItem('login_success');
         if (loginFlag) {
+          localStorage.removeItem('login_success');
           sessionStorage.removeItem('login_success');
           try {
             const profile = await getUserProfile(user.id);
@@ -1277,8 +1283,8 @@ export default function Home() {
               thread_id: '',
               role: 'assistant',
               content: selectedSummary
-                ? 'Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-                : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
+                ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+                : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
               created_at: new Date().toISOString()
             }
           ]);
@@ -1302,8 +1308,8 @@ export default function Home() {
           thread_id: '',
           role: 'assistant',
           content: selectedSummary
-            ? 'Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-            : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
+            ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+            : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
           created_at: new Date().toISOString()
         }
       ]);
@@ -1335,8 +1341,8 @@ export default function Home() {
         thread_id: '',
         role: 'assistant',
         content: selectedSummary
-          ? 'Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-          : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
+          ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+          : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
         created_at: new Date().toISOString()
       }
     ]);
@@ -1571,8 +1577,8 @@ export default function Home() {
                 thread_id: activeThreadId,
                 role: 'assistant',
                 content: selectedSummary
-                  ? 'Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-                  : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?',
+                  ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+                  : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
                 created_at: new Date().toISOString()
               }
             ]);
@@ -1588,7 +1594,7 @@ export default function Home() {
   };
 
   // Combine sidebar states to determine if sidebar is fully opened
-  const isSidebarOpen = sidebarExpanded || isHoveringSidebar || sidebarOpen;
+  const isSidebarOpen = sidebarExpanded || sidebarOpen;
 
   // Filter summaries based on sidebar navigation
   const filteredSummaries = summaries.filter(summary => {
@@ -3147,10 +3153,7 @@ export default function Home() {
         />
       )}
 
-      {/* LEFT COLUMN: COLLAPSIBLE SIDEBAR */}
       <aside 
-        onMouseEnter={() => setIsHoveringSidebar(true)}
-        onMouseLeave={() => setIsHoveringSidebar(false)}
         className={`fixed inset-y-0 left-0 z-40 bg-[#0F0E17] border-r border-white/[0.04] flex flex-col transition-all duration-300 shadow-2xl ${
           isSidebarOpen 
             ? 'w-72 translate-x-0' 
@@ -3962,7 +3965,7 @@ export default function Home() {
                       <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">Jadi Rangkuman 1 Halaman</span>
                     </h2>
                     <p className="text-zinc-400 text-sm leading-relaxed">
-                      Pilih antara mengunggah berkas audio/video rekaman kuliah dosen atau merekam secara langsung dari browser laptopmu sekarang.
+                      Pilih antara mengunggah berkas audio/video rekaman atau merekam secara langsung dari browser laptopmu sekarang.
                     </p>
                   </div>
 
@@ -4121,7 +4124,7 @@ export default function Home() {
                       {!isRecording && !audioBlob && (
                         <div className="relative text-xs text-zinc-500 font-bold flex items-center gap-2">
                           <NotaraLogo variant="icon" animated motionState="thinking" size={18} />
-                          Siap merekam suara perkuliahan...
+                          Siap merekam suara...
                         </div>
                       )}
 
@@ -4741,7 +4744,7 @@ export default function Home() {
                       <div className="space-y-4">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-white/5 pb-2">
                           <FileText className="h-4 w-4 text-violet-400" />
-                          Salinan Suara Kuliah (Transcript)
+                          Salinan Suara (Transkrip)
                         </h3>
                         <div className="text-zinc-300 leading-relaxed font-sans text-sm whitespace-pre-wrap select-text p-4 rounded-2xl bg-black/25 border border-white/[0.02]">
                           {selectedSummary.transcript}
@@ -4784,7 +4787,7 @@ export default function Home() {
                       </div>
                       <div>
                         <h4 className="text-xs font-black text-white leading-none">Neural Nexus</h4>
-                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">AI Learning Companion</span>
+                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">Neural Nexus</span>
                       </div>
                     </div>
                     
@@ -4947,7 +4950,7 @@ export default function Home() {
                         </div>
                       ) : (
                         <div className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-2xl text-[10px] text-zinc-500 leading-relaxed italic">
-                          Tanya saya cara menggunakan Notara, unggah file besar hingga 150MB, atau kelola folder kuliah.
+                          Tanya saya cara menggunakan Notara, unggah file besar hingga 150MB, atau kelola folder.
                         </div>
                       )}
 
@@ -4958,8 +4961,8 @@ export default function Home() {
                           </div>
                           <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed font-sans">
                             {selectedSummary 
-                              ? "Halo! Aku Notara. Ada bagian dari materi kuliah ini yang ingin kamu tanyakan atau minta dijelaskan ulang?"
-                              : "Halo! Saya Notara AI. Ada yang bisa saya bantu tentang cara menggunakan Notara, cara mencatat materi kuliah, atau informasi fitur lainnya?"}
+                              ? "Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?"
+                              : "Halo! Saya Notara AI. Ada yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?"}
                           </div>
                         </div>
                       ) : (
@@ -5437,7 +5440,7 @@ export default function Home() {
                   setSearchQuery(e.target.value);
                   setSelectedSearchResultIdx(0);
                 }}
-                placeholder="Cari judul kuliah, kata kunci, atau rangkuman..."
+                placeholder="Cari judul, kata kunci, atau rangkuman..."
                 className="bg-transparent text-sm text-white focus:outline-none placeholder-zinc-600 flex-1 font-sans"
               />
               
@@ -6221,7 +6224,7 @@ export default function Home() {
             }} 
           />
           
-          <div className="relative w-full max-w-md rounded-3xl bg-zinc-950/80 border border-white/[0.08] backdrop-blur-2xl p-6 shadow-2xl shadow-violet-950/10 flex flex-col space-y-5 animate-in zoom-in-95 duration-200 z-50 overflow-hidden">
+          <div className={`relative w-full ${settingsTab === 'billing' && profileTier === 'free' ? 'max-w-3xl' : 'max-w-md'} rounded-3xl bg-zinc-950/80 border border-white/[0.08] backdrop-blur-2xl p-6 shadow-2xl shadow-violet-950/10 flex flex-col space-y-5 animate-in zoom-in-95 duration-200 z-50 overflow-hidden transition-all duration-300`}>
             {/* Top gradient highlight border */}
             <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-violet-500 via-fuchsia-500 to-indigo-500" />
             {/* Background glowing orb */}
@@ -6525,8 +6528,8 @@ export default function Home() {
 
                   {/* Re-trigger onboarding */}
                   <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                    <p className="text-xs font-bold text-zinc-300 mb-1">Survei Akademik</p>
-                    <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">Perbarui informasi universitas, jurusan, dan peranmu di Notara.</p>
+                    <p className="text-xs font-bold text-zinc-300 mb-1">Survei Onboarding</p>
+                    <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">Perbarui informasi institusi/perusahaan dan peranmu di Notara.</p>
                     <button
                       onClick={() => {
                         setShowSettingsModal(false);
@@ -6612,69 +6615,303 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
-                  ) : (
-                    /* EMPTY STATE: UPGRADE TO PRO */
+                  ) : profileTier === 'max' ? (
+                    /* SUCCESS STATE: MAX ACTIVE */
                     <div className="space-y-4">
-                      <div className="p-4 rounded-2xl bg-gradient-to-tr from-violet-600/10 via-indigo-600/5 to-transparent border border-white/[0.06] relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/5 rounded-full blur-2xl pointer-events-none" />
+                      <div className="p-4 rounded-2xl bg-gradient-to-tr from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/30 relative overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
-                            <Crown className="h-5 w-5" />
+                          <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                            <Crown className="h-5 w-5 animate-[spin_4s_linear_infinite]" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-extrabold text-white tracking-wide">Upgrade ke Notara Pro</h4>
-                            <span className="text-[9px] text-zinc-500 font-bold block mt-0.5">DAPATKAN FITUR EKSKLUSIF</span>
+                            <h4 className="text-sm font-extrabold text-amber-400 tracking-wide">Notara Max Aktif 👑</h4>
+                            <span className="text-[9px] text-zinc-400 font-bold block mt-0.5">PAKET TERTINGGI DENGAN AKSES MAKSIMAL</span>
                           </div>
                         </div>
-
-                        <ul className="mt-4 space-y-2.5 text-xs text-zinc-300">
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-violet-400 shrink-0" />
-                            <span>Rangkum berkas tanpa batas bulanan</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-violet-400 shrink-0" />
-                            <span>Rekam suara langsung hingga 120 menit / sesi</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-violet-400 shrink-0" />
-                            <span>Ekspor rangkuman langsung ke file Word (.docx)</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-violet-400 shrink-0" />
-                            <span>Akses penuh Chatbot Global lintas folder</span>
-                          </li>
-                        </ul>
                         
-                        <div className="mt-5 pt-4 border-t border-white/5 flex flex-col space-y-2">
-                          <button
-                            onClick={handleUpgradeToPro}
-                            disabled={isProcessingPayment}
-                            className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-violet-500/10 flex items-center justify-center gap-2"
-                          >
-                            {isProcessingPayment ? (
-                              <>
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                <span>Memproses...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Crown className="h-4 w-4 text-yellow-300 animate-bounce" />
-                                <span>Beli Pro — Rp 49.000 / Bulan</span>
-                              </>
-                            )}
-                          </button>
-                          <span className="text-[9px] text-zinc-500 text-center block mt-1 font-medium">Sistem aman menggunakan enkripsi Midtrans SSL</span>
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Metode Pembayaran</span>
+                            <span className="font-semibold text-zinc-200 uppercase">{subscriptionData?.payment_type || 'Instant Verification'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Periode Aktif</span>
+                            <span className="font-semibold text-zinc-200">
+                              {subscriptionData?.current_period_end 
+                                ? new Date(subscriptionData.current_period_end).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                                : 'Selamanya'}
+                            </span>
+                          </div>
                         </div>
+                      </div>
+                      
+                      <div className="p-3.5 bg-white/[0.02] border border-white/[0.04] rounded-2xl">
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">
+                          Anda sekarang memiliki akses super premium untuk durasi rekam suara (hingga 240 menit), antrean AI prioritas, terjemahan audio otomatis, dan kustomisasi prompt template AI.
+                        </p>
                       </div>
 
                       <div className="flex justify-end pt-2">
                         <button
                           onClick={() => setShowSettingsModal(false)}
+                          className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 cursor-pointer"
+                        >
+                          Tutup
+                        </button>
+                      </div>
+                    </div>
+                  ) : (profileTier === 'free' && subscriptionData?.status === 'pending' && subscriptionData?.snap_token && !ignorePendingSub) ? (
+                    /* PENDING PAYMENT STATE */
+                    <div className="space-y-4 animate-in fade-in duration-300">
+                      <div className="p-5 rounded-2xl bg-gradient-to-tr from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/30 relative overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-extrabold text-amber-400 tracking-wide flex items-center gap-1.5">
+                              Pembayaran Tertunda ⏳
+                            </h4>
+                            <span className="text-[9px] text-zinc-400 font-bold block mt-0.5 uppercase">
+                              SELESAIKAN PEMBAYARAN UNTUK MENGAKTIFKAN TIER ANDA
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 pt-4 border-t border-white/5 space-y-3 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Paket Dipilih</span>
+                            <span className="font-bold text-zinc-200">
+                              Notara {subscriptionData.amount === 99000 ? 'Max 👑' : 'Pro 🚀'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Nominal Tagihan</span>
+                            <span className="font-extrabold text-amber-400">
+                              Rp {subscriptionData.amount.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">ID Invoice</span>
+                            <span className="font-mono text-[10px] text-zinc-500 bg-white/5 px-2 py-0.5 rounded border border-white/[0.04] select-all">
+                              {subscriptionData.order_id}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 bg-white/[0.02] border border-white/[0.04] rounded-2xl">
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">
+                          Anda memilih pembayaran via Midtrans. Jika Anda menggunakan Bank Transfer atau e-Wallet dan menutup popup, pembayaran Anda tetap valid selama 24 jam. Klik tombol di bawah untuk melanjutkan pembayaran Anda.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-3.5 pt-2">
+                        <button
+                          onClick={() => {
+                            setIgnorePendingSub(true);
+                          }}
+                          className="px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 cursor-pointer text-center"
+                        >
+                          Pilih Paket Lain
+                        </button>
+                        
+                        <button
+                          onClick={loadBillingData}
+                          disabled={billingLoading}
+                          className="px-4 py-2.5 rounded-xl border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 text-violet-400 hover:text-violet-300 font-bold text-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          {billingLoading ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          )}
+                          <span>Perbarui Status</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            const tier = subscriptionData.amount === 99000 ? 'max' : 'pro';
+                            if (typeof window !== 'undefined' && (window as any).snap) {
+                              (window as any).snap.pay(subscriptionData.snap_token, {
+                                onSuccess: async (result: any) => {
+                                  showToast(`Pembayaran berhasil! Akun ${tier === 'max' ? 'Max' : 'Pro'} Anda aktif. 🎉`, 'success');
+                                  await loadBillingData();
+                                },
+                                onPending: async (result: any) => {
+                                  showToast('Pembayaran pending. Selesaikan tagihan Anda.', 'info');
+                                  await loadBillingData();
+                                },
+                                onError: async (result: any) => {
+                                  setBillingError('Pembayaran gagal atau dibatalkan.');
+                                  await loadBillingData();
+                                },
+                                onClose: () => {
+                                  setIsProcessingPayment(false);
+                                }
+                              });
+                            } else {
+                              showToast('Snap SDK belum termuat. Silakan muat ulang.', 'delete');
+                            }
+                          }}
+                          className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-zinc-950 rounded-xl text-xs font-extrabold text-center transition-all duration-200 shadow-md shadow-amber-500/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <span>Lanjutkan Pembayaran →</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* EMPTY STATE: 3-TIER COMPARISON */
+                    <div className="space-y-5">
+                      <div className="text-center md:text-left space-y-1">
+                        <h4 className="text-sm font-extrabold text-white tracking-wide">Pilih Paket Langganan Notara</h4>
+                        <p className="text-xs text-zinc-400">Pilih tier terbaik yang sesuai dengan kebutuhan belajar atau bisnis Anda.</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                        {/* CARD 1: FREE */}
+                        <div className="bg-zinc-900/40 border border-white/[0.04] p-5 rounded-2xl flex flex-col justify-between h-full space-y-4">
+                          <div className="space-y-3">
+                            <div>
+                              <h5 className="text-xs font-extrabold text-zinc-400 uppercase tracking-wider">Free</h5>
+                              <div className="mt-1 flex items-baseline text-white">
+                                <span className="text-xl font-black">Rp 0</span>
+                                <span className="ml-1 text-[10px] font-medium text-zinc-500">/ selamanya</span>
+                              </div>
+                            </div>
+                            <ul className="space-y-2 text-[11px] text-zinc-300">
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-zinc-500 shrink-0 mt-0.5" />
+                                <span>Rekam 30 menit / sesi</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-zinc-500 shrink-0 mt-0.5" />
+                                <span>Maksimal 3 folder</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-zinc-500 shrink-0 mt-0.5" />
+                                <span>Standard transcription</span>
+                              </li>
+                            </ul>
+                          </div>
+                          <button
+                            disabled
+                            className="w-full py-2 bg-zinc-800/40 border border-zinc-700/20 text-zinc-500 rounded-xl text-xs font-bold text-center cursor-default"
+                          >
+                            Paket Aktif
+                          </button>
+                        </div>
+
+                        {/* CARD 2: PRO */}
+                        <div className="bg-violet-950/20 border border-violet-500/25 p-5 rounded-2xl flex flex-col justify-between h-full space-y-4 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/5 rounded-full blur-xl pointer-events-none" />
+                          <div className="space-y-3">
+                            <div>
+                              <h5 className="text-xs font-extrabold text-violet-400 uppercase tracking-wider flex items-center gap-1">
+                                <Sparkles className="h-3 w-3" /> Pro
+                              </h5>
+                              <div className="mt-1 flex items-baseline text-white">
+                                <span className="text-xl font-black">Rp 49.000</span>
+                                <span className="ml-1 text-[10px] font-medium text-zinc-500">/ bulan</span>
+                              </div>
+                            </div>
+                            <ul className="space-y-2 text-[11px] text-zinc-300">
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-violet-400 shrink-0 mt-0.5" />
+                                <span>Rekam 120 menit / sesi</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-violet-400 shrink-0 mt-0.5" />
+                                <span>Kuota & folder tanpa batas</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-violet-400 shrink-0 mt-0.5" />
+                                <span>Global Chat lintas folder</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-violet-400 shrink-0 mt-0.5" />
+                                <span>Ekspor Word & Unduh audio</span>
+                              </li>
+                            </ul>
+                          </div>
+                          <button
+                            onClick={() => handleUpgrade('pro')}
+                            disabled={isProcessingPayment}
+                            className="w-full py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold text-center transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-violet-500/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            {isProcessingPayment ? (
+                              <>
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <span>Memproses...</span>
+                              </>
+                            ) : (
+                              <span>Pilih Pro</span>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* CARD 3: MAX */}
+                        <div className="bg-amber-950/20 border border-amber-500/30 p-5 rounded-2xl flex flex-col justify-between h-full space-y-4 relative overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.05)]">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
+                          <div className="absolute top-3 right-3 text-[7px] bg-amber-500/20 border border-amber-500/30 text-amber-400 px-1.5 py-0.5 rounded font-black tracking-wider uppercase">
+                            Terbaik
+                          </div>
+                          <div className="space-y-3">
+                            <div>
+                              <h5 className="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                                <Crown className="h-3 w-3" /> Max
+                              </h5>
+                              <div className="mt-1 flex items-baseline text-white">
+                                <span className="text-xl font-black">Rp 99.000</span>
+                                <span className="ml-1 text-[10px] font-medium text-zinc-500">/ bulan</span>
+                              </div>
+                            </div>
+                            <ul className="space-y-2 text-[11px] text-zinc-300">
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                <span>Rekam 240 menit / sesi</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                <span>Antrean AI prioritas (Instant)</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                <span>Terjemahan audio otomatis</span>
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <Check className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                <span>Kustomisasi template AI</span>
+                              </li>
+                            </ul>
+                          </div>
+                          <button
+                            onClick={() => handleUpgrade('max')}
+                            disabled={isProcessingPayment}
+                            className="w-full py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-zinc-950 rounded-xl text-xs font-extrabold text-center transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-amber-500/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            {isProcessingPayment ? (
+                              <>
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <span>Memproses...</span>
+                              </>
+                            ) : (
+                              <span>Pilih Max</span>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 flex justify-between items-center text-[10px] text-zinc-500">
+                        <span>Sistem pembayaran aman menggunakan enkripsi Midtrans SSL</span>
+                        <button
+                          onClick={() => setShowSettingsModal(false)}
                           disabled={isProcessingPayment}
                           className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 cursor-pointer disabled:opacity-50"
                         >
-                          Batal
+                          Kembali
                         </button>
                       </div>
                     </div>

@@ -175,14 +175,6 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
   };
 
   const handleStep2Next = () => {
-    // Note: Institution field (university) is optional for Profesional, but required for others if filling Step 2.
-    // However, to keep it extremely smooth, we let them skip or proceed.
-    // If they hit next without input on university but it is Student/School/Teacher/Creator, we prompt focus once.
-    // But since the user requested skip option, they can use skip.
-    if (data.role !== 'profesional' && !data.university.trim()) {
-      universityRef.current?.focus();
-      return;
-    }
     setStep(3);
   };
 

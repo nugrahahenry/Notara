@@ -43,3 +43,7 @@ next-env.d.ts
 # planning and strategy documents
 /docs/
 
+
+# ─── Windows launcher scripts (lokal, jangan masuk GitHub) ───
+*.bat
+*.vbs

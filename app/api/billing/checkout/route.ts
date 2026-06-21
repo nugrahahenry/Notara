@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createMidtransTransaction } from '@/lib/midtrans';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     
@@ -13,7 +13,20 @@ export async function POST() {
       return NextResponse.json({ error: 'Sesi tidak valid. Silakan login kembali.' }, { status: 401 });
     }
 
-    // 2. IDEMPOTENCY: Cek transaksi aktif 'pending' di database
+    // Parse body untuk mengambil param 'tier' (pro atau max)
+    let tier = 'pro';
+    try {
+      const body = await request.json();
+      if (body?.tier === 'max') {
+        tier = 'max';
+      }
+    } catch (e) {
+      // default ke pro jika body kosong/tidak valid
+    }
+
+    const amount = tier === 'max' ? 99000 : 49000;
+
+    // 2. IDEMPOTENCY: Cek transaksi aktif di database
     const { data: existingSub, error: dbError } = await supabase
       .from('subscriptions')
       .select('*')
@@ -24,14 +37,34 @@ export async function POST() {
       console.error('Error checking existing subscription:', dbError.message);
     }
 
-    // Jika sudah ada Snap Token pending yang dibuat < 24 jam, pakai kembali token tersebut
-    if (existingSub && existingSub.status === 'pending' && existingSub.snap_token) {
+    // Jika sudah ada langganan aktif yang sukses dan masa berlakunya masih aktif, cegah double payment
+    if (existingSub && existingSub.status === 'success') {
+      const periodEnd = existingSub.current_period_end ? new Date(existingSub.current_period_end).getTime() : null;
+      const now = Date.now();
+      
+      if (!periodEnd || periodEnd > now) {
+        const activeTier = existingSub.order_id.includes('NOTARA-MAX-') ? 'max' : 'pro';
+        
+        // Mencegah pembelian ulang tier yang sama, atau downgrade
+        if (activeTier === 'max' || (activeTier === 'pro' && tier === 'pro')) {
+          return NextResponse.json({
+            error: `Anda sudah memiliki langganan aktif untuk paket Notara ${activeTier.toUpperCase()}.`,
+            status: 'success',
+            order_id: existingSub.order_id,
+            amount: existingSub.amount,
+          }, { status: 400 });
+        }
+      }
+    }
+
+    // Jika sudah ada Snap Token pending yang dibuat < 24 jam dengan nominal/tier yang sama, pakai kembali token tersebut
+    if (existingSub && existingSub.status === 'pending' && existingSub.snap_token && existingSub.amount === amount) {
       const createdTime = new Date(existingSub.created_at).getTime();
       const now = Date.now();
       const expiryDuration = 24 * 60 * 60 * 1000; // 24 Jam
 
       if (now - createdTime < expiryDuration) {
-        console.log(`[Idempotency] Menggunakan kembali Snap Token pending untuk user: ${user.id}`);
+        console.log(`[Idempotency] Menggunakan kembali Snap Token pending untuk user: ${user.id} (${tier})`);
         return NextResponse.json({
           token: existingSub.snap_token,
           order_id: existingSub.order_id,
@@ -42,8 +75,8 @@ export async function POST() {
     }
 
     // 3. Buat order_id Baru (Unik berbasis User ID + Timestamp)
-    const orderId = `NOTARA-PRO-${user.id.substring(0, 8)}-${Date.now()}`;
-    const amount = 49000; // Tarif Notara Pro (Rp 49.000)
+    const orderPrefix = tier === 'max' ? 'NOTARA-MAX' : 'NOTARA-PRO';
+    const orderId = `${orderPrefix}-${user.id.substring(0, 8)}-${Date.now()}`;
 
     // 4. Minta Snap Token dari Midtrans
     const transaction = await createMidtransTransaction({

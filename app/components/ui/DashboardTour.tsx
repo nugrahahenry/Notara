@@ -313,22 +313,22 @@ export function DashboardTour({ steps, onComplete, onSkip }: DashboardTourProps)
 export const DEFAULT_TOUR_STEPS: TourStep[] = [
   {
     target: 'sidebar-folders',
-    title: 'Folder & Kelas',
-    description: 'Organisasikan materi kuliahmu ke dalam folder berdasarkan mata kuliah atau topik. Klik + untuk membuat folder baru!',
+    title: 'Folder & Kategori',
+    description: 'Organisasikan materi rekaman ke dalam folder berdasarkan topik atau proyek. Klik + untuk membuat folder baru!',
     emoji: '📁',
     position: 'right',
   },
   {
     target: 'upload-area',
     title: 'Unggah & Rekam',
-    description: 'Unggah file audio/video kuliah atau rekam langsung dari microphone. Notara akan otomatis membuat transkrip dan rangkuman!',
+    description: 'Unggah file audio/video atau rekam langsung dari microphone. Notara akan otomatis membuat transkrip dan rangkuman!',
     emoji: '🎙️',
     position: 'top',
   },
   {
     target: 'chat-panel',
     title: 'Neural Nexus AI',
-    description: 'Tanya jawab langsung dengan AI tentang isi kuliahmu! Neural Nexus memahami konteks setiap rangkuman yang kamu buka.',
+    description: 'Tanya jawab langsung dengan AI tentang isi rekaman atau rapat! Neural Nexus memahami konteks setiap rangkuman yang kamu buka.',
     emoji: '🧠',
     position: 'left',
   },
