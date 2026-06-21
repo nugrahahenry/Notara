@@ -200,7 +200,7 @@ function LoginForm() {
       const emailRedirectTo = redirectVal
         ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectVal)}`
         : `${window.location.origin}/auth/callback`;
-      const nextParam = redirectVal || '/';
+      const nextParam = redirectVal || '/dashboard';
 
       if (isSignUp) {
         // Sign Up Flow

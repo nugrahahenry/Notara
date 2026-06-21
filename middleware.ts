@@ -33,32 +33,42 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const url = request.nextUrl.clone();
+  const isLandingPage = url.pathname === '/';
   const isLoginPage = url.pathname === '/login';
   const isAuthRoute = url.pathname.startsWith('/auth/');
   const isPublicShareRoute = url.pathname.startsWith('/s/');
+  const isDashboardRoute = url.pathname.startsWith('/dashboard');
 
-  // Jika user belum login, redirect ke /login (kecuali sudah di /login, /auth/*, atau /s/*)
+  // Rute publik yang boleh diakses tanpa login: /, /login, /auth/*, /s/*
+  const isPublicRoute = isLandingPage || isLoginPage || isAuthRoute || isPublicShareRoute;
+
+  // Jika user belum login dan mencoba mengakses rute terproteksi (e.g., /dashboard),
+  // redirect ke /login
   if (!user) {
-    if (!isLoginPage && !isAuthRoute && !isPublicShareRoute) {
+    if (!isPublicRoute) {
       url.pathname = '/login';
       return NextResponse.redirect(url);
     }
   }
 
-  // Jika user sudah login dan mencoba ke /login:
-  // PENGECUALIAN: jika ada error atau cancelled query param (user baru klik Batal),
-  // biarkan mereka tetap di /login agar bisa lihat pesannya
-  if (user && isLoginPage) {
-    const hasError = url.searchParams.has('error');
-    const hasCancelled = url.searchParams.has('cancelled');
+  // Jika user sudah login:
+  if (user) {
+    // Redirect dari landing page (/) atau login page (/login) ke dashboard
+    if (isLandingPage || isLoginPage) {
+      const hasError = url.searchParams.has('error');
+      const hasCancelled = url.searchParams.has('cancelled');
 
-    if (!hasError && !hasCancelled) {
-      // Normal case: sudah login, arahkan ke dashboard
-      url.pathname = '/';
-      url.search = '';
-      return NextResponse.redirect(url);
+      // PENGECUALIAN: jika ada error atau cancelled query param (user baru klik Batal),
+      // biarkan mereka tetap di /login agar bisa lihat pesannya
+      if (isLoginPage && (hasError || hasCancelled)) {
+        // Jangan redirect — biarkan di /login
+      } else {
+        // Normal case: sudah login, arahkan ke dashboard
+        url.pathname = '/dashboard';
+        url.search = '';
+        return NextResponse.redirect(url);
+      }
     }
-    // Jika ada error/cancelled param, biarkan tetap di /login (jangan redirect)
   }
 
   return supabaseResponse;

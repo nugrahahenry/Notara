@@ -31,9 +31,11 @@ html, body {
   overflow: hidden !important;
 }
 
-/* Override untuk halaman login yang butuh scroll */
+/* Override untuk halaman login dan landing page yang butuh scroll */
 html:has(main[data-page="login"]),
-body:has(main[data-page="login"]) {
+body:has(main[data-page="login"]),
+html:has(main[data-page="landing"]),
+body:has(main[data-page="landing"]) {
   overflow: auto !important;
 }
 

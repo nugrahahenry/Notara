@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code');
   const error = searchParams.get('error');           // e.g. 'access_denied' when user cancels
   const errorCode = searchParams.get('error_code');  // e.g. 'flow_state_already_used'
-  const next = searchParams.get('next') ?? '/';
+  const next = searchParams.get('next') ?? '/dashboard';
 
   // ── 1. User explicitly clicked "Cancel" / "Batal" on Google's screen ──────
   if (error === 'access_denied') {
