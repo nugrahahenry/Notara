@@ -45,7 +45,8 @@ import {
   deleteChatThread,
   renameChatThread,
   getUserProfile,
-  saveOnboardingData
+  saveOnboardingData,
+  getUserSubscription
 } from '@/lib/db';
 import type { Folder as FolderType, Summary as SummaryType, ChatMessage, StudyGroup, ChatThread } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
@@ -351,7 +352,7 @@ export default function Home() {
   // Keamanan Dua Faktor (2FA) States (Sprint 13)
   const [showMfaModal, setShowMfaModal] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'security' | 'app'>('profile');
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'security' | 'app' | 'billing'>('profile');
   const [editingName, setEditingName] = useState<string>('');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState<boolean>(false);
   const [mfaEnabled, setMfaEnabled] = useState<boolean>(false);
@@ -394,6 +395,13 @@ export default function Home() {
   // Full-screen login success states
   const [showLoginSuccess, setShowLoginSuccess] = useState<boolean>(false);
   const [isFirstTimeLogin, setIsFirstTimeLogin] = useState<boolean>(false);
+
+  // Subscription & Billing States (Phase 5)
+  const [profileTier, setProfileTier] = useState<'free' | 'pro'>('free');
+  const [subscriptionData, setSubscriptionData] = useState<any>(null);
+  const [billingLoading, setBillingLoading] = useState<boolean>(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
 
   // Persistent Desktop Chat Panel State
   useEffect(() => {
@@ -770,9 +778,122 @@ export default function Home() {
     }
   };
 
+  const loadBillingData = async () => {
+    if (!user) return;
+    setBillingLoading(true);
+    setBillingError(null);
+    try {
+      const profile = await getUserProfile(user.id);
+      if (profile) {
+        setProfileTier(profile.subscription_tier || 'free');
+      }
+      const sub = await getUserSubscription(user.id);
+      setSubscriptionData(sub);
+    } catch (err: any) {
+      console.error('Error loading billing data:', err);
+      setBillingError('Gagal memuat status langganan.');
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleUpgradeToPro = async () => {
+    if (isProcessingPayment) return;
+    setIsProcessingPayment(true);
+    setBillingError(null);
+    try {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Gagal memulai proses pembayaran.');
+      }
+      
+      const { token } = data;
+
+      if (token.startsWith('mock-snap-token-')) {
+        // Mode Mock: Simulasikan pembayaran sukses offline
+        console.log('[Billing UI] Simulasikan pembayaran dummy...');
+        const orderId = data.order_id;
+        const webhookResponse = await fetch('/api/webhooks/billing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_id: orderId,
+            transaction_status: 'settlement',
+            status_code: '200',
+            gross_amount: '49000.00',
+            signature_key: 'dummy',
+            payment_type: 'gopay'
+          })
+        });
+        const webhookData = await webhookResponse.json();
+        if (webhookResponse.ok && webhookData.status === 'success') {
+          await loadBillingData();
+          showToast('Pembayaran berhasil! Notara Pro Anda telah aktif. 🎉', 'success');
+        } else {
+          throw new Error('Gagal memproses verifikasi sukses pembayaran.');
+        }
+      } else {
+        // Mode Asli Sandbox/Production
+        if (typeof window !== 'undefined' && (window as any).snap) {
+          (window as any).snap.pay(token, {
+            onSuccess: async (result: any) => {
+              showToast('Pembayaran berhasil! Akun Pro Anda aktif. 🎉', 'success');
+              await loadBillingData();
+            },
+            onPending: async (result: any) => {
+              showToast('Pembayaran pending. Selesaikan tagihan Anda.', 'info');
+              await loadBillingData();
+            },
+            onError: async (result: any) => {
+              setBillingError('Pembayaran gagal atau dibatalkan.');
+              await loadBillingData();
+            },
+            onClose: () => {
+              setIsProcessingPayment(false);
+            }
+          });
+        } else {
+          throw new Error('Snap SDK pembayaran belum termuat. Silakan muat ulang.');
+        }
+      }
+    } catch (err: any) {
+      console.error('Upgrade Pro error:', err);
+      setBillingError(err.message || 'Gagal memulai transaksi pembayaran.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  // Load Midtrans Snap Script dynamically
+  useEffect(() => {
+    if (showSettingsModal && settingsTab === 'billing') {
+      loadBillingData();
+      
+      const isProduction = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true';
+      const snapScriptUrl = isProduction
+        ? 'https://app.midtrans.com/snap/snap.js'
+        : 'https://app.sandbox.midtrans.com/snap/snap.js';
+      const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'SB-Mid-client-dummyClientKey12345';
+
+      const existingScript = document.getElementById('midtrans-snap-script');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = snapScriptUrl;
+        script.id = 'midtrans-snap-script';
+        script.setAttribute('data-client-key', clientKey);
+        script.async = true;
+        document.body.appendChild(script);
+      }
+    }
+  }, [showSettingsModal, settingsTab]);
+
   const openSettings = () => {
     if (user) {
       setEditingName(user.user_metadata?.full_name || '');
+      loadBillingData();
     }
     setSettingsTab('profile');
     setShowSettingsModal(true);
@@ -6151,6 +6272,16 @@ export default function Home() {
               >
                 ✦ Aplikasi
               </button>
+              <button
+                onClick={() => setSettingsTab('billing')}
+                className={`flex-1 py-2 rounded-lg transition-all duration-200 ${
+                  settingsTab === 'billing'
+                    ? 'bg-violet-600 text-white shadow shadow-violet-500/10'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                💳 Langganan
+              </button>
             </div>
 
             {/* Tab Contents */}
@@ -6355,7 +6486,7 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : settingsTab === 'app' ? (
                 /* TAB 3: APP INFO */
                 <div className="space-y-4 text-left">
                   {/* Version Card */}
@@ -6415,6 +6546,139 @@ export default function Home() {
                       Tutup
                     </button>
                   </div>
+                </div>
+              ) : (
+                /* TAB 4: LANGGANAN */
+                <div className="space-y-4 text-left">
+                  {billingLoading ? (
+                    <div className="py-12 flex flex-col items-center justify-center space-y-3">
+                      <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                      <span className="text-[10px] text-zinc-500 font-bold tracking-wider">Memuat Status Langganan...</span>
+                    </div>
+                  ) : billingError ? (
+                    <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-2.5">
+                      <div className="flex items-center gap-2 text-rose-400 font-extrabold text-xs">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span>Terjadi Kesalahan</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 leading-relaxed">{billingError}</p>
+                      <button onClick={loadBillingData} className="px-3.5 py-1.5 bg-rose-500/20 text-rose-300 font-bold rounded-xl text-[10px] hover:bg-rose-500/30 transition-all duration-200 cursor-pointer">
+                        Coba Lagi
+                      </button>
+                    </div>
+                  ) : profileTier === 'pro' ? (
+                    /* SUCCESS STATE: PRO ACTIVE */
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-gradient-to-tr from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                            <Crown className="h-5 w-5 animate-pulse" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-extrabold text-emerald-400 tracking-wide">Notara Pro Aktif</h4>
+                            <span className="text-[9px] text-zinc-400 font-bold block mt-0.5">TERIMA KASIH TELAH MENDUKUNG KAMI</span>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Metode Pembayaran</span>
+                            <span className="font-semibold text-zinc-200 uppercase">{subscriptionData?.payment_type || 'Instant Verification'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Periode Aktif</span>
+                            <span className="font-semibold text-zinc-200">
+                              {subscriptionData?.current_period_end 
+                                ? new Date(subscriptionData.current_period_end).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                                : 'Selamanya'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-3.5 bg-white/[0.02] border border-white/[0.04] rounded-2xl">
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">
+                          Anda sekarang memiliki akses tanpa batas untuk durasi rekam suara (hingga 120 menit), kuota rangkuman tak terbatas, ekspor Microsoft Word (.docx), dan chatbot lintas folder (Global Chat).
+                        </p>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          onClick={() => setShowSettingsModal(false)}
+                          className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 cursor-pointer"
+                        >
+                          Tutup
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* EMPTY STATE: UPGRADE TO PRO */
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-gradient-to-tr from-violet-600/10 via-indigo-600/5 to-transparent border border-white/[0.06] relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/5 rounded-full blur-2xl pointer-events-none" />
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
+                            <Crown className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-extrabold text-white tracking-wide">Upgrade ke Notara Pro</h4>
+                            <span className="text-[9px] text-zinc-500 font-bold block mt-0.5">DAPATKAN FITUR EKSKLUSIF</span>
+                          </div>
+                        </div>
+
+                        <ul className="mt-4 space-y-2.5 text-xs text-zinc-300">
+                          <li className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-violet-400 shrink-0" />
+                            <span>Rangkum berkas tanpa batas bulanan</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-violet-400 shrink-0" />
+                            <span>Rekam suara langsung hingga 120 menit / sesi</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-violet-400 shrink-0" />
+                            <span>Ekspor rangkuman langsung ke file Word (.docx)</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="h-4 w-4 text-violet-400 shrink-0" />
+                            <span>Akses penuh Chatbot Global lintas folder</span>
+                          </li>
+                        </ul>
+                        
+                        <div className="mt-5 pt-4 border-t border-white/5 flex flex-col space-y-2">
+                          <button
+                            onClick={handleUpgradeToPro}
+                            disabled={isProcessingPayment}
+                            className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-extrabold text-xs tracking-wider uppercase rounded-xl transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-violet-500/10 flex items-center justify-center gap-2"
+                          >
+                            {isProcessingPayment ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <span>Memproses...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Crown className="h-4 w-4 text-yellow-300 animate-bounce" />
+                                <span>Beli Pro — Rp 49.000 / Bulan</span>
+                              </>
+                            )}
+                          </button>
+                          <span className="text-[9px] text-zinc-500 text-center block mt-1 font-medium">Sistem aman menggunakan enkripsi Midtrans SSL</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          onClick={() => setShowSettingsModal(false)}
+                          disabled={isProcessingPayment}
+                          className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 cursor-pointer disabled:opacity-50"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

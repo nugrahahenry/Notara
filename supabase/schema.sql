@@ -359,6 +359,70 @@ USING (
   )
 );
 
+-- ==========================================
+-- BILLING & SUBSCRIPTIONS (Phase 5 - Monetisasi)
+-- ==========================================
+
+-- 20. TABEL SUBSCRIPTIONS
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+  order_id TEXT UNIQUE NOT NULL,
+  snap_token TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'success', 'failed', 'expired')),
+  amount INTEGER NOT NULL,
+  payment_type TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ
+);
+
+-- Aktifkan RLS
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- Kebijakan RLS untuk subscriptions
+CREATE POLICY "Users can view their own subscription"
+ON subscriptions FOR SELECT
+USING (auth.uid() = user_id);
+
+-- Tambah kolom subscription_tier ke profiles
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro'));
+
+-- 21. FUNCTION handle_payment_callback (SECURITY DEFINER untuk memotong RLS oleh Webhook Midtrans)
+CREATE OR REPLACE FUNCTION public.handle_payment_callback(
+  p_order_id TEXT,
+  p_status TEXT,
+  p_payment_type TEXT
+)
+RETURNS VOID AS $$
+DECLARE
+  v_user_id UUID;
+  v_tier TEXT;
+BEGIN
+  -- Cari user_id yang terhubung dengan order_id
+  SELECT user_id INTO v_user_id FROM public.subscriptions WHERE order_id = p_order_id;
+  
+  IF v_user_id IS NOT NULL THEN
+    -- Update status transaksi di tabel subscriptions
+    UPDATE public.subscriptions
+    SET 
+      status = p_status,
+      payment_type = p_payment_type,
+      current_period_start = CASE WHEN p_status = 'success' THEN now() ELSE current_period_start END,
+      current_period_end = CASE WHEN p_status = 'success' THEN now() + interval '30 days' ELSE current_period_end END
+    WHERE order_id = p_order_id;
+
+    -- Tentukan tier profiles berdasarkan status pembayaran
+    v_tier := CASE WHEN p_status = 'success' THEN 'pro' ELSE 'free' END;
+
+    -- Update tier langganan di profil pengguna
+    UPDATE public.profiles
+    SET subscription_tier = v_tier
+    WHERE id = v_user_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 
 
 

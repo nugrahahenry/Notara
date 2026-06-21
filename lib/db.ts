@@ -627,7 +627,7 @@ export async function leaveStudyGroup(
 }
 
 // ─────────────────────────────────────────────
-// ONBOARDING PROFILE OPERATIONS
+// ONBOARDING PROFILE & BILLING OPERATIONS
 // ─────────────────────────────────────────────
 
 export interface UserProfile {
@@ -639,6 +639,20 @@ export interface UserProfile {
   major: string | null;
   find_source: string | null;
   is_onboarded: boolean;
+  subscription_tier: 'free' | 'pro';
+}
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  order_id: string;
+  snap_token: string | null;
+  status: 'pending' | 'success' | 'failed' | 'expired';
+  amount: number;
+  payment_type: string | null;
+  created_at: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
 }
 
 /** Mengambil profil pengguna aktif */
@@ -677,6 +691,67 @@ export async function saveOnboardingData(
 
   if (error) {
     console.error('Error saving onboarding data:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Mengambil data langganan pengguna */
+export async function getUserSubscription(userId: string): Promise<Subscription | null> {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching subscription:', error.message);
+    return null;
+  }
+  return data;
+}
+
+/** Menyimpan atau memperbarui transaksi langganan */
+export async function upsertSubscription(
+  userId: string,
+  payload: {
+    order_id: string;
+    snap_token?: string | null;
+    status: 'pending' | 'success' | 'failed' | 'expired';
+    amount: number;
+    payment_type?: string | null;
+    current_period_start?: string | null;
+    current_period_end?: string | null;
+  }
+): Promise<Subscription | null> {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .upsert({
+      user_id: userId,
+      ...payload
+    }, { onConflict: 'user_id' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error upserting subscription:', error.message);
+    return null;
+  }
+  return data;
+}
+
+/** Memperbarui tier langganan di profil user */
+export async function updateUserSubscriptionTier(
+  userId: string,
+  tier: 'free' | 'pro'
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ subscription_tier: tier })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Error updating profile subscription tier:', error.message);
     return false;
   }
   return true;
