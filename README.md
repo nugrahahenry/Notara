@@ -1,107 +1,71 @@
-# 📁 Notara — AI-Powered Lecture & Meeting Summarizer 🎓💼🔥
+# Notara — AI-Powered Lecture Summarizer
 
-Notara adalah asisten akademik dan produktivitas berbasis AI yang dirancang untuk mereduksi berkas rekaman suara panjang (seperti perkuliahan, rapat, atau wawancara) menjadi rangkuman terstruktur satu halaman, daftar konsep kunci, prediksi soal ujian, serta dilengkapi dengan chatbot AI interaktif untuk tanya-jawab materi secara real-time.
+> Upload your lecture audio. Get a structured summary, key concepts, exam predictions, and an interactive AI chatbot to ask questions about the material — in seconds.
 
----
+## The Problem
 
-## 🎨 Fitur Utama
+Lectures are long. Notes are tiring to write. Recordings go unwatched. By the time exams roll around, revisiting hours of audio is unrealistic.
 
-1. **Perekaman Suara Native & Live Visualizer**: Rekam audio kuliah langsung di browser dengan waveform visualizer berbasis Canvas, pengukur durasi, tombol jeda/lanjutkan, dan pemutar preview audio.
-2. **Client-Side Audio Chunking**: Mendekode secara asinkron berkas audio berukuran besar (>20MB) di browser lewat Web Audio API, memotongnya menjadi klip-klip 5 menit secara otomatis, mentranskripsinya secara paralel/sekuensial ke Groq Whisper, dan menggabungkannya kembali untuk bypass batasan API (25MB) dan serverless timeout.
-3. **Reduksi Rangkuman Pintar (Groq Llama 3.3 70B)**: Rangkuman markdown komprehensif mencakup ringkasan singkat, poin-poin utama, istilah/konsep kunci, dan prediksi soal ujian/latihan mandiri.
-4. **Streaming Study Q&A Chatbot**: Panel chat interaktif di sebelah kanan yang merespon secara real-time (streaming Server-Sent Events) untuk tanya-jawab seputar materi kuliah.
-   * **🎯 Rangkuman Ini**: AI menjawab berdasarkan transkrip file yang sedang dibuka.
-   * **📚 Satu Mata Kuliah**: AI menggabungkan transkrip dari seluruh dokumen di dalam folder mata kuliah yang sama sebagai context window!
-5. **Database Permanen & Riwayat Chat (Supabase)**: Semua data folder/mata kuliah, riwayat rangkuman, dan riwayat chat tersimpan secara terstruktur di Supabase cloud PostgreSQL.
-6. **Premium UI/UX Polish**:
-   * *Supabase-Style Hover Sidebar*: Sidebar desktop w-16 yang meluncur membesar menjadi w-72 saat kursor diarahkan ke kiri.
-   * *Orbital Brain Glow Loader*: Animasi loading orbital sirkuler bertahap dengan progress bar gradien pulsing neon.
-   * *Sound Synthesizer*: Sintesis chimes dinamis lewat Web Audio API saat proses berhasil atau terhapus.
-   * *Canvas Particle Explosion*: Efek ledakan partikel rose-violet dan pecahan dokumen dari posisi kursor saat dokumen dihapus.
+## The Solution
 
----
+Notara turns any lecture recording into a **structured, one-page summary** with key concepts and predicted exam questions — and adds a live chat interface so you can ask follow-up questions about the material.
 
-## 🛠️ Tech Stack
+## Features
 
-* **Frontend**: Next.js 15+ (App Router), Tailwind CSS, TypeScript
-* **Database**: Supabase PostgreSQL (SDK `@supabase/supabase-js`)
-* **AI Transcription**: Groq Whisper API (`whisper-large-v3`)
-* **AI Chat & Summary**: Groq Llama 3.3 API (`llama-3.3-70b-versatile`)
-* **Audio Processing**: Web Audio API (native browser)
+- **Audio → Transcript → Summary** in one upload (Groq Whisper + Llama 3.3 70B)
+- **Auto-detects content type** — lecture, meeting, or brainstorm — and adapts the summary format
+- **Client-side audio chunking** — decodes large files (>20 MB) in the browser, splits into 5-minute clips, transcribes in parallel, then merges. Bypasses Whisper's 25 MB limit and serverless timeouts.
+- **Streaming Q&A chatbot** — real-time answers via Server-Sent Events, with two scope levels:
+  - *This Summary* — answers from the current file's transcript
+  - *This Subject* — combines transcripts from all files in the same folder/subject
+- **Folder / subject organization** — group recordings by course, share summaries publicly
+- **Public share pages** — shareable link (`/s/[slug]`) for each summary, with fork capability
+- **Auth + Database** — Supabase PostgreSQL for all user data, folder structure, and chat history
+- **Payment integration** — Midtrans checkout + webhook pipeline; order status auto-updates on successful payment
 
----
+## Tech Stack
 
-## 📂 Supabase Database Schema
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js (App Router), React 19, Tailwind CSS 4 |
+| Database & Auth | Supabase (PostgreSQL + Auth) |
+| AI Transcription | Groq Whisper (`whisper-large-v3`, language=id) |
+| AI Summary & Chat | Groq Llama 3.3 70B (`llama-3.3-70b-versatile`) |
+| Payments | Midtrans (Checkout Session + Webhook) |
+| Deployment | Vercel |
 
-Jalankan script SQL berikut di SQL Editor Supabase Anda untuk mempersiapkan tabel yang diperlukan:
+## Architecture
 
-```sql
--- Tabel untuk folder/matkul
-CREATE TABLE folders (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name       TEXT NOT NULL,           
-  color      TEXT NOT NULL DEFAULT '#8B5CF6', 
-  icon       TEXT DEFAULT '📁',       
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Tabel untuk riwayat rangkuman
-CREATE TABLE summaries (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  folder_id    UUID REFERENCES folders(id) ON DELETE SET NULL,
-  title        TEXT NOT NULL,           
-  file_name    TEXT,                    
-  duration_sec INTEGER,                 
-  transcript   TEXT NOT NULL,           
-  summary      TEXT NOT NULL,           
-  word_count   INTEGER,                 
-  created_at   TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Tabel untuk chat history per summary
-CREATE TABLE chat_messages (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  summary_id  UUID REFERENCES summaries(id) ON DELETE CASCADE,
-  role        TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
-  content     TEXT NOT NULL,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
+```
+Browser
+  └─ Audio file
+       ├─ [large files] Client-side chunking via Web Audio API
+       │    └─ 5-min clips → parallel Groq Whisper calls → merged transcript
+       └─ [small files] Direct to API route
+            └─ Groq Whisper → transcript → Groq Llama → structured summary
+                                                └─ stored in Supabase
 ```
 
----
+**Current audio flow:** audio is processed in-request and not stored persistently (Vercel ~4.5 MB body limit is a known constraint). Next planned step: upload from browser to Supabase Storage via signed URL before transcription — removes the size ceiling entirely.
 
-## ⚙️ Cara Menjalankan secara Lokal
+## Getting Started
 
-### 1. Clone & Install Dependensi
-Masuk ke direktori dan jalankan perintah install:
 ```bash
+# 1. Install dependencies
 npm install
-```
 
-### 2. Konfigurasi Environment Variables
-Buat berkas `.env.local` di root direktori proyek dan isi variabel berikut:
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-GROQ_API_KEY=your-groq-api-key
-```
+# 2. Set up environment variables
+cp .env.example .env.local
+# Fill in: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+#          GROQ_API_KEY, MIDTRANS_SERVER_KEY, MIDTRANS_CLIENT_KEY
 
-### 3. Jalankan Dev Server
-```bash
+# 3. Run locally
 npm run dev
 ```
-Buka [http://localhost:3000](http://localhost:3000) di browser Anda.
 
----
+## Roadmap
 
-## 🚀 Deploy ke Vercel
-
-1. Buat repositori baru di GitHub dan dorong code Anda.
-2. Impor proyek ke Vercel.
-3. Tambahkan environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `GROQ_API_KEY`) di menu Settings Vercel.
-4. Klik **Deploy**!
-
----
-
-## 📜 Lisensi
-Lisensi di bawah [MIT License](LICENSE). Dibuat dengan 💜 oleh Henry & Notara Team.
+- [ ] Supabase Storage upload (bypass Vercel body size limit)
+- [ ] Audio queue for long recordings (Trigger.dev)
+- [ ] Gemini integration for global cross-subject chat (1M context window)
+- [ ] Mobile-friendly upload experience
