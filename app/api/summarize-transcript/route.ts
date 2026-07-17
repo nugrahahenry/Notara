@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GROQ_LLM_MODEL } from '../../../lib/ai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -131,7 +132,7 @@ ${transcript}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_LLM_MODEL, // dikelola terpusat di lib/ai.ts
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
         max_tokens: 4096,

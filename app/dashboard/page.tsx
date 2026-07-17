@@ -57,35 +57,46 @@ import type { User } from '@supabase/supabase-js';
 // ==========================================
 
 // Slice an AudioBuffer from start to end (in seconds)
-const sliceAudioBuffer = (ctx: AudioContext, buffer: AudioBuffer, start: number, end: number): AudioBuffer => {
-  const duration = end - start;
-  const chunkLength = Math.round(duration * buffer.sampleRate);
-  const slicedBuffer = ctx.createBuffer(
-    1, // Always mix down to 1 channel (mono) to save space and stay under Groq's 25MB limit
-    chunkLength,
-    buffer.sampleRate
+// Native sample-rate Whisper = 16kHz. WAV di rate asli (44.1kHz) bikin chunk 3-menit
+// jadi ~16MB → lewat limit body Vercel (4.5MB). Resample ke 16kHz mono = jauh lebih kecil,
+// akurasi Whisper sama (dia memang memproses di 16kHz). Async karena pakai OfflineAudioContext.
+const TARGET_SAMPLE_RATE = 16000;
+
+const sliceAudioBuffer = async (buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> => {
+  const startSample = Math.round(start * buffer.sampleRate);
+  const frameCount = Math.max(
+    0,
+    Math.min(Math.round((end - start) * buffer.sampleRate), buffer.length - startSample)
   );
-  
-  const targetData = slicedBuffer.getChannelData(0);
+
   const sourceChannels: Float32Array[] = [];
   for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
     sourceChannels.push(buffer.getChannelData(channel));
   }
-  
-  const startSample = Math.round(start * buffer.sampleRate);
-  
-  for (let i = 0; i < chunkLength; i++) {
-    const srcIndex = startSample + i;
-    if (srcIndex >= buffer.length) break;
-    
+
+  const OfflineCtx =
+    window.OfflineAudioContext ||
+    (window as unknown as { webkitOfflineAudioContext: typeof OfflineAudioContext }).webkitOfflineAudioContext;
+
+  const targetLength = Math.max(1, Math.ceil((frameCount / buffer.sampleRate) * TARGET_SAMPLE_RATE));
+  const offline = new OfflineCtx(1, targetLength, TARGET_SAMPLE_RATE);
+
+  // Buffer sumber di sample-rate ASLI + downmix mono; di-resample otomatis saat dirender ke 16kHz
+  const monoSource = offline.createBuffer(1, Math.max(1, frameCount), buffer.sampleRate);
+  const monoData = monoSource.getChannelData(0);
+  for (let i = 0; i < frameCount; i++) {
     let sum = 0;
     for (let c = 0; c < buffer.numberOfChannels; c++) {
-      sum += sourceChannels[c][srcIndex];
+      sum += sourceChannels[c][startSample + i];
     }
-    targetData[i] = sum / buffer.numberOfChannels;
+    monoData[i] = sum / buffer.numberOfChannels;
   }
-  
-  return slicedBuffer;
+
+  const node = offline.createBufferSource();
+  node.buffer = monoSource;
+  node.connect(offline.destination);
+  node.start();
+  return await offline.startRendering(); // mono @ 16kHz
 };
 
 // Convert AudioBuffer to playable WAV Blob (16-bit PCM WAV format)
@@ -1663,7 +1674,7 @@ export default function Home() {
   // Recording triggers
   const startRecording = async () => {
     // Check monthly limit for Free tier
-    const isPro = false;
+    const isPro = profileTier !== 'free';
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     const currentMonthSummariesCount = summaries.filter(s => {
@@ -1827,7 +1838,7 @@ export default function Home() {
         }
 
         // Limit check: 30 mins (1800s) for Free, 120 mins (7200s) for Pro
-        const isPro = false; // Auth tier integration in Phase 4
+        const isPro = profileTier !== 'free'; // disambung ke subscription_tier (3 Jul 2026)
         const limit = isPro ? 120 * 60 : 30 * 60;
         
         if (nextSec >= limit) {
@@ -1844,7 +1855,7 @@ export default function Home() {
 
   const resumeRecording = () => {
     // Check limits before resuming (Sprint 8)
-    const isPro = false;
+    const isPro = profileTier !== 'free';
     const limit = isPro ? 120 * 60 : 30 * 60;
     if (recordingDuration >= limit) {
       setShowUpgradeModal(true);
@@ -1894,7 +1905,7 @@ export default function Home() {
     if (!pendingSummary) return;
 
     // Check limit of 3 files per folder for Free tier
-    const isPro = false;
+    const isPro = profileTier !== 'free';
     if (!isPro && folderId) {
       const folderSummariesCount = summaries.filter(s => s.folder_id === folderId).length;
       if (folderSummariesCount >= 3) {
@@ -1990,10 +2001,10 @@ export default function Home() {
       const totalDuration = audioBuffer.duration;
       const fileDurationSec = Math.round(totalDuration);
       
-      const chunkDuration = 3 * 60; // 3 minute blocks (safely under Groq's 25MB limit when converted to mono WAV)
+      const chunkDuration = 2 * 60; // 2 menit/chunk @16kHz mono ≈ 3.8MB — aman di bawah limit body Vercel (4.5MB)
       const totalChunks = Math.ceil(totalDuration / chunkDuration);
       setChunkTotal(totalChunks);
-      addThinkingLog(`✂️ Audio akan dipotong menjadi ${totalChunks} bagian @ 3 menit...`);
+      addThinkingLog(`✂️ Audio akan dipotong menjadi ${totalChunks} bagian @ 2 menit...`);
       
       let concatenatedTranscript = '';
       
@@ -2005,7 +2016,7 @@ export default function Home() {
         addThinkingLog(`🔪 Memotong bagian ${c + 1}/${totalChunks} (menit ${Math.floor(start/60)}–${Math.floor(end/60)})...`);
         setChunkProgress(`Memotong bagian ${c + 1} dari ${totalChunks}...`);
         
-        const slicedBuffer = sliceAudioBuffer(audioCtx, audioBuffer, start, end);
+        const slicedBuffer = await sliceAudioBuffer(audioBuffer, start, end);
         
         setChunkProgress(`Mengubah bagian ${c + 1} menjadi WAV...`);
         const wavBlob = bufferToWav(slicedBuffer);
@@ -2081,7 +2092,7 @@ export default function Home() {
   // Main Audio Processor
   const startProcessing = async (sourceFile: File | Blob, name: string, queueIndex: number | null = null) => {
     // Check monthly limit for Free tier
-    const isPro = false;
+    const isPro = profileTier !== 'free';
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     const currentMonthSummariesCount = summaries.filter(s => {
@@ -2112,7 +2123,7 @@ export default function Home() {
 
     const isVideoFile = sourceFile instanceof File && sourceFile.type.startsWith('video/');
     const MAX_FILE_SIZE_LIMIT = 150 * 1024 * 1024; // 150MB — limit to prevent browser crash
-    const CHUNK_THRESHOLD = 20 * 1024 * 1024; // 20MB — chunking threshold
+    const CHUNK_THRESHOLD = 4 * 1024 * 1024; // 4MB — di atas ini WAJIB chunk di browser (limit body Vercel 4.5MB)
 
     // Block files larger than 150MB to prevent browser memory exhaust / tab crash
     if (sourceFile instanceof File && sourceFile.size > MAX_FILE_SIZE_LIMIT) {
@@ -2844,7 +2855,7 @@ export default function Home() {
     const targetFolderId = folderId === 'null' ? null : folderId;
 
     // Check limit of 3 files per folder for Free tier
-    const isPro = false;
+    const isPro = profileTier !== 'free';
     if (!isPro && targetFolderId) {
       const folderSummariesCount = summaries.filter(s => s.folder_id === targetFolderId).length;
       if (folderSummariesCount >= 3) {
@@ -6517,7 +6528,7 @@ export default function Home() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span>AI Engine</span>
-                        <span className="text-zinc-400">Gemini Pro</span>
+                        <span className="text-zinc-400">Groq (GPT-OSS 120B)</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span>Update Mode</span>

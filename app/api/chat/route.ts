@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GROQ_LLM_MODEL } from '../../../lib/ai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,7 +65,7 @@ ${contextTranscript || 'Tidak ada transkrip materi kuliah yang tersedia untuk se
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_LLM_MODEL, // dikelola terpusat di lib/ai.ts
         messages,
         temperature: 0.6,
         stream: true,

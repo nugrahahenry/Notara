@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GROQ_LLM_MODEL, GROQ_STT_MODEL } from '../../../lib/ai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const groqFormData = new FormData();
     const fileBlob = new Blob([buffer], { type: file.type });
     groqFormData.append('file', fileBlob, file.name || 'audio.mp3');
-    groqFormData.append('model', 'whisper-large-v3');
+    groqFormData.append('model', GROQ_STT_MODEL);
     groqFormData.append('language', 'id'); // Paksa Bahasa Indonesia agar akurat
 
     console.log('Asisten 1: Groq Whisper sedang mentranskripsi audio...');
@@ -176,7 +177,7 @@ ${transcript}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_LLM_MODEL, // dikelola terpusat di lib/ai.ts
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
         max_tokens: 4096,
