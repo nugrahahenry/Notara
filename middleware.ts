@@ -47,7 +47,11 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     if (!isPublicRoute) {
       url.pathname = '/login';
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      // Bawa cookie sesi yang mungkin baru di-refresh oleh getUser(), kalau tidak
+      // cookie itu hilang di response redirect dan session jadi desync.
+      supabaseResponse.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+      return redirectResponse;
     }
   }
 
@@ -66,7 +70,10 @@ export async function middleware(request: NextRequest) {
         // Normal case: sudah login, arahkan ke dashboard
         url.pathname = '/dashboard';
         url.search = '';
-        return NextResponse.redirect(url);
+        const redirectResponse = NextResponse.redirect(url);
+        // Sama seperti di atas: token yang baru di-refresh harus ikut di response redirect.
+        supabaseResponse.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+        return redirectResponse;
       }
     }
   }

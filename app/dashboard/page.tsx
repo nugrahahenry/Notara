@@ -3724,7 +3724,7 @@ export default function Home() {
             <div className="px-4 pt-3 pb-1 flex items-center gap-2">
               <span className="text-[10px] font-bold text-zinc-600 tracking-widest uppercase">Notara</span>
               <span className="text-[10px] font-mono font-bold text-violet-500/60 bg-violet-500/10 border border-violet-500/15 rounded-full px-2 py-0.5">
-                v0.0.05
+                v0.0.06
               </span>
               <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" title="Versi terkini" />
             </div>
@@ -6511,7 +6511,7 @@ export default function Home() {
                       </div>
                       <div>
                         <p className="text-xs font-extrabold text-white">Notara</p>
-                        <p className="text-[11px] text-zinc-500 font-mono">Versi v0.0.05 — Early Testing</p>
+                        <p className="text-[11px] text-zinc-500 font-mono">Versi v0.0.06 · Early Testing</p>
                       </div>
                       <span className="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-2.5 py-1">
                         ✓ Terkini
@@ -7030,7 +7030,7 @@ export default function Home() {
 
       {/* ─── VERSION UPDATE BANNER ─── */}
       {/* Detects new Vercel deployments on window focus — shows update prompt */}
-      <VersionUpdateBanner appVersion="v0.0.05" />
+      <VersionUpdateBanner appVersion="v0.0.06" />
 
     </div>
   );

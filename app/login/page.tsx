@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, Zap, MessageSquare, FolderGit2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { NotaraLogo } from '../components/brand/NotaraLogo';
@@ -65,7 +65,6 @@ const getFriendlyErrorMessage = (msg: string): string => {
 };
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
   
@@ -217,6 +216,14 @@ function LoginForm() {
 
         if (error) throw error;
 
+        // Email sudah terdaftar (mis. lewat Google): Supabase tetap membalas "sukses"
+        // tapi identities kosong dan password TIDAK pernah diset. Tanpa cek ini, user
+        // disuruh "cek email" padahal login dengan kata sandi akan selalu gagal.
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          setErrorMsg('Email ini sudah terdaftar. Silakan masuk memakai email dan kata sandi Anda, atau gunakan tombol Masuk dengan Google.');
+          return;
+        }
+
         // If email confirmation is required, inform the user
         if (data.user && data.session === null) {
           setSuccessMsg('Pendaftaran berhasil! Silakan periksa kotak masuk email Anda untuk melakukan verifikasi akun.');
@@ -228,7 +235,10 @@ function LoginForm() {
           // Direct session after sign-up (email confirmation disabled)
           localStorage.setItem('login_success', '1');
           sessionStorage.setItem('login_success', '1');
-          router.replace(nextParam);
+          // Navigasi dokumen penuh (bukan soft-nav): menjamin cookie sesi yang baru
+          // diset ikut terkirim di permintaan pertama, sehingga middleware langsung
+          // melihat user sebagai sudah login dan tidak memantulkan ke halaman publik.
+          window.location.replace(nextParam);
         }
       } else {
         // Sign In Flow
@@ -242,7 +252,10 @@ function LoginForm() {
         if (data.session) {
           localStorage.setItem('login_success', '1');
           sessionStorage.setItem('login_success', '1');
-          router.replace(nextParam);
+          // Navigasi dokumen penuh (bukan soft-nav): menjamin cookie sesi yang baru
+          // diset ikut terkirim di permintaan pertama, sehingga middleware langsung
+          // melihat user sebagai sudah login dan tidak memantulkan ke halaman publik.
+          window.location.replace(nextParam);
         }
       }
     } catch (err: any) {
