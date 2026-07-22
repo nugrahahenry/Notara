@@ -1838,7 +1838,7 @@ export default function Home() {
         }
 
         // Limit check: 30 mins (1800s) for Free, 120 mins (7200s) for Pro
-        const isPro = profileTier !== 'free'; // disambung ke subscription_tier (3 Jul 2026)
+        const isPro = profileTier !== 'free'; // disambung ke subscription_tier (19 Jul 2026)
         const limit = isPro ? 120 * 60 : 30 * 60;
         
         if (nextSec >= limit) {

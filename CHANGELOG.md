@@ -24,6 +24,8 @@ Lihat aturan lengkap di `../KONVENSI-VERSI.md`.
 ### Removed
 - Dependensi `@google/generative-ai` yang tidak pernah dipakai.
 
-## [0.1.0] - 2026-06-24
+## [0.0.01] - 2026-06-24
 ### Added
-- Titik awal pencatatan changelog. Next.js initialized, API key (Groq Whisper + Gemini) configured. Siap development frontend — lihat `CLAUDE.md`.
+- Titik awal pencatatan changelog. Next.js initialized, API key (Groq Whisper + Gemini) configured. Siap development frontend.
+
+> Catatan: entri ini dulu ditulis `[0.1.0]` (angka seed dari `KONVENSI-VERSI.md`), padahal aplikasinya sejak awal memakai skema `0.0.0x`. Dinomori ulang 19 Jul 2026 supaya urutannya konsisten.
