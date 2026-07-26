@@ -1,7 +1,7 @@
-# Notara — Handoff Sesi (19 Juli 2026)
+# Notara — Handoff Sesi (27 Juli 2026)
 
 > Dokumen ini buat melanjutkan kerja di sesi/chat lain tanpa perlu jelasin ulang dari nol.
-> Status saat ditulis: **v0.0.06**, build hijau, MVP fungsional tapi **belum tervalidasi end-to-end**.
+> Status saat ditulis: **v0.0.06**, build hijau. Rekaman lokal 18 menit dan migration Supabase sudah tervalidasi; production Vercel masih perlu diuji.
 
 ---
 
@@ -15,6 +15,14 @@
 ---
 
 ## 1. Yang SUDAH dikerjakan sesi ini
+
+### 1.0 Pemulihan Supabase & RLS (27 Juli 2026)
+- Project live `wwofgavevtvvqnqaaves` (Notara, Eclipse Stars) kembali **Healthy**.
+- `supabase/migrations/20260719_catchup.sql` sudah dijalankan sukses di database live. Semua 9 tabel inti, 6 kolom kunci, 4 function, RLS di 9 tabel, dan FK `group_members.user_id -> profiles(id)` terverifikasi ada.
+- Audit menemukan 5 policy lama yang tidak tercakup migration catch-up. Tiga di antaranya bernama `Allow all` pada `folders`, `summaries`, dan `chat_messages`; karena policy RLS bersifat permissive/OR, ketiganya membypass ownership dan merupakan celah data privat.
+- Cleanup tercatat di `supabase/migrations/20260727_remove_legacy_rls_policies.sql` dan **sudah dijalankan** di Supabase: tiga `Allow all` serta dua policy duplikat telah dihapus. Verifikasi akhir: **21** policy, **0** `Allow all`, dan **0** policy chat lama.
+- Perbaikan recording panjang lokal: potongan audio hanya ditranskrip (`transcribeOnly=true`), lalu seluruh transkrip dirangkum sekali di akhir. Sebelumnya setiap chunk memanggil LLM sehingga file 18 menit cepat gagal/rate limited. Mode bypass auth lokal dijaga `development`-only dan tidak dapat aktif di Vercel.
+- Uji production 27 Juli 2026: deployment yang benar adalah `https://notara-hengs.vercel.app` (bukan `notara.vercel.app`, yang milik aplikasi lain). Commit `783c9ba` / v0.0.08 berstatus Ready; login Google, pemuatan dashboard, serta satu alur rekam → rangkum berhasil. Endpoint `/api/version` masih ter-redirect ke login oleh middleware; ini sejalan dengan pekerjaan billing/webhook yang belum ditutup di §2.3–2.4.
 
 ### 1.1 Model Groq deprecated
 `llama-3.3-70b-versatile` dan `llama-3.1-8b-instant` di-deprecate Groq per 17 Jun 2026. Notara sudah pindah ke `openai/gpt-oss-120b`, dan sekarang ID model dipusatkan di **`lib/ai.ts`** supaya deprecation berikutnya cukup ubah 1 baris (dulu hardcode di 3 route).
