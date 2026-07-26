@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     // 2. Ambil file audio dari request
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const transcribeOnly = formData.get('transcribeOnly') === 'true';
 
     if (!file) {
       return NextResponse.json(
@@ -65,6 +66,14 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Transkripsi selesai! Panjang teks:', transcript.length, 'karakter');
+
+    // Audio panjang dipecah di browser. Setiap chunk hanya perlu melewati
+    // Whisper; rangkuman dibuat sekali di /api/summarize-transcript setelah
+    // semua transcript digabung agar tidak memboroskan quota Groq.
+    if (transcribeOnly) {
+      return NextResponse.json({ transcript });
+    }
+
     console.log('Asisten 2: Groq Llama 3.3 sedang membuat rangkuman...');
 
     // 5. Panggil Groq LLM (Llama 3.3 70B) untuk merangkum teks — GRATIS!

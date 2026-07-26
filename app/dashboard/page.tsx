@@ -62,6 +62,22 @@ import type { User } from '@supabase/supabase-js';
 // akurasi Whisper sama (dia memang memproses di 16kHz). Async karena pakai OfflineAudioContext.
 const TARGET_SAMPLE_RATE = 16000;
 
+// Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
+// membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
+// environment variable yang keliru di Vercel.
+const DEV_BYPASS_AUTH =
+  process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_NOTARA_DEV_BYPASS_AUTH === 'true';
+
+const DEV_BYPASS_USER = {
+  id: 'local-recording-test',
+  email: 'local@notara.test',
+  app_metadata: {},
+  user_metadata: { full_name: 'Mode Tes Lokal' },
+  aud: 'authenticated',
+  created_at: '2026-01-01T00:00:00.000Z',
+} as User;
+
 const sliceAudioBuffer = async (buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> => {
   const startSample = Math.round(start * buffer.sampleRate);
   const frameCount = Math.max(
@@ -1103,6 +1119,17 @@ export default function Home() {
   useEffect(() => {
     let active = true;
 
+    if (DEV_BYPASS_AUTH) {
+      setUser(DEV_BYPASS_USER);
+      setFolders([]);
+      setSummaries([]);
+      setStudyGroups([]);
+      setIsDataLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
     async function checkUser() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -1904,6 +1931,33 @@ export default function Home() {
   const handleSavePendingSummary = async (folderId: string | null) => {
     if (!pendingSummary) return;
 
+    // Dalam mode tes lokal, hasil tetap bisa dibuka dan diuji tanpa menulis
+    // ke Supabase. Data ini hanya hidup selama tab browser masih terbuka.
+    if (DEV_BYPASS_AUTH) {
+      const localSummary: SummaryType = {
+        id: `local-${Date.now()}`,
+        folder_id: folderId,
+        title: pendingSummary.title,
+        file_name: pendingSummary.file_name,
+        duration_sec: pendingSummary.duration_sec,
+        transcript: pendingSummary.transcript,
+        summary: pendingSummary.summary,
+        word_count: pendingSummary.word_count,
+        created_at: new Date().toISOString(),
+        user_id: DEV_BYPASS_USER.id,
+      };
+
+      setSummaries((previous) => [localSummary, ...previous]);
+      setSelectedSummary(localSummary);
+      setFiles([]);
+      setPendingSummary(null);
+      setShowSaveFolderModal(false);
+      setProcessingQueueActive(false);
+      setCurrentQueueIndex(0);
+      showToast('Rangkuman disimpan sementara di tab ini.', 'success');
+      return;
+    }
+
     // Check limit of 3 files per folder for Free tier
     const isPro = profileTier !== 'free';
     if (!isPro && folderId) {
@@ -2027,6 +2081,10 @@ export default function Home() {
         
         const formData = new FormData();
         formData.append('file', wavFile);
+        // Chunk besar cukup ditranskrip. Rangkuman baru dibuat SEKALI setelah
+        // seluruh transkrip digabung; kalau tidak, rekaman 18 menit meminta
+        // banyak rangkuman penuh sekaligus dan gampang kena limit Groq.
+        formData.append('transcribeOnly', 'true');
         
         const response = await fetch('/api/summarize', {
           method: 'POST',

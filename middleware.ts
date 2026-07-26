@@ -2,6 +2,16 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Jalur uji lokal: sengaja hanya berlaku saat `next dev`. Ini memungkinkan
+  // perekam dan pipeline Groq dites ketika project Supabase sedang nonaktif,
+  // tanpa pernah membuka dashboard pada build/deploy production.
+  if (
+    process.env.NODE_ENV === 'development' &&
+    process.env.NOTARA_DEV_BYPASS_AUTH === 'true'
+  ) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
