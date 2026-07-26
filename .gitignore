@@ -42,6 +42,9 @@ next-env.d.ts
 
 # planning and strategy documents
 /docs/
+!/docs/
+/docs/*
+!/docs/SPEAKER-CONTEXT.md
 
 
 # ─── Windows launcher scripts (lokal, jangan masuk GitHub) ───

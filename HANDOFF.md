@@ -1,7 +1,7 @@
 # Notara — Handoff Sesi (27 Juli 2026)
 
 > Dokumen ini buat melanjutkan kerja di sesi/chat lain tanpa perlu jelasin ulang dari nol.
-> Status saat ditulis: **v0.0.06**, build hijau. Rekaman lokal 18 menit dan migration Supabase sudah tervalidasi; production Vercel masih perlu diuji.
+> Status saat ditulis: **v0.0.09**, build hijau. Rekaman lokal 18 menit, migration Supabase, cleanup RLS, dan alur rekam sampai rangkum di production sudah tervalidasi.
 
 ---
 
@@ -23,6 +23,12 @@
 - Cleanup tercatat di `supabase/migrations/20260727_remove_legacy_rls_policies.sql` dan **sudah dijalankan** di Supabase: tiga `Allow all` serta dua policy duplikat telah dihapus. Verifikasi akhir: **21** policy, **0** `Allow all`, dan **0** policy chat lama.
 - Perbaikan recording panjang lokal: potongan audio hanya ditranskrip (`transcribeOnly=true`), lalu seluruh transkrip dirangkum sekali di akhir. Sebelumnya setiap chunk memanggil LLM sehingga file 18 menit cepat gagal/rate limited. Mode bypass auth lokal dijaga `development`-only dan tidak dapat aktif di Vercel.
 - Uji production 27 Juli 2026: deployment yang benar adalah `https://notara-hengs.vercel.app` (bukan `notara.vercel.app`, yang milik aplikasi lain). Commit `783c9ba` / v0.0.08 berstatus Ready; login Google, pemuatan dashboard, serta satu alur rekam → rangkum berhasil. Endpoint `/api/version` masih ter-redirect ke login oleh middleware; ini sejalan dengan pekerjaan billing/webhook yang belum ditutup di §2.3–2.4.
+
+### 1.0.1 Arah produk berikutnya — Study Canvas dan Speaker Context
+- Arah UI yang dieksplorasi: rangkuman menjadi **Study Canvas** di tengah; pertanyaan pada teks dijawab inline; panel kanan berubah menjadi **Learning Lab** (konsep, quiz, visualisasi Neurova, dan konteks pembicara); chat lintas materi menjadi drawer/command palette, bukan chat permanen.
+- Speaker Context belum ada di backend: route transkripsi saat ini hanya menerima teks polos dari Groq Whisper. Notara belum dapat membedakan dosen/mahasiswa secara nyata.
+- Kontrak produk dan data awal sudah ditulis di `docs/SPEAKER-CONTEXT.md`: label pembicara netral, dugaan peran harus dikonfirmasi pengguna, tanpa voiceprint/nama, dan tanpa data speaker palsu bila provider tidak mengirim diarization.
+- Workflow desain: Henry sedang membuat prototype HTML standalone terlebih dahulu. Jangan langsung membongkar `app/dashboard/page.tsx` sebelum prototype diaudit.
 
 ### 1.1 Model Groq deprecated
 `llama-3.3-70b-versatile` dan `llama-3.1-8b-instant` di-deprecate Groq per 17 Jun 2026. Notara sudah pindah ke `openai/gpt-oss-120b`, dan sekarang ID model dipusatkan di **`lib/ai.ts`** supaya deprecation berikutnya cukup ubah 1 baris (dulu hardcode di 3 route).
