@@ -66,7 +66,10 @@ Nilai `NULL` berarti rekaman belum memiliki data speaker. Jika tersedia, bentukn
       "start_ms": 0,
       "end_ms": 222000,
       "speaker_id": "spk_1",
-      "text": "Hari ini kita membahas gradient descent."
+      "text": "Hari ini kita membahas gradient descent.",
+      "content_type": "instruction",
+      "relevance": "core",
+      "include_in_summary": true
     }
   ]
 }
@@ -80,6 +83,8 @@ Nilai yang diizinkan:
 | `source` | `provider_diarization`, `manual`, `none` |
 | `role` | `unknown`, `lecturer`, `student`, `guest`, `other` |
 | `role_source` | `unconfirmed`, `suggested`, `user_confirmed` |
+| `content_type` | `instruction`, `question`, `answer`, `side_talk`, `noise` |
+| `relevance` | `core`, `supporting`, `irrelevant`, `uncertain` |
 
 Nama asli tidak menjadi field produk pada MVP. Kalau suatu hari dibutuhkan, itu harus menjadi keputusan privasi terpisah dan opt-in.
 
@@ -93,6 +98,28 @@ Nama asli tidak menjadi field produk pada MVP. Kalau suatu hari dibutuhkan, itu 
 6. Jika `speaker_context` bernilai `NULL`, panel menjelaskan keterbatasan dengan singkat dan tidak menampilkan data contoh seolah-olah nyata.
 
 Study Canvas prototype adalah tempat menguji alur ini sebelum frontend produksi disentuh.
+
+### 5.1 Strategi kelas besar
+
+Diarization dan relevansi adalah dua masalah berbeda. Notara boleh mendeteksi banyak cluster suara di belakang layar, tetapi pengguna tidak boleh dipaksa memberi peran pada 40 orang satu per satu.
+
+Tampilan default menggunakan tiga kelompok yang mudah dipahami:
+
+- **Dosen utama** — penjelasan inti, demonstrasi, koreksi, dan jawaban.
+- **Pertanyaan mahasiswa** — pertanyaan relevan digabung sebagai satu kelompok, kecuali ada pembicara berulang yang memang penting untuk dipisahkan.
+- **Obrolan sampingan** — percakapan tidak relevan, suara tumpang tindih, atau noise; disembunyikan dari rangkuman dan diciutkan di transkrip.
+
+Aturan penyaringan tidak boleh hanya memakai durasi. Pertanyaan lima detik dapat menjadi sangat penting, sedangkan percakapan dua menit dapat tidak relevan. Penilaian minimum harus mempertimbangkan:
+
+1. apakah ucapan dapat dipahami;
+2. apakah berisi penjelasan, pertanyaan, jawaban, koreksi, keputusan, atau istilah materi;
+3. apakah dosen merespons atau merujuk ucapan tersebut;
+4. apakah isinya konsisten dengan topik aktif;
+5. apakah segmen hanya noise, pengulangan, atau percakapan sampingan.
+
+Tab Transkrip memiliki filter default **Materi saja** dan opsi **Semua transkrip**. Segmen yang dikeluarkan dari rangkuman tidak dihapus diam-diam; ia tetap dapat dilihat dalam kelompok yang diciutkan bila data provider tersedia.
+
+Panel Pembicara hanya menampilkan pembicara yang memiliki kontribusi materi atau pertanyaan penting. Daftar seluruh cluster suara menjadi tampilan lanjutan, bukan pekerjaan wajib pengguna.
 
 ## 6. Perubahan teknis yang direncanakan (belum dikerjakan)
 

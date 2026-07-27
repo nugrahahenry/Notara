@@ -1,7 +1,7 @@
 # Notara — Handoff Sesi (27 Juli 2026)
 
 > Dokumen ini buat melanjutkan kerja di sesi/chat lain tanpa perlu jelasin ulang dari nol.
-> Status saat ditulis: **v0.0.09**, build hijau. Rekaman lokal 18 menit, migration Supabase, cleanup RLS, dan alur rekam sampai rangkum di production sudah tervalidasi.
+> Status saat ditulis: checkpoint repo terakhir **v0.0.10**, build terakhir hijau. Metadata runtime di `package.json` masih 0.0.06 dan perlu diselaraskan pada checkpoint implementasi berikutnya.
 
 ---
 
@@ -29,6 +29,13 @@
 - Speaker Context belum ada di backend: route transkripsi saat ini hanya menerima teks polos dari Groq Whisper. Notara belum dapat membedakan dosen/mahasiswa secara nyata.
 - Kontrak produk dan data awal sudah ditulis di `docs/SPEAKER-CONTEXT.md`: label pembicara netral, dugaan peran harus dikonfirmasi pengguna, tanpa voiceprint/nama, dan tanpa data speaker palsu bila provider tidak mengirim diarization.
 - Workflow desain: Henry sedang membuat prototype HTML standalone terlebih dahulu. Jangan langsung membongkar `app/dashboard/page.tsx` sebelum prototype diaudit.
+
+### 1.0.2 Audit prototype pertama (28 Juli 2026)
+- Prototype berada di `docs/prototype/notara-study-canvas-prototype.html` dan telah diuji visual serta interaksinya di desktop.
+- Struktur yang dipertahankan: profil kiri bawah, Rekam / Upload tepat di atas profil, Study Canvas di tengah, dan Learning Lab di kanan.
+- Revisi yang dikunci di `spec/STUDY-CANVAS.md`: Tutor Materi berada di tengah dan menjawab inline; Tanya semua materi pindah menjadi item teratas sidebar yang membuka workspace global di tengah; formula memiliki bukti transkrip, confidence, review, dan catatan; warna akan dibandingkan lewat tiga palet.
+- Speaker Context direvisi untuk kelas besar: UI tidak meminta label puluhan mahasiswa. Pertanyaan relevan digabung, obrolan sampingan disaring dari rangkuman, dan transkrip menyediakan mode Materi saja / Semua transkrip.
+- Frontend production belum disentuh. Langkah berikutnya adalah prototype v2, lalu audit final sebelum component extraction.
 
 ### 1.1 Model Groq deprecated
 `llama-3.3-70b-versatile` dan `llama-3.1-8b-instant` di-deprecate Groq per 17 Jun 2026. Notara sudah pindah ke `openai/gpt-oss-120b`, dan sekarang ID model dipusatkan di **`lib/ai.ts`** supaya deprecation berikutnya cukup ubah 1 baris (dulu hardcode di 3 route).
