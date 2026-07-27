@@ -23,6 +23,8 @@ Notara memiliki MVP yang benar-benar berjalan untuk auth, dashboard, audio → t
 
 ## Dokumen lama: status dan kontradiksi
 
+Catatan pembersihan 28 Juli 2026: draft historis yang tercantum di bawah telah dihapus dari working tree setelah audit. Baris ini dipertahankan sebagai jejak keputusan, bukan sebagai referensi file yang masih tersedia.
+
 | Dokumen | Status | Mengapa tidak boleh jadi source of truth |
 | --- | --- | --- |
 | `README.md` sebelum audit | diganti | menyebut Llama 3.3, chunk 5 menit/parallel, limit 25 MB, dan pipeline payment auto-update; semuanya tidak sesuai kode/status terbaru. |

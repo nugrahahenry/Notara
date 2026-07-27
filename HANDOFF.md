@@ -167,8 +167,14 @@ Urutannya **jangan dibalik**:
 ## 3.1 Dokumentasi baru (28 Juli 2026)
 
 - Baseline dokumentasi tracked sekarang ada di `README.md`, `spec/`, dan `docs/DOCUMENTATION-AUDIT.md`; mulai dari `spec/README.md` untuk urutan baca.
-- Kode runtime, route API, `lib/`, dan `supabase/migrations/` adalah source of truth. `docs/BRD.md`, `docs/SRS.md`, `docs/ERD.md`, dan `docs/roadmap.md` dipertahankan sebagai arsip historis, bukan requirement aktif.
+- Kode runtime, route API, `lib/`, dan `supabase/migrations/` adalah source of truth. Draft historis Juni yang stale sudah dihapus; penggantinya ada di `spec/`.
 - Audit mendokumentasikan billing sebagai belum siap production: webhook tertahan middleware, RPC callback perlu dicabut dari akses publik, dan mode mock Midtrans perlu fail closed di production.
+
+## 3.2 Pembersihan struktur (28 Juli 2026)
+
+- Dokumen Juni yang stale dan tidak direferensikan sudah dihapus dari `docs/`; dokumen aktif tetap berada di `README.md`, `spec/`, `docs/DOCUMENTATION-AUDIT.md`, `docs/SPEAKER-CONTEXT.md`, `docs/prototype/`, dan `docs/Notara_Assets/`.
+- Lima SVG bawaan template Next.js di `public/` dihapus setelah pencarian referensi tidak menemukan pemakaian. `public/favicon.svg` dan favicon App Router dipertahankan.
+- Untuk brainstorming ChatGPT, gunakan `spec/PROMPT-MASTER-DESIGN-BRAINSTORM.md` bersama paket file yang dipilih, bukan seluruh repository atau dokumen historis.
 
 ## 4. Status commit
 
