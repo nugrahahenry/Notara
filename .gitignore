@@ -45,6 +45,7 @@ next-env.d.ts
 !/docs/
 /docs/*
 !/docs/SPEAKER-CONTEXT.md
+!/docs/DOCUMENTATION-AUDIT.md
 
 
 # ─── Windows launcher scripts (lokal, jangan masuk GitHub) ───

@@ -1,7 +1,7 @@
 # Notara — Handoff Sesi (27 Juli 2026)
 
 > Dokumen ini buat melanjutkan kerja di sesi/chat lain tanpa perlu jelasin ulang dari nol.
-> Status saat ditulis: checkpoint repo terakhir **v0.0.10**, build terakhir hijau. Metadata runtime di `package.json` masih 0.0.06 dan perlu diselaraskan pada checkpoint implementasi berikutnya.
+> Status saat ditulis: checkpoint repo terakhir **v0.0.11**, build terakhir yang tercatat hijau. Metadata runtime di `package.json` masih 0.0.06 dan perlu diselaraskan pada checkpoint implementasi berikutnya.
 
 ---
 
@@ -36,6 +36,12 @@
 - Revisi yang dikunci di `spec/STUDY-CANVAS.md`: Tutor Materi berada di tengah dan menjawab inline; Tanya semua materi pindah menjadi item teratas sidebar yang membuka workspace global di tengah; formula memiliki bukti transkrip, confidence, review, dan catatan; warna akan dibandingkan lewat tiga palet.
 - Speaker Context direvisi untuk kelas besar: UI tidak meminta label puluhan mahasiswa. Pertanyaan relevan digabung, obrolan sampingan disaring dari rangkuman, dan transkrip menyediakan mode Materi saja / Semua transkrip.
 - Frontend production belum disentuh. Langkah berikutnya adalah prototype v2, lalu audit final sebelum component extraction.
+
+### 1.0.3 Design Brainstorm Pack (28 Juli 2026)
+- Prompt master riset, redesign, dan finalisasi aset tersedia di `spec/PROMPT-MASTER-DESIGN-BRAINSTORM.md`.
+- Prompt memisahkan Fase 1 (Deep Research, JTBD, IA, benchmark, visual direction, asset audit) dari Fase 2 (design system dan prototype standalone), sehingga HTML tidak dibuat sebelum Henry memilih arah.
+- Upload pack mengutamakan kontrak Study Canvas, Speaker Context, prototype v1, dan tiga referensi brand. Screenshot dashboard production tetap dibutuhkan karena halaman setelah login tidak dapat diandalkan untuk diakses dari URL publik.
+- Hasil riset dari ChatGPT nanti divalidasi Codex dan ditulis ke `docs/research/2026-07-28-notara-ui-ux-benchmark.md` sebelum implementasi production.
 
 ### 1.1 Model Groq deprecated
 `llama-3.3-70b-versatile` dan `llama-3.1-8b-instant` di-deprecate Groq per 17 Jun 2026. Notara sudah pindah ke `openai/gpt-oss-120b`, dan sekarang ID model dipusatkan di **`lib/ai.ts`** supaya deprecation berikutnya cukup ubah 1 baris (dulu hardcode di 3 route).
@@ -157,6 +163,12 @@ Urutannya **jangan dibalik**:
 - Opsi masa depan: colok Gemini khusus chat scope "global" (context 1M cocok untuk tanya lintas semua kuliah).
 
 ---
+
+## 3.1 Dokumentasi baru (28 Juli 2026)
+
+- Baseline dokumentasi tracked sekarang ada di `README.md`, `spec/`, dan `docs/DOCUMENTATION-AUDIT.md`; mulai dari `spec/README.md` untuk urutan baca.
+- Kode runtime, route API, `lib/`, dan `supabase/migrations/` adalah source of truth. `docs/BRD.md`, `docs/SRS.md`, `docs/ERD.md`, dan `docs/roadmap.md` dipertahankan sebagai arsip historis, bukan requirement aktif.
+- Audit mendokumentasikan billing sebagai belum siap production: webhook tertahan middleware, RPC callback perlu dicabut dari akses publik, dan mode mock Midtrans perlu fail closed di production.
 
 ## 4. Status commit
 
