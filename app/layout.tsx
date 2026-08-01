@@ -1,6 +1,27 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
+import { ThemeProvider } from "./components/theme/ThemeProvider";
 import "./globals.css";
+
+const themeInitializationScript = `
+  (function () {
+    try {
+      var preference = localStorage.getItem('notara-theme') || 'system';
+      if (preference !== 'light' && preference !== 'dark') preference = 'system';
+      var resolved = preference === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : preference;
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.dataset.themePreference = preference;
+      document.documentElement.style.colorScheme = resolved;
+    } catch (_) {
+      document.documentElement.dataset.theme = 'light';
+      document.documentElement.dataset.themePreference = 'system';
+      document.documentElement.style.colorScheme = 'light';
+    }
+  })();
+`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,10 +74,20 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="h-full overflow-hidden flex flex-col">{children}</body>
+      <head>
+        <Script
+          id="notara-theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
+        />
+      </head>
+      <body className="h-full overflow-hidden flex flex-col">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

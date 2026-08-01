@@ -1,6 +1,6 @@
 'use client';
 
-import { NotaraLogo } from '../brand/NotaraLogo';
+import { ProcessingMark } from '../brand/BrandSlots';
 
 interface ProcessingViewProps {
   thinkingElapsed: number;
@@ -32,29 +32,23 @@ export function ProcessingView({
   return (
     <div className="max-w-xl mx-auto text-center py-16 flex flex-col items-center justify-center animate-in fade-in duration-300">
       <div className="relative flex items-center justify-center">
-        <NotaraLogo
-          variant="icon"
-          animated
-          motionState="loading"
-          size={112}
-          showGlow
-        />
+        <ProcessingMark size={112} />
       </div>
 
       <div className="mt-8 flex flex-col items-center gap-1">
-        <h3 className="text-white font-black text-xl tracking-tight">Notara Thinking...</h3>
-        <p className="text-violet-300 font-mono text-xs font-bold">
+        <h3 className="text-xl font-black tracking-tight text-[var(--text-primary)]">Notara Thinking...</h3>
+        <p className="font-mono text-xs font-bold text-[var(--brand-primary)]">
           {thinkingElapsed}s berlalu
         </p>
       </div>
 
-      <p className="text-zinc-400 text-sm mt-3 px-6 leading-relaxed max-w-sm mx-auto min-h-8 animate-pulse">
+      <p className="mx-auto mt-3 min-h-8 max-w-sm animate-pulse px-6 text-sm leading-relaxed text-[var(--text-secondary)]">
         {isChunkProcessing ? chunkProgress : statusMessage}
       </p>
 
-      <div className="w-64 h-2 bg-white/5 border border-white/[0.08] rounded-full mt-5 overflow-hidden relative shadow-[0_0_15px_rgba(124,58,237,0.1)]">
+      <div className="relative mt-5 h-2 w-64 overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--surface-tool)]">
         <div
-          className="h-full bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500 rounded-full animate-shimmer transition-all duration-700"
+          className="h-full rounded-full bg-[var(--brand-primary)] transition-all duration-700"
           style={{
             width: isChunkProcessing
               ? `${chunkPercent}%`
@@ -63,7 +57,6 @@ export function ProcessingView({
                 : loadingStep === 2
                   ? '75%'
                   : '98%',
-            boxShadow: '0 0 10px #8B5CF6',
             animationDuration: '2s',
             animationIterationCount: 'infinite',
           }}
@@ -74,7 +67,7 @@ export function ProcessingView({
         <div className="mt-6 w-full max-w-xs">
           <button
             onClick={onToggleThinkingPanel}
-            className="flex items-center gap-2 text-[11px] text-zinc-500 hover:text-zinc-300 font-semibold transition-colors duration-200 mx-auto"
+            className="mx-auto flex min-h-11 items-center gap-2 text-xs font-semibold text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]"
           >
             <span className="flex items-center gap-1">
               {showThinkingPanel ? '▾' : '▸'}
@@ -83,13 +76,13 @@ export function ProcessingView({
           </button>
 
           {showThinkingPanel && (
-            <div className="mt-2 bg-white/[0.015] border border-white/[0.05] rounded-xl p-3 text-left space-y-1.5 max-h-52 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="mt-2 max-h-52 space-y-1.5 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-3 text-left animate-in fade-in slide-in-from-top-2 duration-200">
               {thinkingLog.map((log, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <span className="text-[9px] font-mono text-zinc-600 pt-0.5 shrink-0">
+                  <span className="shrink-0 pt-0.5 font-mono text-xs text-[var(--text-tertiary)]">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <p className="text-[10px] text-zinc-400 leading-relaxed">{log}</p>
+                  <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{log}</p>
                 </div>
               ))}
             </div>

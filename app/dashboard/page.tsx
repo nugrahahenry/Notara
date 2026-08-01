@@ -12,7 +12,7 @@ import {
   ImageDown, Smartphone, Square, Download, Clock, Settings, RefreshCw
 } from 'lucide-react';
 import { NotaraLogo } from '../components/brand/NotaraLogo';
-import { StarryBackground } from '../components/ui/StarryBackground';
+import { BrandMark, Wordmark } from '../components/brand/BrandSlots';
 import { OnboardingModal } from '../components/ui/OnboardingModal';
 import { DashboardTour, DEFAULT_TOUR_STEPS } from '../components/ui/DashboardTour';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
@@ -21,6 +21,13 @@ import { CaptureSourceTabs } from '../components/capture/CaptureSourceTabs';
 import { ProcessingView } from '../components/capture/ProcessingView';
 import { RecordingPanel } from '../components/capture/RecordingPanel';
 import { UploadQueuePanel } from '../components/capture/UploadQueuePanel';
+import {
+  AppShellRoot,
+  AppShellSidebar,
+  AppShellTopbar,
+  AppShellWorkspace,
+} from '../components/shell/AppShell';
+import { ThemeSwitcher } from '../components/theme/ThemeSwitcher';
 import {
   getFolders,
   createFolder,
@@ -132,6 +139,7 @@ export default function Home() {
   // Sidebar Expansion States
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false); // Mobile sidebar open
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false); // Desktop locked expansion
+  const mobileSidebarTriggerRef = useRef<HTMLButtonElement>(null);
   
   // Chatbot Drawer States
   const [isChatOpenMobile, setIsChatOpenMobile] = useState<boolean>(false); // Mobile chatbot active
@@ -322,6 +330,18 @@ export default function Home() {
       setIsChatPanelOpen(saved === 'true');
     }
   }, []);
+
+  useEffect(() => {
+    const savedSidebarState = localStorage.getItem('notara-shell-sidebar-expanded');
+    if (savedSidebarState !== null) {
+      setSidebarExpanded(savedSidebarState === 'true');
+    }
+  }, []);
+
+  const updateSidebarExpanded = (expanded: boolean) => {
+    setSidebarExpanded(expanded);
+    localStorage.setItem('notara-shell-sidebar-expanded', String(expanded));
+  };
 
   // Focus Timer useEffect — scoped per user account
   useEffect(() => {
@@ -1682,6 +1702,8 @@ export default function Home() {
     
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    const themeStyles = getComputedStyle(document.documentElement);
+    const waveformColor = themeStyles.getPropertyValue('--brand-primary').trim() || '#7058E8';
     
     const draw = () => {
       if (!canvas || !analyser) return;
@@ -1689,11 +1711,10 @@ export default function Home() {
       
       analyser.getByteTimeDomainData(dataArray);
       
-      ctx.fillStyle = '#0F0E17';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#8B5CF6';
+      ctx.strokeStyle = waveformColor;
       ctx.beginPath();
       
       const sliceWidth = canvas.width / bufferLength;
@@ -2846,7 +2867,7 @@ export default function Home() {
     const flushList = (keyPrefix: string) => {
       if (listItems.length > 0) {
         elements.push(
-          <ul key={`${keyPrefix}-list`} className="space-y-2.5 my-4 list-disc pl-6 text-zinc-300">
+          <ul key={`${keyPrefix}-list`} className="my-4 list-disc space-y-2.5 pl-6 text-[var(--text-secondary)]">
             {listItems}
           </ul>
         );
@@ -2869,10 +2890,10 @@ export default function Home() {
         row.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
       const headers = parseRow(headerRow);
       elements.push(
-        <div key={`table-${keyPrefix}`} className="overflow-x-auto my-6 rounded-xl border border-white/[0.07] shadow-xl">
+        <div key={`table-${keyPrefix}`} className="my-6 overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="bg-violet-600/10 border-b border-white/[0.07]">
+              <tr className="border-b border-[var(--border-subtle)] bg-[var(--nav-selected)]">
                 {headers.map((h, hi) => (
                   <th
                     key={hi}
@@ -2893,7 +2914,7 @@ export default function Home() {
                     {cells.map((cell, ci) => (
                       <td
                         key={ci}
-                        className="px-4 py-2.5 text-zinc-300 leading-relaxed border-t border-white/[0.04]"
+                        className="border-t border-[var(--border-subtle)] px-4 py-2.5 leading-relaxed text-[var(--text-secondary)]"
                         dangerouslySetInnerHTML={{ __html: parseInline(cell) }}
                       />
                     ))}
@@ -2936,7 +2957,7 @@ export default function Home() {
       if (cleanLine === '---' || cleanLine === '***' || cleanLine === '___') {
         flushList(`hr-${i}`);
         elements.push(
-          <hr key={`hr-${i}`} className="my-6 border-white/[0.07]" />
+          <hr key={`hr-${i}`} className="my-6 border-[var(--border-subtle)]" />
         );
         continue;
       }
@@ -2944,7 +2965,7 @@ export default function Home() {
       if (cleanLine.startsWith('# ')) {
         flushList(`h1-${i}`);
         elements.push(
-          <h1 key={`h1-${i}`} className="text-2xl md:text-3xl font-extrabold text-white mt-8 mb-4 border-b border-white/10 pb-3 tracking-tight">
+          <h1 key={`h1-${i}`} className="mb-4 mt-8 border-b border-[var(--border-subtle)] pb-3 text-2xl font-extrabold tracking-tight text-[var(--text-primary)] md:text-3xl">
             {cleanLine.replace('# ', '')}
           </h1>
         );
@@ -2954,7 +2975,7 @@ export default function Home() {
       if (cleanLine.startsWith('## ')) {
         flushList(`h2-${i}`);
         elements.push(
-          <h2 key={`h2-${i}`} className="text-xl md:text-2xl font-bold text-violet-400 mt-8 mb-4 flex items-center gap-2">
+          <h2 key={`h2-${i}`} className="mb-4 mt-8 flex items-center gap-2 text-xl font-bold text-[var(--brand-primary)] md:text-2xl">
             <span className="h-2 w-2 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 inline-block"></span>
             {cleanLine.replace('## ', '')}
           </h2>
@@ -2965,7 +2986,7 @@ export default function Home() {
       if (cleanLine.startsWith('### ')) {
         flushList(`h3-${i}`);
         elements.push(
-          <h3 key={`h3-${i}`} className="text-lg md:text-xl font-semibold text-zinc-100 mt-6 mb-2">
+          <h3 key={`h3-${i}`} className="mb-2 mt-6 text-lg font-semibold text-[var(--text-primary)] md:text-xl">
             {cleanLine.replace('### ', '')}
           </h3>
         );
@@ -2976,7 +2997,7 @@ export default function Home() {
         flushList(`bq-${i}`);
         const content = cleanLine.replace(/^>\s+/, '');
         elements.push(
-          <blockquote key={`bq-${i}`} className="border-l-4 border-violet-500 bg-violet-500/5 px-4 py-3 rounded-r-xl my-4 text-zinc-300 italic">
+          <blockquote key={`bq-${i}`} className="my-4 rounded-r-xl border-l-4 border-[var(--brand-primary)] bg-[var(--nav-selected)] px-4 py-3 italic text-[var(--text-secondary)]">
             <p dangerouslySetInnerHTML={{ __html: parseInline(content) }} />
           </blockquote>
         );
@@ -3007,7 +3028,7 @@ export default function Home() {
               {num}
             </span>
             <p 
-              className="text-zinc-300 leading-relaxed flex-1"
+              className="flex-1 leading-relaxed text-[var(--text-secondary)]"
               dangerouslySetInnerHTML={{ __html: parseInline(content) }}
             />
           </div>
@@ -3025,7 +3046,7 @@ export default function Home() {
       elements.push(
         <p 
           key={`p-${i}`} 
-          className="text-zinc-300 leading-relaxed mb-4"
+          className="mb-4 leading-relaxed text-[var(--text-secondary)]"
           dangerouslySetInnerHTML={{ __html: parseInline(line) }}
         />
       );
@@ -3033,7 +3054,7 @@ export default function Home() {
 
     if (insideList && listItems.length > 0) {
       elements.push(
-        <ul key="end-list" className="space-y-2.5 my-4 list-disc pl-6 text-zinc-300">
+        <ul key="end-list" className="my-4 list-disc space-y-2.5 pl-6 text-[var(--text-secondary)]">
           {listItems}
         </ul>
       );
@@ -3047,10 +3068,7 @@ export default function Home() {
   // getReadingTime helper removed in favor of Fokus Aktif timer & Word Count
 
   return (
-    <div className="flex h-screen w-screen bg-[#08070B] text-zinc-100 font-sans overflow-hidden">
-      
-      {/* Dynamic Starry Space Background */}
-      <StarryBackground />
+    <AppShellRoot>
 
       {/* ─── ONBOARDING SURVEY MODAL (First-time users) ─── */}
       {showOnboardingModal && user && (
@@ -3086,45 +3104,39 @@ export default function Home() {
         />
       )}
 
-      {/* MOBILE SIDEBAR OVERLAY */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden animate-in fade-in duration-300"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <aside 
-        className={`fixed inset-y-0 left-0 z-40 bg-[#0F0E17] border-r border-white/[0.04] flex flex-col transition-all duration-300 shadow-2xl ${
-          isSidebarOpen 
-            ? 'w-72 translate-x-0' 
-            : 'w-16 translate-x-0 -translate-x-full md:translate-x-0'
-        } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+      <AppShellSidebar
+        mobileOpen={sidebarOpen}
+        expanded={isSidebarOpen}
+        onCloseMobile={() => setSidebarOpen(false)}
+        triggerRef={mobileSidebarTriggerRef}
       >
         
         {/* LOGO AREA */}
         {isSidebarOpen ? (
-          <div className="p-4 border-b border-white/[0.04] flex items-center justify-between shrink-0">
+          <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] p-4">
             <div className="animate-in fade-in duration-300">
-              <NotaraLogo variant="horizontal" size={36} showGlow />
+              <div className="flex items-center gap-2.5" aria-label="Notara">
+                <BrandMark size={32} />
+                <Wordmark />
+              </div>
             </div>
             {/* Lock Pin Button */}
             <button 
-              onClick={() => setSidebarExpanded(!sidebarExpanded)} 
-              className="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5 transition-colors hidden md:block"
+              onClick={() => updateSidebarExpanded(!sidebarExpanded)}
+              className="hidden rounded-lg p-2 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] md:block"
               title={sidebarExpanded ? "Ciutkan Sidebar" : "Kunci Lebar Sidebar"}
             >
               <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${sidebarExpanded ? 'rotate-180' : ''}`} />
             </button>
           </div>
         ) : (
-          <div className="h-16 border-b border-white/[0.04] flex items-center justify-center shrink-0">
+          <div className="flex h-16 shrink-0 items-center justify-center border-b border-[var(--border-subtle)]">
             <button 
-              onClick={() => setSidebarExpanded(true)}
+              onClick={() => updateSidebarExpanded(true)}
               className="hover:scale-105 active:scale-95 transition-all"
               title="Buka Menu Sidebar"
             >
-              <NotaraLogo variant="icon" size={32} />
+              <BrandMark size={32} />
             </button>
           </div>
         )}
@@ -3137,18 +3149,18 @@ export default function Home() {
                 setSelectedSummary(null);
                 setSidebarOpen(false);
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/10 hover:shadow-violet-500/25 transition-all duration-300 group"
+              className="group flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--action-primary)] px-4 py-2.5 text-xs font-bold tracking-wide text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)]"
             >
               <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" />
-              <span>Rangkuman Baru</span>
+              <span>Rekam / Upload</span>
             </button>
           ) : (
             <button
               onClick={() => {
                 setSelectedSummary(null);
               }}
-              className="h-10 w-10 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white flex items-center justify-center shadow-md shadow-violet-500/15 hover:scale-105 active:scale-95 transition-all duration-200 group"
-              title="Buat Rangkuman Baru"
+              className="group flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--action-primary)] text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)]"
+              title="Rekam atau upload materi baru"
             >
               <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" />
             </button>
@@ -3169,15 +3181,15 @@ export default function Home() {
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'all' 
-                      ? 'bg-white/5 text-white font-bold' 
-                      : 'text-zinc-400 hover:bg-white/[0.02] hover:text-zinc-200'
+                      ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)] font-bold'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <BookOpen className="h-3.5 w-3.5 text-violet-400" />
                     <span>Semua Rangkuman</span>
                   </div>
-                  <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full font-mono text-zinc-400">
+                  <span className="rounded-full bg-[var(--surface-elevated)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
                     {summaries.length}
                   </span>
                 </button>
@@ -3189,15 +3201,15 @@ export default function Home() {
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'recent' 
-                      ? 'bg-white/5 text-white font-bold' 
-                      : 'text-zinc-400 hover:bg-white/[0.02] hover:text-zinc-200'
+                      ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)] font-bold'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-3.5 w-3.5 text-violet-400 animate-pulse" />
                     <span>Baru Ditambahkan</span>
                   </div>
-                  <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full font-mono text-zinc-400">
+                  <span className="rounded-full bg-[var(--surface-elevated)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
                     {summaries.filter(s => {
                       const summaryDate = new Date(s.created_at).getTime();
                       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -3213,15 +3225,15 @@ export default function Home() {
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'uncategorized' 
-                      ? 'bg-white/5 text-white font-bold' 
-                      : 'text-zinc-400 hover:bg-white/[0.02] hover:text-zinc-200'
+                      ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)] font-bold'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <Folder className="h-3.5 w-3.5 text-zinc-500" />
                     <span>Belum Dikategorikan</span>
                   </div>
-                  <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full font-mono text-zinc-400">
+                  <span className="rounded-full bg-[var(--surface-elevated)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)]">
                     {summaries.filter(s => !s.folder_id).length}
                   </span>
                 </button>
@@ -3265,9 +3277,9 @@ export default function Home() {
                         <div 
                           key={folder.id}
                           className={`group/folder flex items-center justify-between rounded-lg transition-all duration-200 ${
-                            isActive 
-                              ? 'bg-white/5 text-white font-bold' 
-                              : 'text-zinc-400 hover:bg-white/[0.02]'
+                            isActive
+                              ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)] font-bold'
+                              : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)]'
                           }`}
                         >
                           <button
@@ -3286,7 +3298,7 @@ export default function Home() {
                           </button>
 
                           <div className="flex items-center gap-1 pr-2">
-                            <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full font-mono text-zinc-500 group-hover/folder:hidden">
+                            <span className="rounded-full bg-[var(--surface-elevated)] px-2 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)] group-hover/folder:hidden">
                               {folderSummariesCount}
                             </span>
                             <button
@@ -3492,8 +3504,8 @@ export default function Home() {
                         key={summary.id}
                         className={`group/summary flex items-center justify-between rounded-lg transition-all duration-200 border ${
                           isSelected 
-                            ? 'bg-violet-600/10 border-violet-500/30 text-white font-bold' 
-                            : 'border-transparent text-zinc-400 hover:bg-white/[0.01] hover:text-zinc-200'
+                            ? 'bg-[var(--nav-selected)] border-[var(--brand-primary)] text-[var(--nav-selected-text)] font-bold'
+                            : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
                         }`}
                       >
                         <button
@@ -3503,7 +3515,7 @@ export default function Home() {
                           }}
                           className="flex-1 text-left px-3 py-2 truncate min-w-0"
                         >
-                          <span className="text-xs font-semibold block truncate text-zinc-200">
+                          <span className="block truncate text-xs font-semibold text-current">
                             {summary.title}
                           </span>
                           <span className="text-[9px] text-zinc-500 flex items-center gap-1.5 mt-0.5 font-medium font-mono">
@@ -3595,7 +3607,7 @@ export default function Home() {
                   setSelectedSummary(null);
                 }}
                 className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
-                  activeFolderId === 'uncategorized' ? 'bg-white/5 text-white' : 'text-zinc-500'
+                  activeFolderId === 'uncategorized' ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)]' : 'text-[var(--text-tertiary)]'
                 }`}
                 title="Belum Dikategorikan"
               >
@@ -3603,7 +3615,7 @@ export default function Home() {
               </button>
             </div>
 
-            <hr className="w-6 border-white/[0.04] shrink-0" />
+            <hr className="w-6 shrink-0 border-[var(--border-subtle)]" />
 
             {/* Folder emoji icons */}
             <div className="space-y-2 w-full flex flex-col items-center">
@@ -3617,7 +3629,7 @@ export default function Home() {
                       setSelectedSummary(null);
                     }}
                     className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all relative ${
-                      isActive ? 'bg-white/5 border border-white/10 scale-105' : ''
+                      isActive ? 'bg-[var(--nav-selected)] border border-[var(--brand-primary)] scale-105' : ''
                     }`}
                     title={folder.name}
                   >
@@ -3648,7 +3660,7 @@ export default function Home() {
         )}
 
         {/* SIDEBAR FOOTER */}
-        <div className="border-t border-white/[0.04] bg-black/10 shrink-0">
+        <div className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-sidebar)]">
           {/* Version Badge — shown when sidebar is expanded */}
           {isSidebarOpen && (
             <div className="px-4 pt-3 pb-1 flex items-center gap-2">
@@ -3679,86 +3691,96 @@ export default function Home() {
             )}
           </div>
         </div>
-      </aside>
+      </AppShellSidebar>
 
       {/* RIGHT COLUMN AREA */}
-      <div className="flex-1 h-full flex flex-col md:pl-16 transition-all duration-300">
+      <AppShellWorkspace sidebarExpanded={sidebarExpanded}>
         
         {/* HEADER BAR */}
-        <header className="h-14 border-b border-white/[0.04] bg-[#0C0A12]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 md:h-16">
-          <div className="flex items-center gap-3">
-            <button 
+        <AppShellTopbar>
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <button
+              ref={mobileSidebarTriggerRef}
               onClick={() => setSidebarOpen(true)}
-              className="p-1 rounded hover:bg-white/5 text-zinc-400 hover:text-white md:hidden"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] md:hidden"
+              aria-controls="notara-navigation"
+              aria-expanded={sidebarOpen}
+              aria-label="Buka navigasi"
             >
               <Menu className="h-5 w-5" />
             </button>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400 font-semibold tracking-wide">
-                {selectedSummary ? 'Detil Rangkuman' : 'Mulai Rangkum'}
-              </span>
-              
-              {activeFolderId !== 'all' && activeFolderId !== 'recent' && activeFolderId !== 'uncategorized' && activeFolder && (
-                <>
-                  <ChevronRight className="h-3 w-3 text-zinc-600" />
-                  <span className="text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white font-bold flex items-center gap-1.5">
-                    <span>{activeFolder.icon}</span>
-                    <span>{activeFolder.name}</span>
-                  </span>
-                </>
-              )}
 
-              {activeFolderId === 'uncategorized' && (
-                <>
-                  <ChevronRight className="h-3 w-3 text-zinc-600" />
-                  <span className="text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-zinc-400 font-bold">
-                    📁 Belum Dikategorikan
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Mobile Chat Toggle */}
             <button
-              onClick={() => setIsChatOpenMobile(true)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-md md:hidden cursor-pointer"
+              type="button"
+              onClick={() => {
+                setShowSearchModal(true);
+                setSearchQuery('');
+                setSelectedSearchResultIdx(0);
+              }}
+              className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] sm:w-64"
+              aria-label="Cari materi dan rangkuman"
             >
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span>Chat AI</span>
+              <Search className="h-4 w-4 shrink-0" />
+              <span className="hidden truncate sm:inline">Cari materi atau rangkuman...</span>
+              <span className="ml-auto hidden rounded-md border border-[var(--border-subtle)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-tertiary)] sm:inline">
+                Ctrl K
+              </span>
             </button>
 
-            {/* Desktop Chat Toggle */}
+            {activeFolderId !== 'all' && activeFolderId !== 'recent' && activeFolderId !== 'uncategorized' && activeFolder && (
+              <span className="hidden max-w-44 items-center gap-1.5 truncate rounded-lg bg-[var(--nav-selected)] px-2.5 py-1.5 text-xs font-bold text-[var(--nav-selected-text)] lg:flex">
+                <span>{activeFolder.icon}</span>
+                <span className="truncate">{activeFolder.name}</span>
+              </span>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <button
+              onClick={() => setIsChatOpenMobile(true)}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--brand-primary)] md:hidden"
+              aria-label="Tanya Notara"
+            >
+              <MessageSquare className="h-4 w-4" />
+            </button>
+
             <button
               onClick={() => {
                 const nextState = !isChatPanelOpen;
                 setIsChatPanelOpen(nextState);
                 localStorage.setItem('isChatPanelOpen', String(nextState));
               }}
-              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs border transition-all active:scale-95 duration-200 cursor-pointer ${
-                isChatPanelOpen 
-                  ? 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/[0.06] hover:border-white/10' 
-                  : 'bg-violet-600 hover:bg-violet-500 text-white border-transparent shadow-md shadow-violet-500/20'
+              className={`hidden h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-colors md:flex ${
+                isChatPanelOpen
+                  ? 'border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
+                  : 'border-[var(--brand-primary)] bg-[var(--nav-selected)] text-[var(--nav-selected-text)]'
               }`}
-              title={isChatPanelOpen ? "Sembunyikan Chat Asisten" : "Tampilkan Chat Asisten"}
+              title={isChatPanelOpen ? 'Sembunyikan Tanya Notara' : 'Buka Tanya Notara'}
             >
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span>{isChatPanelOpen ? 'Tutup Chat' : 'Chat AI'}</span>
+              <MessageSquare className="h-4 w-4" />
+              <span>{isChatPanelOpen ? 'Tutup Notara' : 'Tanya Notara'}</span>
             </button>
 
-            <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold flex items-center gap-1 hidden sm:flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              Connected
-            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedSummary(null);
+                setIsRecordingMode(true);
+                clearFile();
+              }}
+              className="hidden h-11 items-center gap-2 rounded-xl bg-[var(--action-primary)] px-3.5 text-xs font-bold text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)] sm:flex"
+            >
+              <Mic className="h-4 w-4" />
+              <span>Rekam baru</span>
+            </button>
 
-            {/* USER PROFILE & SETTINGS ACTIONS */}
+            <ThemeSwitcher />
+
             {user && (
               <div data-tour="global-search" className="flex items-center gap-2">
                 <button
                   onClick={openSettings}
-                  className="h-8 w-8 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer flex items-center justify-center text-zinc-400"
+                  className="hidden h-11 w-11 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] sm:flex"
                   title="Pengaturan Akun"
                 >
                   <Settings className="h-4 w-4" />
@@ -3766,7 +3788,7 @@ export default function Home() {
 
                 <button
                   onClick={openSettings}
-                  className="relative h-8 w-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white border border-white/10 hover:ring-2 hover:ring-violet-500 transition-all outline-none cursor-pointer"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)] text-xs font-bold text-[var(--text-on-brand)] ring-offset-2 ring-offset-[var(--surface-header)] transition-shadow hover:ring-2 hover:ring-[var(--focus-ring)]"
                   title={user.user_metadata?.full_name || user.email || 'Profil Saya'}
                 >
                   {user.user_metadata?.avatar_url ? (
@@ -3785,20 +3807,20 @@ export default function Home() {
               </div>
             )}
           </div>
-        </header>
+        </AppShellTopbar>
 
         {/* SPLIT WORKSPACE WINDOW */}
         <div className="flex-1 flex flex-row overflow-hidden relative">
           
           {/* COLUMN 2: MIDDLE DOCUMENT AREA */}
-          <div className="flex-1 overflow-y-auto p-6 md:p-10 select-text scrollbar-thin">
+          <main id="notara-main-content" tabIndex={-1} className="notara-dashboard-content flex-1 overflow-y-auto p-6 md:p-10 select-text scrollbar-thin">
             
             {error && (
-              <div className="max-w-3xl mx-auto mb-8 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 flex items-start gap-3 shadow-lg shadow-rose-950/20 animate-in fade-in">
+              <div className="mx-auto mb-8 flex max-w-3xl items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-[var(--danger-accent)] animate-in fade-in">
                 <AlertCircle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <h4 className="font-bold text-white text-sm">Terjadi Kesalahan</h4>
-                  <p className="text-sm mt-0.5 text-rose-300/90">{error}</p>
+                  <h4 className="text-sm font-bold text-[var(--text-primary)]">Terjadi Kesalahan</h4>
+                  <p className="mt-0.5 text-sm">{error}</p>
                 </div>
                 <button onClick={() => setError(null)} className="text-zinc-500 hover:text-white p-0.5">
                   <X className="h-4 w-4" />
@@ -3837,20 +3859,17 @@ export default function Home() {
               ) : (
                 <div className="max-w-2xl mx-auto animate-in fade-in duration-300 relative">
                   
-                  {/* Premium Ambient Dashboard Mesh Glow */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-gradient-to-tr from-violet-600/15 via-indigo-600/10 to-transparent rounded-full blur-[100px] pointer-events-none -z-10 animate-pulse-glow" />
-                
                   {/* Jumbotron banner */}
                   <div className="text-center max-w-xl mx-auto mb-8 relative">
                     <span className="px-3.5 py-1.5 rounded-full bg-violet-500/5 border border-violet-500/15 text-violet-300 text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 mb-6">
                       <Sparkles className="h-3 w-3 text-violet-400" />
                       NEURAL NEXUS
                     </span>
-                    <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-4 leading-tight">
+                    <h2 className="mb-4 text-3xl font-black leading-tight tracking-tight text-[var(--text-primary)] md:text-4xl">
                       Reduksi Kuliah 1 Jam <br />
                       <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">Jadi Rangkuman 1 Halaman</span>
                     </h2>
-                    <p className="text-zinc-400 text-sm leading-relaxed">
+                    <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
                       Pilih antara mengunggah berkas audio/video rekaman atau merekam secara langsung dari browser laptopmu sekarang.
                     </p>
                   </div>
@@ -3906,12 +3925,12 @@ export default function Home() {
 
                 {/* SUBMIT BUTTON CONTROL ACTION & FOLDER SELECTOR */}
                 {(files.length > 0 || audioBlob) && (
-                  <div className="mt-8 flex flex-col items-center gap-6 p-6 rounded-3xl bg-white/[0.015] border border-white/[0.04] backdrop-blur-md animate-in fade-in max-w-md mx-auto">
+                  <div className="mx-auto mt-8 flex max-w-md flex-col items-center gap-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] p-6 animate-in fade-in">
                     
                     {/* Folder Assignment Before Processing */}
                     <div className="w-full space-y-3.5 text-left">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-zinc-400 flex items-center gap-1.5">
+                        <label className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-secondary)]">
                           <Folder className="h-3.5 w-3.5 text-violet-400" />
                           Simpan ke Mata Kuliah:
                         </label>
@@ -3933,20 +3952,20 @@ export default function Home() {
 
                       {isAddingFolderInline ? (
                         /* Inline Folder Form */
-                        <div className="bg-black/30 border border-white/5 rounded-2xl p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                        <div className="space-y-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4 animate-in slide-in-from-top-2 duration-200">
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-zinc-500">Nama Mata Kuliah</label>
+                            <label className="text-xs font-bold text-[var(--text-tertiary)]">Nama Mata Kuliah</label>
                             <input
                               type="text"
                               value={inlineFolderName}
                               onChange={(e) => setInlineFolderName(e.target.value)}
                               placeholder="Contoh: Basis Data"
-                              className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/40"
+                              className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-3 py-2 text-xs text-[var(--text-primary)] focus:border-[var(--focus-ring)] focus:outline-none"
                             />
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-zinc-500 block">Emoji Ikon</label>
+                            <label className="block text-xs font-bold text-[var(--text-tertiary)]">Emoji Ikon</label>
                             <div className="flex gap-1 overflow-x-auto pb-1 max-w-full">
                               {folderEmojis.map(emoji => (
                                 <button
@@ -3988,7 +4007,7 @@ export default function Home() {
                         <select
                           value={chosenSaveFolderId}
                           onChange={(e) => setChosenSaveFolderId(e.target.value)}
-                          className="w-full bg-[#0F0E17] border border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-violet-500/40 cursor-pointer font-sans"
+                      className="w-full cursor-pointer rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3 py-2.5 font-sans text-xs text-[var(--text-primary)] focus:border-[var(--focus-ring)] focus:outline-none"
                         >
                           <option value="null" className="text-zinc-400">📁 Belum Dikategorikan</option>
                           {folders.map(f => (
@@ -4002,7 +4021,7 @@ export default function Home() {
 
                     <button
                       onClick={handleSubmit}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm tracking-wide shadow-lg shadow-violet-500/25 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--action-primary)] py-3.5 text-sm font-bold tracking-wide text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)]"
                     >
                       <Sparkles className="h-4 w-4" />
                       Mulai Reduksi & Rangkum
@@ -4432,7 +4451,7 @@ export default function Home() {
               </div>
             )}
 
-          </div>
+          </main>
 
           {/* COLUMN 3: RIGHT CHAT PANEL */}
           <>
@@ -4760,7 +4779,7 @@ export default function Home() {
 
         </div>
 
-      </div>
+      </AppShellWorkspace>
 
       {/* FOLDER CRUD MODAL (CREATE / EDIT) */}
       {showFolderModal && (
@@ -6696,6 +6715,6 @@ export default function Home() {
       {/* Detects new Vercel deployments on window focus — shows update prompt */}
       <VersionUpdateBanner appVersion="v0.0.06" />
 
-    </div>
+    </AppShellRoot>
   );
 }

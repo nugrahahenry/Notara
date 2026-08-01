@@ -1,22 +1,90 @@
 @import "tailwindcss";
 
 :root {
-  --background: #08070B;
-  --foreground: #zinc-100;
+  --surface-app: #eceef2;
+  --surface-sidebar: #f5f4f1;
+  --surface-header: #eceef2;
+  --surface-canvas: #fbf8f1;
+  --surface-tool: #f3f5f8;
+  --surface-elevated: #ffffff;
+  --surface-overlay: #ffffff;
 
-  /* ── Notara Brand Tokens ── */
-  --notara-bg: #09090B;
-  --notara-bg-panel: #111122;
-  --notara-bg-glass: #161622;
-  --notara-border: #27272A;
-  --notara-violet: #8B5CF6;
-  --notara-purple: #A855F7;
-  --notara-indigo: #312E81;
-  --notara-blue: #2563EB;
-  --notara-cyan: #38BDF8;
-  --notara-text: #F8FAFC;
-  --notara-text-muted: #A1A1AA;
-  --notara-text-soft: #CBD5E1;
+  --text-primary: #182136;
+  --text-secondary: #4a566b;
+  --text-tertiary: #70798b;
+  --text-on-brand: #ffffff;
+
+  --border-subtle: #d8dee7;
+  --border-strong: #bcc5d1;
+
+  --brand-primary: #7058e8;
+  --brand-secondary: #596ee6;
+  --action-primary: #4661d8;
+  --action-primary-hover: #394fc0;
+  --knowledge-accent: #16868c;
+  --review-accent: #b87820;
+  --success-accent: #24734f;
+  --danger-accent: #b34b52;
+
+  --nav-selected: #ebe8fb;
+  --nav-selected-text: #4f3eb8;
+  --focus-ring: #4661d8;
+  --selection-fill: rgba(22, 134, 140, 0.18);
+
+  --background: var(--surface-app);
+  --foreground: var(--text-primary);
+
+  /* Legacy aliases remain while page-level content migrates in later checkpoints. */
+  --notara-bg: var(--surface-app);
+  --notara-bg-panel: var(--surface-sidebar);
+  --notara-bg-glass: var(--surface-elevated);
+  --notara-border: var(--border-subtle);
+  --notara-violet: var(--brand-primary);
+  --notara-purple: var(--brand-primary);
+  --notara-indigo: var(--brand-secondary);
+  --notara-blue: var(--action-primary);
+  --notara-cyan: var(--knowledge-accent);
+  --notara-text: var(--text-primary);
+  --notara-text-muted: var(--text-tertiary);
+  --notara-text-soft: var(--text-secondary);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-app: #14161c;
+  --surface-sidebar: #191b23;
+  --surface-header: #14161c;
+  --surface-canvas: #20232a;
+  --surface-tool: #252934;
+  --surface-elevated: #2a2e38;
+  --surface-overlay: #2d313c;
+
+  --text-primary: #f1f2f6;
+  --text-secondary: #c0c5d0;
+  --text-tertiary: #949cab;
+  --text-on-brand: #ffffff;
+
+  --border-subtle: #343944;
+  --border-strong: #4a5060;
+
+  --brand-primary: #9b86f7;
+  --brand-secondary: #8493f4;
+  --action-primary: #7d8bf2;
+  --action-primary-hover: #929df7;
+  --knowledge-accent: #58b9be;
+  --review-accent: #d7a35a;
+  --success-accent: #70bb93;
+  --danger-accent: #df7f86;
+
+  --nav-selected: #2d2945;
+  --nav-selected-text: #c9beff;
+  --focus-ring: #a7b0ff;
+  --selection-fill: rgba(88, 185, 190, 0.22);
 }
 
 @theme inline {
@@ -42,7 +110,269 @@ body:has(main[data-page="landing"]) {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Inter, system-ui, sans-serif;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+::selection {
+  background: var(--selection-fill);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── App Shell V4 foundation ── */
+.notara-app-shell {
+  position: relative;
+  display: flex;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--surface-app);
+  color: var(--text-primary);
+}
+
+.notara-skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 10000;
+  transform: translateY(-160%);
+  border-radius: 10px;
+  background: var(--action-primary);
+  color: var(--text-on-brand);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 160ms ease;
+}
+
+.notara-skip-link:focus {
+  transform: translateY(0);
+}
+
+.notara-shell-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  border: 0;
+  background: rgba(18, 22, 32, 0.42);
+  cursor: default;
+  animation: fadeIn 160ms ease-out both;
+}
+
+.notara-shell-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+  display: flex;
+  width: min(288px, calc(100vw - 32px));
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--surface-sidebar);
+  color: var(--text-secondary);
+  box-shadow: 18px 0 42px rgba(24, 33, 54, 0.14);
+  transform: translateX(-100%);
+  transition:
+    width 180ms ease,
+    transform 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.notara-shell-sidebar[data-mobile-open="true"] {
+  transform: translateX(0);
+}
+
+.notara-shell-workspace {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  flex-direction: column;
+  background: var(--surface-app);
+  transition: padding-left 180ms ease, background-color 180ms ease;
+}
+
+.notara-shell-topbar {
+  z-index: 20;
+  display: flex;
+  min-height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-header) 92%, transparent);
+  color: var(--text-primary);
+  padding: 0 20px;
+  backdrop-filter: blur(14px);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+@media (min-width: 768px) {
+  .notara-shell-backdrop {
+    display: none;
+  }
+
+  .notara-shell-sidebar {
+    width: 72px;
+    box-shadow: none;
+    transform: translateX(0);
+  }
+
+  .notara-shell-sidebar[data-expanded="true"] {
+    width: 232px;
+  }
+
+  .notara-shell-workspace {
+    padding-left: 72px;
+  }
+
+  .notara-shell-workspace[data-sidebar-expanded="true"] {
+    padding-left: 232px;
+  }
+}
+
+.notara-theme-switcher {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  padding: 0 9px;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.notara-theme-switcher:hover {
+  border-color: var(--border-strong);
+}
+
+.notara-theme-switcher select {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  outline: none;
+}
+
+.notara-theme-switcher option {
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+}
+
+.notara-brand-mark {
+  display: block;
+  overflow: visible;
+  color: var(--brand-primary);
+}
+
+.notara-brand-mark path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.15;
+}
+
+.notara-brand-mark__signal {
+  opacity: 0.62;
+}
+
+.notara-brand-mark .notara-brand-mark__fold {
+  stroke: var(--brand-primary);
+}
+
+.notara-brand-mark .notara-brand-mark__note {
+  stroke: var(--knowledge-accent);
+}
+
+.notara-brand-mark__source {
+  fill: var(--knowledge-accent);
+  stroke: var(--surface-sidebar);
+  stroke-width: 1.25;
+}
+
+.notara-wordmark-v4 {
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 780;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.notara-wordmark-v4--compact {
+  font-size: 16px;
+}
+
+.notara-processing-mark {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-primary) 8%, transparent);
+  color: var(--brand-primary);
+}
+
+.notara-brand-mark--animated .notara-brand-mark__signal {
+  animation: notara-signal-flow 1.3s ease-in-out infinite;
+  stroke-dasharray: 5 4;
+}
+
+.notara-brand-mark--animated .notara-brand-mark__source {
+  animation: notara-source-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes notara-signal-flow {
+  0% { stroke-dashoffset: 18; opacity: 0.35; }
+  50% { opacity: 0.9; }
+  100% { stroke-dashoffset: 0; opacity: 0.35; }
+}
+
+@keyframes notara-source-pulse {
+  0%, 100% { transform: scale(0.9); transform-origin: 4px 8.5px; }
+  50% { transform: scale(1.2); transform-origin: 4px 8.5px; }
+}
+
+@media (max-width: 639px) {
+  .notara-shell-topbar {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .notara-theme-switcher {
+    position: relative;
+    width: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .notara-theme-switcher select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Global Custom Scrollbar for Dark Mode */
@@ -247,4 +577,3 @@ body {
   left: -9999px;
   pointer-events: none;
 }
-
