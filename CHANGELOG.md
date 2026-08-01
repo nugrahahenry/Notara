@@ -4,7 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 Lihat aturan lengkap di `../KONVENSI-VERSI.md`.
 
 ## [Unreleased]
-- (tulis perubahan yang belum dirilis di sini)
+### Added
+- Model state capture per file untuk status antrean, tahap pemrosesan, progress terukur, hasil terminal, error, dan kelayakan retry.
+- Baris antrean aksesibel dengan metadata audio/video, tujuan penyimpanan, aksi Ganti/Hapus, ringkasan antrean, serta komponen status sukses/gagal yang siap disambungkan ke pipeline.
+
+### Changed
+- Drag-and-drop kini membedakan file valid dan tidak valid, menolak format yang tidak didukung atau ukuran di atas 150 MB, dan mempertahankan batas tiga file sekuensial.
+- Progress pemrosesan tidak lagi memakai persentase berbasis tebakan waktu. Persentase hanya ditampilkan untuk bagian rekaman yang benar-benar selesai.
+- Proses browser-bound kini menjelaskan agar tab tetap dibuka dan memunculkan peringatan native saat tab ditutup atau dimuat ulang di tengah pekerjaan.
 
 ## [0.0.06] - 2026-07-19
 ### Added

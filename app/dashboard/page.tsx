@@ -21,7 +21,10 @@ import { VersionUpdateBanner } from '../components/ui/VersionUpdateBanner';
 import { CaptureSourceTabs } from '../components/capture/CaptureSourceTabs';
 import { ProcessingView } from '../components/capture/ProcessingView';
 import { RecordingPanel } from '../components/capture/RecordingPanel';
-import { UploadQueuePanel } from '../components/capture/UploadQueuePanel';
+import {
+  UploadQueuePanel,
+  type CaptureDragState,
+} from '../components/capture/UploadQueuePanel';
 import {
   AppShellRoot,
   AppShellSidebar,
@@ -73,8 +76,14 @@ import { bufferToWav, getAudioDuration, sliceAudioBuffer } from '@/lib/capture/a
 import {
   CHUNK_DURATION_SECONDS,
   CHUNK_THRESHOLD_BYTES,
+  MAX_QUEUE_FILES,
 } from '@/lib/capture/constants';
-import { exceedsMaxFileSize, getCaptureLimits, mergeCaptureQueue } from '@/lib/capture/policy';
+import {
+  exceedsMaxFileSize,
+  getCaptureLimits,
+  isSupportedMediaFile,
+  mergeCaptureQueue,
+} from '@/lib/capture/policy';
 
 // Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
 // membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
@@ -91,6 +100,14 @@ const DEV_BYPASS_USER = {
   aud: 'authenticated',
   created_at: '2026-01-01T00:00:00.000Z',
 } as User;
+
+const createCaptureTaskId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `capture-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+};
 
 // Format relative time for chat thread age description
 const formatRelativeTime = (dateStr: string): string => {
@@ -121,7 +138,9 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [showUserDropdown, setShowUserDropdown] = useState<boolean>(false);
   const [files, setFiles] = useState<File[]>([]);
-  const [dragActive, setDragActive] = useState<boolean>(false);
+  const [captureFileIds, setCaptureFileIds] = useState<string[]>([]);
+  const [captureDragState, setCaptureDragState] = useState<CaptureDragState>('idle');
+  const [captureInputNotice, setCaptureInputNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -172,9 +191,6 @@ export default function Home() {
   const [showSharePopover, setShowSharePopover] = useState<boolean>(false);
   const [copiedShareLink, setCopiedShareLink] = useState<boolean>(false);
 
-  // Loading Steps State for Enhanced Loading Animation
-  const [loadingStep, setLoadingStep] = useState<number>(1);
-
   // Thinking Panel States
   const [thinkingLog, setThinkingLog] = useState<string[]>([]);
   const [showThinkingPanel, setShowThinkingPanel] = useState<boolean>(false);
@@ -191,8 +207,9 @@ export default function Home() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   // Chunking States for Large Files
-  const [chunkTotal, setChunkTotal] = useState<number>(1);
-  const [chunkCurrent, setChunkCurrent] = useState<number>(1);
+  const [chunkTotal, setChunkTotal] = useState<number>(0);
+  const [chunkCurrent, setChunkCurrent] = useState<number>(0);
+  const [chunkCompleted, setChunkCompleted] = useState<number>(0);
   const [chunkProgress, setChunkProgress] = useState<string>('');
   const [isChunkProcessing, setIsChunkProcessing] = useState<boolean>(false);
 
@@ -268,6 +285,7 @@ export default function Home() {
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const captureDragDepthRef = useRef<number>(0);
   const [processingQueueActive, setProcessingQueueActive] = useState<boolean>(false);
   const [currentQueueIndex, setCurrentQueueIndex] = useState<number>(0);
   const [inlineEditingSummaryId, setInlineEditingSummaryId] = useState<string | null>(null);
@@ -1176,25 +1194,19 @@ export default function Home() {
     checkLoginSuccess();
   }, [isDataLoading, user]);
 
-  // Sync loading step timeline
+  // Capture jobs are still browser-bound. Protect work that would otherwise
+  // disappear when the tab is closed or refreshed mid-process.
   useEffect(() => {
-    if (!loading) {
-      setLoadingStep(1);
-      return;
-    }
-    const step2Timer = setTimeout(() => {
-      setLoadingStep(2);
-    }, 4500);
+    if (!loading && !processingQueueActive) return;
 
-    const step3Timer = setTimeout(() => {
-      setLoadingStep(3);
-    }, 8500);
-
-    return () => {
-      clearTimeout(step2Timer);
-      clearTimeout(step3Timer);
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = true;
     };
-  }, [loading]);
+
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }, [loading, processingQueueActive]);
 
   // Recording cleanup
   useEffect(() => {
@@ -1953,6 +1965,9 @@ export default function Home() {
   const processLargeAudio = async (largeFile: File | Blob, fileName: string, queueIndex: number | null = null) => {
     setLoading(true);
     setIsChunkProcessing(true);
+    setChunkTotal(0);
+    setChunkCurrent(0);
+    setChunkCompleted(0);
     setThinkingLog([]);
     setShowThinkingPanel(false);
     startThinkingTimer();
@@ -2030,6 +2045,7 @@ export default function Home() {
         
         addThinkingLog(`✅ Bagian ${c + 1} selesai ditranskripsi!`);
         concatenatedTranscript += (data.transcript + ' ');
+        setChunkCompleted(c + 1);
       }
       
       addThinkingLog('📝 Semua bagian selesai! Notara sedang merangkum keseluruhan isi...');
@@ -2138,7 +2154,7 @@ export default function Home() {
     
     const fileLabel = queueIndex !== null ? ` (Berkas ${queueIndex + 1} dari ${files.length})` : '';
     addThinkingLog(`🎙️ Mulai mendengarkan rekaman${fileLabel}...`);
-    setStatusMessage(`🎙️ Sedang mendengar dan menyalin audio${fileLabel}...`);
+    setStatusMessage(`Audio sedang dikirim untuk ditranskrip dan dirangkum${fileLabel}.`);
 
     try {
       let duration = 0;
@@ -2151,17 +2167,10 @@ export default function Home() {
       const formData = new FormData();
       formData.append('file', sourceFile, name);
 
-      const statusInterval = setTimeout(() => {
-        addThinkingLog('📖 Transkripsi selesai! Sedang merangkum isi...');
-        setStatusMessage('✨ Sedang membaca transkrip dan menyusun rangkuman...');
-      }, 4500);
-
       const response = await fetch('/api/summarize', {
         method: 'POST',
         body: formData,
       });
-
-      clearTimeout(statusInterval);
 
       const data = await response.json();
 
@@ -2429,57 +2438,120 @@ export default function Home() {
   const handleDrag = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+
+    if (e.type === 'dragenter') {
+      captureDragDepthRef.current += 1;
     }
+
+    if (e.type === 'dragleave') {
+      captureDragDepthRef.current = Math.max(0, captureDragDepthRef.current - 1);
+      if (captureDragDepthRef.current === 0) setCaptureDragState('idle');
+      return;
+    }
+
+    const fileItems = Array.from(e.dataTransfer.items).filter((item) => item.kind === 'file');
+    const itemFiles = fileItems
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
+    const candidateFiles = itemFiles.length > 0
+      ? itemFiles
+      : Array.from(e.dataTransfer.files);
+    const candidateCount = candidateFiles.length || fileItems.length;
+    const queueWouldOverflow = files.length + candidateCount > MAX_QUEUE_FILES;
+    const candidatesAreValid = candidateFiles.length > 0
+      ? candidateFiles.every(
+          (file) => isSupportedMediaFile(file) && !exceedsMaxFileSize(file),
+        )
+      : fileItems.length > 0 && fileItems.every(
+          (item) => item.type.startsWith('audio/') || item.type.startsWith('video/'),
+        );
+
+    setCaptureDragState(
+      candidateCount > 0 && !queueWouldOverflow && candidatesAreValid
+        ? 'valid'
+        : 'invalid',
+    );
+  };
+
+  const addCaptureCandidates = (candidateFiles: File[]) => {
+    const unsupportedFiles = candidateFiles.filter((file) => !isSupportedMediaFile(file));
+    const oversizedFiles = candidateFiles.filter(
+      (file) => isSupportedMediaFile(file) && exceedsMaxFileSize(file),
+    );
+    const validFiles = candidateFiles.filter(
+      (file) => isSupportedMediaFile(file) && !exceedsMaxFileSize(file),
+    );
+    const queueResult = mergeCaptureQueue(files, validFiles);
+    const availableSlots = Math.max(0, MAX_QUEUE_FILES - files.length);
+    const overflowCount = Math.max(0, validFiles.length - availableSlots);
+    const notices: string[] = [];
+
+    if (unsupportedFiles.length > 0) {
+      notices.push(`${unsupportedFiles.length} file dilewati karena formatnya belum didukung.`);
+    }
+    if (oversizedFiles.length > 0) {
+      notices.push(`${oversizedFiles.length} file dilewati karena ukurannya melebihi 150 MB.`);
+    }
+    if (overflowCount > 0 || queueResult.queueLimitReached) {
+      notices.push('Antrean hanya menampung tiga file. File sisanya belum ditambahkan.');
+    }
+
+    if (validFiles.length > 0 && availableSlots > 0) {
+      setFiles(queueResult.files);
+      const addedCount = Math.max(0, queueResult.files.length - files.length);
+      setCaptureFileIds((currentIds) => [
+        ...currentIds.slice(0, files.length),
+        ...Array.from({ length: addedCount }, createCaptureTaskId),
+      ]);
+      setError(null);
+    }
+
+    if (candidateFiles.length === 0) {
+      notices.push('Tidak ada file yang dapat dibaca dari pilihan ini.');
+    }
+
+    setCaptureInputNotice(notices.length > 0 ? notices.join(' ') : null);
   };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files) {
-      const droppedFiles = Array.from(e.dataTransfer.files);
-      const queueResult = mergeCaptureQueue(files, droppedFiles);
-
-      if (queueResult.supportedCandidates.length > 0) {
-        setFiles(prev => {
-          const result = mergeCaptureQueue(prev, droppedFiles);
-          if (result.queueLimitReached) {
-            setError('Batas maksimal antrean adalah 3 file.');
-            return result.files;
-          }
-          setError(null);
-          return result.files;
-        });
-      } else {
-        setError('Format tidak didukung. Silakan upload file audio atau video (MP3, MP4, M4A, WAV, WEBM, dll.)');
-      }
-    }
+    captureDragDepthRef.current = 0;
+    setCaptureDragState('idle');
+    addCaptureCandidates(Array.from(e.dataTransfer.files));
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      const queueResult = mergeCaptureQueue(files, selectedFiles);
+    addCaptureCandidates(Array.from(e.target.files ?? []));
+    e.target.value = '';
+  };
 
-      if (queueResult.supportedCandidates.length > 0) {
-        setFiles(prev => {
-          const result = mergeCaptureQueue(prev, selectedFiles);
-          if (result.queueLimitReached) {
-            setError('Batas maksimal antrean adalah 3 file.');
-            return result.files;
-          }
-          setError(null);
-          return result.files;
-        });
-      } else {
-        setError('Format tidak didukung. Silakan upload file audio atau video (MP3, MP4, M4A, WAV, WEBM, dll.)');
-      }
+  const handleReplaceCaptureFile = (index: number, replacement: File) => {
+    if (!isSupportedMediaFile(replacement)) {
+      setCaptureInputNotice('File pengganti belum didukung. Pilih file audio atau video.');
+      return;
     }
+    if (exceedsMaxFileSize(replacement)) {
+      setCaptureInputNotice('File pengganti melebihi batas 150 MB. Pilih file yang lebih kecil.');
+      return;
+    }
+
+    setFiles((currentFiles) =>
+      currentFiles.map((file, fileIndex) => (fileIndex === index ? replacement : file)),
+    );
+    setCaptureFileIds((currentIds) =>
+      currentIds.map((taskId, fileIndex) =>
+        fileIndex === index ? createCaptureTaskId() : taskId,
+      ),
+    );
+    setCaptureInputNotice(null);
+    setError(null);
+  };
+
+  const handleRemoveCaptureFile = (index: number) => {
+    setFiles((currentFiles) => currentFiles.filter((_, fileIndex) => fileIndex !== index));
+    setCaptureFileIds((currentIds) => currentIds.filter((_, fileIndex) => fileIndex !== index));
+    setCaptureInputNotice(null);
   };
 
   const handleButtonClick = () => {
@@ -2488,11 +2560,23 @@ export default function Home() {
 
   const clearFile = () => {
     setFiles([]);
+    setCaptureFileIds([]);
     setError(null);
+    setCaptureInputNotice(null);
+    setCaptureDragState('idle');
+    captureDragDepthRef.current = 0;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
+
+  const selectedCaptureFolder =
+    chosenSaveFolderId === 'null'
+      ? null
+      : folders.find((folder) => folder.id === chosenSaveFolderId) ?? null;
+  const captureDestinationLabel = selectedCaptureFolder
+    ? `Mata kuliah • ${selectedCaptureFolder.name}`
+    : 'Belum Dikategorikan';
 
   // Inline folder creation inside Save Folder Modal
   const handleCreateFolderInline = async () => {
@@ -3959,8 +4043,8 @@ export default function Home() {
                 chunkProgress={chunkProgress}
                 statusMessage={statusMessage}
                 chunkCurrent={chunkCurrent}
+                chunkCompleted={chunkCompleted}
                 chunkTotal={chunkTotal}
-                loadingStep={loadingStep}
                 thinkingLog={thinkingLog}
                 showThinkingPanel={showThinkingPanel}
                 onToggleThinkingPanel={() => setShowThinkingPanel(value => !value)}
@@ -4090,13 +4174,17 @@ export default function Home() {
                   /* UPLOAD INTERFACE */
                   <UploadQueuePanel
                     files={files}
-                    dragActive={dragActive}
+                    taskIds={captureFileIds}
+                    dragState={captureDragState}
+                    notice={captureInputNotice}
+                    destinationLabel={captureDestinationLabel}
                     fileInputRef={fileInputRef}
                     onDrag={handleDrag}
                     onDrop={handleDrop}
                     onFileChange={handleFileChange}
                     onBrowse={handleButtonClick}
-                    onRemoveFile={(index) => setFiles(previous => previous.filter((_, fileIndex) => fileIndex !== index))}
+                    onReplaceFile={handleReplaceCaptureFile}
+                    onRemoveFile={handleRemoveCaptureFile}
                     onClearFiles={clearFile}
                   />
                 ) : (

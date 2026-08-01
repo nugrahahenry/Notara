@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2, TriangleAlert } from 'lucide-react';
 import { ProcessingMark } from '../brand/BrandSlots';
 
 interface ProcessingViewProps {
@@ -8,8 +9,8 @@ interface ProcessingViewProps {
   chunkProgress: string;
   statusMessage: string;
   chunkCurrent: number;
+  chunkCompleted: number;
   chunkTotal: number;
-  loadingStep: number;
   thinkingLog: string[];
   showThinkingPanel: boolean;
   onToggleThinkingPanel: () => void;
@@ -21,64 +22,112 @@ export function ProcessingView({
   chunkProgress,
   statusMessage,
   chunkCurrent,
+  chunkCompleted,
   chunkTotal,
-  loadingStep,
   thinkingLog,
   showThinkingPanel,
   onToggleThinkingPanel,
 }: ProcessingViewProps) {
-  const chunkPercent = Math.max(5, Math.round((chunkCurrent / chunkTotal) * 100));
+  const hasMeasuredChunkProgress =
+    isChunkProcessing &&
+    chunkTotal > 0 &&
+    chunkCurrent > 0 &&
+    chunkCompleted < chunkTotal;
+  const measuredPercent = hasMeasuredChunkProgress
+    ? Math.round((chunkCompleted / chunkTotal) * 100)
+    : null;
+  const currentStatus = isChunkProcessing
+    ? chunkProgress || 'Browser sedang menyiapkan rekaman...'
+    : statusMessage || 'Audio sedang diproses...';
 
   return (
-    <div className="max-w-xl mx-auto text-center py-16 flex flex-col items-center justify-center animate-in fade-in duration-300">
-      <div className="relative flex items-center justify-center">
+    <section
+      className="mx-auto flex max-w-xl flex-col items-center justify-center py-12 text-center animate-in fade-in duration-300"
+      aria-labelledby="capture-processing-title"
+      aria-describedby="capture-processing-status capture-tab-warning"
+    >
+      <div className="relative flex items-center justify-center" aria-hidden="true">
         <ProcessingMark size={112} />
       </div>
 
-      <div className="mt-8 flex flex-col items-center gap-1">
-        <h3 className="text-xl font-black tracking-tight text-[var(--text-primary)]">Notara Thinking...</h3>
-        <p className="font-mono text-xs font-bold text-[var(--brand-primary)]">
-          {thinkingElapsed}s berlalu
+      <div className="mt-7 flex flex-col items-center gap-1">
+        <h2 id="capture-processing-title" className="text-xl font-black tracking-tight text-[var(--text-primary)]">
+          Notara sedang bekerja
+        </h2>
+        <p className="font-mono text-xs font-bold text-[var(--action-primary)]">
+          {thinkingElapsed} detik berlalu
         </p>
       </div>
 
-      <p className="mx-auto mt-3 min-h-8 max-w-sm animate-pulse px-6 text-sm leading-relaxed text-[var(--text-secondary)]">
-        {isChunkProcessing ? chunkProgress : statusMessage}
-      </p>
+      <div
+        id="capture-processing-status"
+        className="mx-auto mt-4 max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-5 py-4"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <p className="inline-flex items-center justify-center gap-2 text-sm font-semibold leading-relaxed text-[var(--text-secondary)]">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--action-primary)]" aria-hidden="true" />
+          {currentStatus}
+        </p>
+      </div>
 
-      <div className="relative mt-5 h-2 w-64 overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--surface-tool)]">
-        <div
-          className="h-full rounded-full bg-[var(--brand-primary)] transition-all duration-700"
-          style={{
-            width: isChunkProcessing
-              ? `${chunkPercent}%`
-              : loadingStep === 1
-                ? '35%'
-                : loadingStep === 2
-                  ? '75%'
-                  : '98%',
-            animationDuration: '2s',
-            animationIterationCount: 'infinite',
-          }}
-        />
+      {hasMeasuredChunkProgress && measuredPercent !== null && (
+        <div className="mt-5 w-full max-w-sm text-left">
+          <div className="mb-1.5 flex items-center justify-between gap-3 text-xs text-[var(--text-secondary)]">
+            <span>
+              {chunkCompleted} dari {chunkTotal} bagian selesai
+              {chunkCurrent > chunkCompleted ? ` • bagian ${chunkCurrent} sedang dikerjakan` : ''}
+            </span>
+            <span className="font-mono font-bold">{measuredPercent}%</span>
+          </div>
+          <progress
+            className="h-2 w-full overflow-hidden rounded-full accent-[var(--action-primary)]"
+            max={chunkTotal}
+            value={chunkCompleted}
+            aria-label="Bagian rekaman yang selesai diproses"
+          >
+            {measuredPercent}%
+          </progress>
+        </div>
+      )}
+
+      {!hasMeasuredChunkProgress && (
+        <p className="mt-4 text-xs leading-relaxed text-[var(--text-tertiary)]">
+          Tahap ini tidak memiliki persentase yang dapat diukur dengan akurat.
+        </p>
+      )}
+
+      <div
+        id="capture-tab-warning"
+        className="mt-5 flex max-w-md items-start gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-3.5 text-left text-xs leading-relaxed text-[var(--review-accent)]"
+      >
+        <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <p>
+          <strong>Tetap buka tab ini sampai selesai.</strong> Proses saat ini berjalan di browser dan belum dapat dilanjutkan di latar belakang.
+        </p>
       </div>
 
       {thinkingLog.length > 0 && (
-        <div className="mt-6 w-full max-w-xs">
+        <div className="mt-6 w-full max-w-sm">
           <button
+            type="button"
             onClick={onToggleThinkingPanel}
             className="mx-auto flex min-h-11 items-center gap-2 text-xs font-semibold text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]"
+            aria-expanded={showThinkingPanel}
+            aria-controls="capture-process-details"
           >
-            <span className="flex items-center gap-1">
-              {showThinkingPanel ? '▾' : '▸'}
-              Lihat detail proses...
-            </span>
+            <span aria-hidden="true">{showThinkingPanel ? '▾' : '▸'}</span>
+            Detail proses
           </button>
 
           {showThinkingPanel && (
-            <div className="mt-2 max-h-52 space-y-1.5 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-3 text-left animate-in fade-in slide-in-from-top-2 duration-200">
+            <div
+              id="capture-process-details"
+              className="mt-2 max-h-52 space-y-1.5 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-3 text-left animate-in fade-in slide-in-from-top-2 duration-200"
+            >
               {thinkingLog.map((log, index) => (
-                <div key={index} className="flex items-start gap-2">
+                <div key={`${index}-${log}`} className="flex items-start gap-2">
                   <span className="shrink-0 pt-0.5 font-mono text-xs text-[var(--text-tertiary)]">
                     {String(index + 1).padStart(2, '0')}
                   </span>
@@ -89,6 +138,6 @@ export function ProcessingView({
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }

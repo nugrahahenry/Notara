@@ -18,6 +18,7 @@
     "lib/types.ts",
     "lib/capture/constants.ts",
     "lib/capture/policy.ts",
+    "lib/capture/task.ts",
     "lib/learning/fallback.ts"
   ],
   "exclude": ["node_modules", "build"]

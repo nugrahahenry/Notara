@@ -11,11 +11,11 @@ try {
   execSync('node test/compile.js', { stdio: 'inherit' });
 
   console.log('\n--------------------------------------------------');
-  console.log(' Running Test Suite: Tiers 1 - 4 + Capture/Learning Policies (74 Test Cases)');
+  console.log(' Running Test Suite: Tiers 1 - 4 + Capture Task/Learning Policies');
   console.log('--------------------------------------------------\n');
 
   // 2. Run the test suite via Node.js native test runner
-  execSync('node --test test/tier1.test.js test/tier2.test.js test/tier3.test.js test/tier4.test.js test/capture-policy.test.js test/learning-fallback.test.js', { stdio: 'inherit' });
+  execSync('node --test test/tier1.test.js test/tier2.test.js test/tier3.test.js test/tier4.test.js test/capture-policy.test.js test/capture-task.test.js test/learning-fallback.test.js', { stdio: 'inherit' });
 
   console.log('\n==================================================');
   console.log(' ✅ ALL TEST SUITES EXECUTED AND PASSED SUCCESSFUL!');
