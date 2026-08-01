@@ -9,7 +9,8 @@ import {
   Calendar, FileSignature, ArrowUpRight, Menu, MessageSquare, Send, Search, LogOut,
   Shield, QrCode, Key, Share2, Globe, Lock, Copy, ExternalLink,
   Mic, MicOff, Users, UserPlus, Link2, Crown, Hash,
-  ImageDown, Smartphone, Square, Download, Clock, Settings, RefreshCw
+  ImageDown, Smartphone, Square, Download, Clock, Settings, RefreshCw,
+  House, GraduationCap
 } from 'lucide-react';
 import { NotaraLogo } from '../components/brand/NotaraLogo';
 import { BrandMark, Wordmark } from '../components/brand/BrandSlots';
@@ -28,6 +29,12 @@ import {
   AppShellWorkspace,
 } from '../components/shell/AppShell';
 import { ThemeSwitcher } from '../components/theme/ThemeSwitcher';
+import { HomeWorkspace } from '../components/workspace/HomeWorkspace';
+import { CoursesWorkspace } from '../components/workspace/CoursesWorkspace';
+import { SharedWorkspace } from '../components/workspace/SharedWorkspace';
+import { NotaraWorkspace } from '../components/workspace/NotaraWorkspace';
+import { StudyCanvasFoundation } from '../components/workspace/StudyCanvasFoundation';
+import type { WorkspaceView } from '../components/workspace/types';
 import {
   getFolders,
   createFolder,
@@ -124,6 +131,7 @@ export default function Home() {
   const [summaries, setSummaries] = useState<SummaryType[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<string>('all'); // 'all', 'recent', 'uncategorized', or folder_id
   const [selectedSummary, setSelectedSummary] = useState<SummaryType | null>(null);
+  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('home');
   
   // Chatbot States
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -144,7 +152,7 @@ export default function Home() {
   // Chatbot Drawer States
   const [isChatOpenMobile, setIsChatOpenMobile] = useState<boolean>(false); // Mobile chatbot active
   const [chatScope, setChatScope] = useState<'summary' | 'folder' | 'global'>('summary'); // Chat context scope
-  const [isChatPanelOpen, setIsChatPanelOpen] = useState<boolean>(true); // Desktop chatbot open
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState<boolean>(false); // Material tutor opens only from Study Dock
   
   // Folder Selector Prominent Dropdown
   const [showFolderSelectDropdown, setShowFolderSelectDropdown] = useState<boolean>(false);
@@ -325,7 +333,7 @@ export default function Home() {
 
   // Persistent Desktop Chat Panel State
   useEffect(() => {
-    const saved = localStorage.getItem('isChatPanelOpen');
+    const saved = localStorage.getItem('isMaterialTutorPanelOpen');
     if (saved !== null) {
       setIsChatPanelOpen(saved === 'true');
     }
@@ -1206,9 +1214,28 @@ export default function Home() {
   // Load chat threads when selectedSummary or user changes
   useEffect(() => {
     if (!user) return;
-    
+
     const summaryId = selectedSummary ? selectedSummary.id : null;
     const userId = user.id;
+
+    if (DEV_BYPASS_AUTH) {
+      setChatThreads([]);
+      setActiveThreadId(null);
+      setShowChatHistory(false);
+      setChatMessages([
+        {
+          id: 'welcome',
+          summary_id: summaryId,
+          thread_id: '',
+          role: 'assistant',
+          content: selectedSummary
+            ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+            : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      return;
+    }
     
     async function loadThreads() {
       try {
@@ -3067,6 +3094,56 @@ export default function Home() {
 
   // getReadingTime helper removed in favor of Fokus Aktif timer & Word Count
 
+  const openWorkspace = (view: WorkspaceView) => {
+    setWorkspaceView(view);
+    setSelectedSummary(null);
+    setSidebarOpen(false);
+    setIsChatOpenMobile(false);
+    setShowChatHistory(false);
+  };
+
+  const openCaptureWorkspace = (recording: boolean) => {
+    openWorkspace('capture');
+    setIsRecordingMode(recording);
+    clearFile();
+  };
+
+  const openSummaryInCanvas = (summary: SummaryType) => {
+    setSelectedSummary(summary);
+    setActiveTab('summary');
+    setSidebarOpen(false);
+    setIsChatOpenMobile(false);
+    setIsChatPanelOpen(false);
+  };
+
+  const handleCopySharedLink = async (summary: SummaryType) => {
+    if (!summary.public_slug) return;
+    try {
+      const link = `${window.location.origin}/s/${summary.public_slug}`;
+      await navigator.clipboard.writeText(link);
+      showToast('Link publik berhasil disalin.', 'success');
+    } catch {
+      setError('Browser tidak mengizinkan Notara menyalin link. Buka link lalu salin dari address bar.');
+    }
+  };
+
+  const handleDisableSharedLink = async (summary: SummaryType) => {
+    try {
+      const result = await toggleSummaryPublic(summary.id, false, summary.public_slug);
+      if (!result) throw new Error('Gagal menonaktifkan link publik.');
+      const updatedSummary = {
+        ...summary,
+        is_public: result.is_public,
+        public_slug: result.public_slug,
+      };
+      setSummaries(previous => previous.map(item => item.id === summary.id ? updatedSummary : item));
+      setSelectedSummary(previous => previous?.id === summary.id ? updatedSummary : previous);
+      showToast('Link publik dinonaktifkan.', 'success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menonaktifkan link publik.');
+    }
+  };
+
   return (
     <AppShellRoot>
 
@@ -3141,31 +3218,36 @@ export default function Home() {
           </div>
         )}
 
-        {/* NEW SUMMARY BUTTON */}
-        <div className="p-3 shrink-0 flex justify-center">
-          {isSidebarOpen ? (
-            <button
-              onClick={() => {
-                setSelectedSummary(null);
-                setSidebarOpen(false);
-              }}
-              className="group flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--action-primary)] px-4 py-2.5 text-xs font-bold tracking-wide text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)]"
-            >
-              <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" />
-              <span>Rekam / Upload</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                setSelectedSummary(null);
-              }}
-              className="group flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--action-primary)] text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)]"
-              title="Rekam atau upload materi baru"
-            >
-              <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" />
-            </button>
-          )}
-        </div>
+        {/* GLOBAL WORKSPACE NAVIGATION */}
+        <nav className="shrink-0 space-y-1 p-3" aria-label="Ruang utama Notara">
+          {([
+            ['notara', 'Tanya Notara', MessageSquare],
+            ['home', 'Beranda', House],
+            ['courses', 'Mata Kuliah', GraduationCap],
+            ['shared', 'Dibagikan', Share2],
+          ] as const).map(([view, label, Icon]) => {
+            const isActive = workspaceView === view && !selectedSummary;
+            return (
+              <button
+                key={view}
+                type="button"
+                onClick={() => openWorkspace(view)}
+                aria-current={isActive ? 'page' : undefined}
+                title={label}
+                className={`flex min-h-11 w-full items-center rounded-xl text-xs font-bold transition-colors ${
+                  isSidebarOpen ? 'gap-2.5 px-3' : 'justify-center px-0'
+                } ${
+                  isActive
+                    ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {isSidebarOpen && <span>{label}</span>}
+              </button>
+            );
+          })}
+        </nav>
 
         {/* EXPANDED NAVIGATION CONTENT */}
         {isSidebarOpen ? (
@@ -3178,6 +3260,7 @@ export default function Home() {
                   onClick={() => {
                     setActiveFolderId('all');
                     setSelectedSummary(null);
+                    setWorkspaceView('courses');
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'all' 
@@ -3198,6 +3281,7 @@ export default function Home() {
                   onClick={() => {
                     setActiveFolderId('recent');
                     setSelectedSummary(null);
+                    setWorkspaceView('courses');
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'recent' 
@@ -3222,6 +3306,7 @@ export default function Home() {
                   onClick={() => {
                     setActiveFolderId('uncategorized');
                     setSelectedSummary(null);
+                    setWorkspaceView('courses');
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'uncategorized' 
@@ -3286,6 +3371,7 @@ export default function Home() {
                             onClick={() => {
                               setActiveFolderId(folder.id);
                               setSelectedSummary(null);
+                              setWorkspaceView('courses');
                             }}
                             className="flex-1 flex items-center gap-2.5 px-3 py-2 text-xs text-left truncate"
                           >
@@ -3579,6 +3665,7 @@ export default function Home() {
                 onClick={() => {
                   setActiveFolderId('all');
                   setSelectedSummary(null);
+                  setWorkspaceView('courses');
                 }}
                 className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
                   activeFolderId === 'all' ? 'bg-white/5 text-violet-400' : 'text-zinc-500'
@@ -3592,6 +3679,7 @@ export default function Home() {
                 onClick={() => {
                   setActiveFolderId('recent');
                   setSelectedSummary(null);
+                  setWorkspaceView('courses');
                 }}
                 className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
                   activeFolderId === 'recent' ? 'bg-white/5 text-violet-400' : 'text-zinc-500'
@@ -3605,6 +3693,7 @@ export default function Home() {
                 onClick={() => {
                   setActiveFolderId('uncategorized');
                   setSelectedSummary(null);
+                  setWorkspaceView('courses');
                 }}
                 className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
                   activeFolderId === 'uncategorized' ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)]' : 'text-[var(--text-tertiary)]'
@@ -3627,6 +3716,7 @@ export default function Home() {
                     onClick={() => {
                       setActiveFolderId(folder.id);
                       setSelectedSummary(null);
+                      setWorkspaceView('courses');
                     }}
                     className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all relative ${
                       isActive ? 'bg-[var(--nav-selected)] border border-[var(--brand-primary)] scale-105' : ''
@@ -3659,8 +3749,45 @@ export default function Home() {
           </div>
         )}
 
+        {/* CAPTURE UTILITY */}
+        <div className="shrink-0 px-3 pb-3">
+          <button
+            type="button"
+            onClick={() => openCaptureWorkspace(false)}
+            title="Rekam atau upload materi baru"
+            className={`group flex min-h-11 w-full items-center rounded-xl bg-[var(--action-primary)] text-xs font-bold text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)] ${
+              isSidebarOpen ? 'justify-center gap-2 px-4' : 'justify-center px-0'
+            }`}
+          >
+            <Plus className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+            {isSidebarOpen && <span>Rekam / Upload</span>}
+          </button>
+        </div>
+
         {/* SIDEBAR FOOTER */}
         <div className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-sidebar)]">
+          {user && (
+            <div className="px-3 pt-3">
+              <button
+                type="button"
+                onClick={openSettings}
+                title={user.user_metadata?.full_name || user.email || 'Profil Saya'}
+                className={`flex min-h-11 w-full items-center rounded-xl text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] ${
+                  isSidebarOpen ? 'gap-2.5 px-2.5 text-left' : 'justify-center px-0'
+                }`}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-xs font-black text-[var(--text-on-brand)]">
+                  {(user.user_metadata?.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                </span>
+                {isSidebarOpen && (
+                  <span className="min-w-0">
+                    <strong className="block truncate text-xs text-[var(--text-primary)]">{user.user_metadata?.full_name || 'Profil saya'}</strong>
+                    <small className="block truncate text-[10px] text-[var(--text-tertiary)]">{user.email}</small>
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
           {/* Version Badge — shown when sidebar is expanded */}
           {isSidebarOpen && (
             <div className="px-4 pt-3 pb-1 flex items-center gap-2">
@@ -3737,37 +3864,33 @@ export default function Home() {
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
-              onClick={() => setIsChatOpenMobile(true)}
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--brand-primary)] md:hidden"
+              onClick={() => openWorkspace('notara')}
+              className={`flex h-11 w-11 items-center justify-center rounded-xl border md:hidden ${
+                workspaceView === 'notara' && !selectedSummary
+                  ? 'border-[var(--brand-primary)] bg-[var(--nav-selected)] text-[var(--nav-selected-text)]'
+                  : 'border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--brand-primary)]'
+              }`}
               aria-label="Tanya Notara"
             >
               <MessageSquare className="h-4 w-4" />
             </button>
 
             <button
-              onClick={() => {
-                const nextState = !isChatPanelOpen;
-                setIsChatPanelOpen(nextState);
-                localStorage.setItem('isChatPanelOpen', String(nextState));
-              }}
+              onClick={() => openWorkspace('notara')}
               className={`hidden h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-colors md:flex ${
-                isChatPanelOpen
-                  ? 'border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
-                  : 'border-[var(--brand-primary)] bg-[var(--nav-selected)] text-[var(--nav-selected-text)]'
+                workspaceView === 'notara' && !selectedSummary
+                  ? 'border-[var(--brand-primary)] bg-[var(--nav-selected)] text-[var(--nav-selected-text)]'
+                  : 'border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
               }`}
-              title={isChatPanelOpen ? 'Sembunyikan Tanya Notara' : 'Buka Tanya Notara'}
+              title="Buka Tanya Notara"
             >
               <MessageSquare className="h-4 w-4" />
-              <span>{isChatPanelOpen ? 'Tutup Notara' : 'Tanya Notara'}</span>
+              <span>Tanya Notara</span>
             </button>
 
             <button
               type="button"
-              onClick={() => {
-                setSelectedSummary(null);
-                setIsRecordingMode(true);
-                clearFile();
-              }}
+              onClick={() => openCaptureWorkspace(true)}
               className="hidden h-11 items-center gap-2 rounded-xl bg-[var(--action-primary)] px-3.5 text-xs font-bold text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)] sm:flex"
             >
               <Mic className="h-4 w-4" />
@@ -3844,8 +3967,83 @@ export default function Home() {
               />
             )}
 
+            {!selectedSummary && !loading && isDataLoading && workspaceView !== 'capture' && (
+              <div className="mx-auto max-w-5xl space-y-6 py-12 animate-pulse" aria-label="Memuat ruang belajar">
+                <div className="h-5 w-28 rounded-md bg-[var(--surface-elevated)]" />
+                <div className="h-12 w-2/3 rounded-2xl bg-[var(--surface-elevated)]" />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="h-48 rounded-3xl bg-[var(--surface-elevated)]" />
+                  <div className="h-48 rounded-3xl bg-[var(--surface-elevated)]" />
+                </div>
+              </div>
+            )}
+
+            {!selectedSummary && !loading && !isDataLoading && workspaceView === 'home' && (
+              <HomeWorkspace
+                userName={user?.user_metadata?.full_name || user?.email || 'teman belajar'}
+                folders={folders}
+                summaries={summaries}
+                processingError={error}
+                onUpload={() => openCaptureWorkspace(false)}
+                onRecord={() => openCaptureWorkspace(true)}
+                onOpenSummary={openSummaryInCanvas}
+                onOpenCourses={() => openWorkspace('courses')}
+                onOpenNotara={() => openWorkspace('notara')}
+              />
+            )}
+
+            {!selectedSummary && !loading && !isDataLoading && workspaceView === 'courses' && (
+              <CoursesWorkspace
+                folders={folders}
+                summaries={summaries}
+                activeFolderId={activeFolderId}
+                onCreateCourse={() => {
+                  setEditingFolder(null);
+                  setFolderName('');
+                  setFolderColor('#8B5CF6');
+                  setFolderIcon('📁');
+                  setShowFolderModal(true);
+                }}
+                onSelectCourse={(folderId) => setActiveFolderId(folderId)}
+                onOpenSummary={openSummaryInCanvas}
+              />
+            )}
+
+            {!selectedSummary && !loading && !isDataLoading && workspaceView === 'shared' && (
+              <SharedWorkspace
+                summaries={summaries}
+                onOpenSummary={openSummaryInCanvas}
+                onCopyLink={handleCopySharedLink}
+                onDisableLink={handleDisableSharedLink}
+              />
+            )}
+
+            {!selectedSummary && !loading && !isDataLoading && workspaceView === 'notara' && (
+              <NotaraWorkspace
+                folders={folders}
+                summaries={summaries}
+                messages={chatMessages}
+                threads={chatThreads}
+                activeThreadId={activeThreadId}
+                input={chatInput}
+                isSending={isSendingChat}
+                showHistory={showChatHistory}
+                onInputChange={setChatInput}
+                onSend={handleSendChatMessage}
+                onCreateThread={handleCreateNewThread}
+                onToggleHistory={() => setShowChatHistory(value => !value)}
+                onSelectThread={(threadId) => {
+                  setActiveThreadId(threadId);
+                  setShowChatHistory(false);
+                }}
+                onDeleteThread={(threadId) => handleDeleteThread(threadId)}
+                onOpenSummary={openSummaryInCanvas}
+                renderMessage={renderMarkdown}
+              />
+            )}
+
             {/* SCREEN 1: UPLOAD AREA / RECORDER CHOOSE */}
-            {!selectedSummary && !loading && (
+            {!selectedSummary && !loading && workspaceView === 'capture' && (
               isDataLoading ? (
                 <div className="max-w-xl mx-auto space-y-6 animate-pulse py-16 text-center">
                   <div className="h-6 bg-white/5 rounded-md w-1/3 mx-auto" />
@@ -4031,6 +4229,22 @@ export default function Home() {
               </div>
             )
           )}
+
+            {selectedSummary && !loading && (
+              <StudyCanvasFoundation
+                summary={selectedSummary}
+                folder={folders.find(folder => folder.id === selectedSummary.folder_id) ?? null}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                onBack={() => openWorkspace('courses')}
+                onAskMaterial={() => {
+                  setChatScope('summary');
+                  setIsChatPanelOpen(true);
+                  setIsChatOpenMobile(true);
+                  localStorage.setItem('isMaterialTutorPanelOpen', 'true');
+                }}
+              />
+            )}
 
             {/* SCREEN 2: SUMMARY DETAIL VIEW */}
             {selectedSummary && !loading && (
@@ -4454,7 +4668,8 @@ export default function Home() {
           </main>
 
           {/* COLUMN 3: RIGHT CHAT PANEL */}
-          <>
+          {selectedSummary && (
+            <>
             {isChatOpenMobile && (
               <div 
                 className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden animate-in fade-in"
@@ -4520,7 +4735,7 @@ export default function Home() {
                         onClick={() => {
                           setIsChatOpenMobile(false);
                           setIsChatPanelOpen(false);
-                          localStorage.setItem('isChatPanelOpen', 'false');
+                          localStorage.setItem('isMaterialTutorPanelOpen', 'false');
                         }}
                         className="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5 transition-all duration-200"
                         title="Tutup Chat"
@@ -4775,7 +4990,8 @@ export default function Home() {
 
               </div>
             </div>
-          </>
+            </>
+          )}
 
         </div>
 

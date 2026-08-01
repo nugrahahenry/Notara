@@ -17,7 +17,8 @@
     "lib/supabase.ts",
     "lib/types.ts",
     "lib/capture/constants.ts",
-    "lib/capture/policy.ts"
+    "lib/capture/policy.ts",
+    "lib/learning/fallback.ts"
   ],
   "exclude": ["node_modules", "build"]
 }
