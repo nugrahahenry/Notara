@@ -17,6 +17,10 @@ import { OnboardingModal } from '../components/ui/OnboardingModal';
 import { DashboardTour, DEFAULT_TOUR_STEPS } from '../components/ui/DashboardTour';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
 import { VersionUpdateBanner } from '../components/ui/VersionUpdateBanner';
+import { CaptureSourceTabs } from '../components/capture/CaptureSourceTabs';
+import { ProcessingView } from '../components/capture/ProcessingView';
+import { RecordingPanel } from '../components/capture/RecordingPanel';
+import { UploadQueuePanel } from '../components/capture/UploadQueuePanel';
 import {
   getFolders,
   createFolder,
@@ -51,16 +55,12 @@ import {
 import type { Folder as FolderType, Summary as SummaryType, ChatMessage, StudyGroup, ChatThread } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
-
-// ==========================================
-// CLIENT AUDIO PROCESSING UTILITIES (WAV Encoder & Slicer)
-// ==========================================
-
-// Slice an AudioBuffer from start to end (in seconds)
-// Native sample-rate Whisper = 16kHz. WAV di rate asli (44.1kHz) bikin chunk 3-menit
-// jadi ~16MB → lewat limit body Vercel (4.5MB). Resample ke 16kHz mono = jauh lebih kecil,
-// akurasi Whisper sama (dia memang memproses di 16kHz). Async karena pakai OfflineAudioContext.
-const TARGET_SAMPLE_RATE = 16000;
+import { bufferToWav, getAudioDuration, sliceAudioBuffer } from '@/lib/capture/audio';
+import {
+  CHUNK_DURATION_SECONDS,
+  CHUNK_THRESHOLD_BYTES,
+} from '@/lib/capture/constants';
+import { exceedsMaxFileSize, getCaptureLimits, mergeCaptureQueue } from '@/lib/capture/policy';
 
 // Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
 // membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
@@ -77,122 +77,6 @@ const DEV_BYPASS_USER = {
   aud: 'authenticated',
   created_at: '2026-01-01T00:00:00.000Z',
 } as User;
-
-const sliceAudioBuffer = async (buffer: AudioBuffer, start: number, end: number): Promise<AudioBuffer> => {
-  const startSample = Math.round(start * buffer.sampleRate);
-  const frameCount = Math.max(
-    0,
-    Math.min(Math.round((end - start) * buffer.sampleRate), buffer.length - startSample)
-  );
-
-  const sourceChannels: Float32Array[] = [];
-  for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-    sourceChannels.push(buffer.getChannelData(channel));
-  }
-
-  const OfflineCtx =
-    window.OfflineAudioContext ||
-    (window as unknown as { webkitOfflineAudioContext: typeof OfflineAudioContext }).webkitOfflineAudioContext;
-
-  const targetLength = Math.max(1, Math.ceil((frameCount / buffer.sampleRate) * TARGET_SAMPLE_RATE));
-  const offline = new OfflineCtx(1, targetLength, TARGET_SAMPLE_RATE);
-
-  // Buffer sumber di sample-rate ASLI + downmix mono; di-resample otomatis saat dirender ke 16kHz
-  const monoSource = offline.createBuffer(1, Math.max(1, frameCount), buffer.sampleRate);
-  const monoData = monoSource.getChannelData(0);
-  for (let i = 0; i < frameCount; i++) {
-    let sum = 0;
-    for (let c = 0; c < buffer.numberOfChannels; c++) {
-      sum += sourceChannels[c][startSample + i];
-    }
-    monoData[i] = sum / buffer.numberOfChannels;
-  }
-
-  const node = offline.createBufferSource();
-  node.buffer = monoSource;
-  node.connect(offline.destination);
-  node.start();
-  return await offline.startRendering(); // mono @ 16kHz
-};
-
-// Convert AudioBuffer to playable WAV Blob (16-bit PCM WAV format)
-function bufferToWav(buffer: AudioBuffer): Blob {
-  const numOfChan = buffer.numberOfChannels;
-  const length = buffer.length * 2 + 44;
-  const bufferArray = new ArrayBuffer(length);
-  const view = new DataView(bufferArray);
-  const channels = [];
-  let i;
-  let sample;
-  let offset = 0;
-  let pos = 0;
-
-  // write WAVE header
-  setUint32(0x46464952);                         // "RIFF"
-  setUint32(36 + buffer.length * 2);             // file length - 8
-  setUint32(0x45564157);                         // "WAVE"
-  setUint32(0x20746d66);                         // "fmt " chunk
-  setUint32(16);                                 // chunk length
-  setUint16(1);                                  // sample format (raw)
-  setUint16(numOfChan);                          // channel count
-  setUint32(buffer.sampleRate);                  // sample rate
-  setUint32(buffer.sampleRate * 2 * numOfChan); // byte rate (sample rate * block align)
-  setUint16(2 * numOfChan);                      // block align (channel count * bytes per sample)
-  setUint16(16);                                 // bits per sample
-  setUint32(0x61746164);                         // "data" - chunk
-  setUint32(buffer.length * 2);                  // chunk length
-
-  // write interleaved data
-  for (i = 0; i < buffer.numberOfChannels; i++) {
-    channels.push(buffer.getChannelData(i));
-  }
-
-  while (pos < buffer.length) {
-    for (i = 0; i < numOfChan; i++) {             // interleave channels
-      sample = Math.max(-1, Math.min(1, channels[i][pos])); // clamp
-      sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF; // scale to 16-bit signed integer
-      view.setInt16(44 + offset, sample, true); // write 16-bit sample (little endian)
-      offset += 2;
-    }
-    pos++;
-  }
-
-  return new Blob([bufferArray], { type: 'audio/wav' });
-
-  function setUint16(data: number) {
-    view.setUint16(pos, data, true);
-    pos += 2;
-  }
-
-  function setUint32(data: number) {
-    view.setUint32(pos, data, true);
-    pos += 4;
-  }
-}
-
-// Get the duration of an audio file in seconds
-const getAudioDuration = (file: File | Blob): Promise<number> => {
-  return new Promise((resolve) => {
-    const audio = new Audio();
-    audio.src = URL.createObjectURL(file);
-    audio.onloadedmetadata = () => {
-      URL.revokeObjectURL(audio.src);
-      resolve(Math.round(audio.duration));
-    };
-    audio.onerror = () => {
-      resolve(0); // Fallback if decoding fails
-    };
-  });
-};
-
-// Format file size in bytes to a human readable string
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
 
 // Format relative time for chat thread age description
 const formatRelativeTime = (dateStr: string): string => {
@@ -424,6 +308,7 @@ export default function Home() {
 
   // Subscription & Billing States (Phase 5)
   const [profileTier, setProfileTier] = useState<'free' | 'pro' | 'max'>('free');
+  const captureLimits = getCaptureLimits(profileTier);
   const [subscriptionData, setSubscriptionData] = useState<any>(null);
   const [billingLoading, setBillingLoading] = useState<boolean>(false);
   const [billingError, setBillingError] = useState<string | null>(null);
@@ -1701,7 +1586,6 @@ export default function Home() {
   // Recording triggers
   const startRecording = async () => {
     // Check monthly limit for Free tier
-    const isPro = profileTier !== 'free';
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     const currentMonthSummariesCount = summaries.filter(s => {
@@ -1709,7 +1593,10 @@ export default function Home() {
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
     }).length;
 
-    if (!isPro && currentMonthSummariesCount >= 5) {
+    if (
+      captureLimits.monthlySummaryLimit !== null &&
+      currentMonthSummariesCount >= captureLimits.monthlySummaryLimit
+    ) {
       showToast('Batas bulanan akun gratis tercapai (maksimal 5 rangkuman per bulan).', 'delete');
       setShowUpgradeModal(true);
       return;
@@ -1865,8 +1752,7 @@ export default function Home() {
         }
 
         // Limit check: 30 mins (1800s) for Free, 120 mins (7200s) for Pro
-        const isPro = profileTier !== 'free'; // disambung ke subscription_tier (19 Jul 2026)
-        const limit = isPro ? 120 * 60 : 30 * 60;
+        const limit = captureLimits.recordingLimitSeconds;
         
         if (nextSec >= limit) {
           setTimeout(() => {
@@ -1882,8 +1768,7 @@ export default function Home() {
 
   const resumeRecording = () => {
     // Check limits before resuming (Sprint 8)
-    const isPro = profileTier !== 'free';
-    const limit = isPro ? 120 * 60 : 30 * 60;
+    const limit = captureLimits.recordingLimitSeconds;
     if (recordingDuration >= limit) {
       setShowUpgradeModal(true);
       return;
@@ -1959,10 +1844,9 @@ export default function Home() {
     }
 
     // Check limit of 3 files per folder for Free tier
-    const isPro = profileTier !== 'free';
-    if (!isPro && folderId) {
+    if (captureLimits.folderSummaryLimit !== null && folderId) {
       const folderSummariesCount = summaries.filter(s => s.folder_id === folderId).length;
-      if (folderSummariesCount >= 3) {
+      if (folderSummariesCount >= captureLimits.folderSummaryLimit) {
         showToast('Batas 3 rangkuman per mata kuliah tercapai untuk paket gratis.', 'delete');
         setShowUpgradeModal(true);
         // Reset queue if limit reached
@@ -2055,7 +1939,7 @@ export default function Home() {
       const totalDuration = audioBuffer.duration;
       const fileDurationSec = Math.round(totalDuration);
       
-      const chunkDuration = 2 * 60; // 2 menit/chunk @16kHz mono ≈ 3.8MB — aman di bawah limit body Vercel (4.5MB)
+      const chunkDuration = CHUNK_DURATION_SECONDS; // 2 menit/chunk @16kHz mono ≈ 3.8MB — aman di bawah limit body Vercel (4.5MB)
       const totalChunks = Math.ceil(totalDuration / chunkDuration);
       setChunkTotal(totalChunks);
       addThinkingLog(`✂️ Audio akan dipotong menjadi ${totalChunks} bagian @ 2 menit...`);
@@ -2150,7 +2034,6 @@ export default function Home() {
   // Main Audio Processor
   const startProcessing = async (sourceFile: File | Blob, name: string, queueIndex: number | null = null) => {
     // Check monthly limit for Free tier
-    const isPro = profileTier !== 'free';
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     const currentMonthSummariesCount = summaries.filter(s => {
@@ -2158,7 +2041,10 @@ export default function Home() {
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
     }).length;
 
-    if (!isPro && currentMonthSummariesCount >= 5) {
+    if (
+      captureLimits.monthlySummaryLimit !== null &&
+      currentMonthSummariesCount >= captureLimits.monthlySummaryLimit
+    ) {
       showToast('Batas bulanan akun gratis tercapai (maksimal 5 rangkuman per bulan).', 'delete');
       setShowUpgradeModal(true);
       setProcessingQueueActive(false);
@@ -2168,9 +2054,9 @@ export default function Home() {
 
     // Check folder limit early if a specific folder is targeted
     const targetFolderId = chosenSaveFolderId !== 'null' ? chosenSaveFolderId : (activeFolderId !== 'all' && activeFolderId !== 'uncategorized' && activeFolderId !== 'recent' ? activeFolderId : 'null');
-    if (!isPro && targetFolderId !== 'null') {
+    if (captureLimits.folderSummaryLimit !== null && targetFolderId !== 'null') {
       const folderSummariesCount = summaries.filter(s => s.folder_id === targetFolderId).length;
-      if (folderSummariesCount >= 3) {
+      if (folderSummariesCount >= captureLimits.folderSummaryLimit) {
         showToast('Batas 3 rangkuman per mata kuliah tercapai untuk paket gratis.', 'delete');
         setShowUpgradeModal(true);
         setProcessingQueueActive(false);
@@ -2180,11 +2066,8 @@ export default function Home() {
     }
 
     const isVideoFile = sourceFile instanceof File && sourceFile.type.startsWith('video/');
-    const MAX_FILE_SIZE_LIMIT = 150 * 1024 * 1024; // 150MB — limit to prevent browser crash
-    const CHUNK_THRESHOLD = 4 * 1024 * 1024; // 4MB — di atas ini WAJIB chunk di browser (limit body Vercel 4.5MB)
-
     // Block files larger than 150MB to prevent browser memory exhaust / tab crash
-    if (sourceFile instanceof File && sourceFile.size > MAX_FILE_SIZE_LIMIT) {
+    if (sourceFile instanceof File && exceedsMaxFileSize(sourceFile)) {
       setError(
         'Ukuran berkas terlalu besar (>' + Math.round(sourceFile.size / 1024 / 1024) + 'MB). ' +
         'Batas maksimal unggahan langsung adalah 150MB. Silakan kompres video Anda atau ekstrak audio-nya menjadi MP3/M4A terlebih dahulu.'
@@ -2194,7 +2077,7 @@ export default function Home() {
     }
 
     // Any file > 20MB (audio or video) goes through browser chunking
-    if (sourceFile instanceof File && sourceFile.size > CHUNK_THRESHOLD) {
+    if (sourceFile instanceof File && sourceFile.size > CHUNK_THRESHOLD_BYTES) {
       await processLargeAudio(sourceFile, name, queueIndex);
       return;
     }
@@ -2512,22 +2395,17 @@ export default function Home() {
 
     if (e.dataTransfer.files) {
       const droppedFiles = Array.from(e.dataTransfer.files);
-      const validFiles = droppedFiles.filter(file => {
-        const isAudio = file.type.startsWith('audio/');
-        const isVideo = file.type.startsWith('video/');
-        const hasValidExt = ['.mp3','.m4a','.wav','.mp4','.mov','.webm','.mkv','.ogg','.aac'].some(ext => file.name.toLowerCase().endsWith(ext));
-        return isAudio || isVideo || hasValidExt;
-      });
+      const queueResult = mergeCaptureQueue(files, droppedFiles);
 
-      if (validFiles.length > 0) {
+      if (queueResult.supportedCandidates.length > 0) {
         setFiles(prev => {
-          const combined = [...prev, ...validFiles];
-          if (combined.length > 3) {
+          const result = mergeCaptureQueue(prev, droppedFiles);
+          if (result.queueLimitReached) {
             setError('Batas maksimal antrean adalah 3 file.');
-            return combined.slice(0, 3);
+            return result.files;
           }
           setError(null);
-          return combined;
+          return result.files;
         });
       } else {
         setError('Format tidak didukung. Silakan upload file audio atau video (MP3, MP4, M4A, WAV, WEBM, dll.)');
@@ -2538,22 +2416,17 @@ export default function Home() {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
-      const validFiles = selectedFiles.filter(file => {
-        const isAudio = file.type.startsWith('audio/');
-        const isVideo = file.type.startsWith('video/');
-        const hasValidExt = ['.mp3','.m4a','.wav','.mp4','.mov','.webm','.mkv','.ogg','.aac'].some(ext => file.name.toLowerCase().endsWith(ext));
-        return isAudio || isVideo || hasValidExt;
-      });
+      const queueResult = mergeCaptureQueue(files, selectedFiles);
 
-      if (validFiles.length > 0) {
+      if (queueResult.supportedCandidates.length > 0) {
         setFiles(prev => {
-          const combined = [...prev, ...validFiles];
-          if (combined.length > 3) {
+          const result = mergeCaptureQueue(prev, selectedFiles);
+          if (result.queueLimitReached) {
             setError('Batas maksimal antrean adalah 3 file.');
-            return combined.slice(0, 3);
+            return result.files;
           }
           setError(null);
-          return combined;
+          return result.files;
         });
       } else {
         setError('Format tidak didukung. Silakan upload file audio atau video (MP3, MP4, M4A, WAV, WEBM, dll.)');
@@ -2913,10 +2786,9 @@ export default function Home() {
     const targetFolderId = folderId === 'null' ? null : folderId;
 
     // Check limit of 3 files per folder for Free tier
-    const isPro = profileTier !== 'free';
-    if (!isPro && targetFolderId) {
+    if (captureLimits.folderSummaryLimit !== null && targetFolderId) {
       const folderSummariesCount = summaries.filter(s => s.folder_id === targetFolderId).length;
-      if (folderSummariesCount >= 3) {
+      if (folderSummariesCount >= captureLimits.folderSummaryLimit) {
         showToast('Batas 3 rangkuman per mata kuliah tercapai untuk paket gratis.', 'delete');
         setShowUpgradeModal(true);
         return;
@@ -3936,73 +3808,18 @@ export default function Home() {
 
             {/* UNIFIED NOTARA THINKING LOADER */}
             {loading && (
-              <div className="max-w-xl mx-auto text-center py-16 flex flex-col items-center justify-center animate-in fade-in duration-300">
-
-                {/* Notara Animated Logo — Orbit-to-Wave Loading */}
-                <div className="relative flex items-center justify-center">
-                  <NotaraLogo 
-                    variant="icon" 
-                    animated 
-                    motionState="loading" 
-                    size={112} 
-                    showGlow 
-                  />
-                </div>
-
-                {/* Title + Timer */}
-                <div className="mt-8 flex flex-col items-center gap-1">
-                  <h3 className="text-white font-black text-xl tracking-tight">Notara Thinking...</h3>
-                  <p className="text-violet-300 font-mono text-xs font-bold">
-                    {thinkingElapsed}s berlalu
-                  </p>
-                </div>
-
-                {/* Current step message */}
-                <p className="text-zinc-400 text-sm mt-3 px-6 leading-relaxed max-w-sm mx-auto min-h-8 animate-pulse">
-                  {isChunkProcessing ? chunkProgress : statusMessage}
-                </p>
-
-                {/* Progress bar */}
-                <div className="w-64 h-2 bg-white/5 border border-white/[0.08] rounded-full mt-5 overflow-hidden relative shadow-[0_0_15px_rgba(124,58,237,0.1)]">
-                  <div 
-                    className="h-full bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-500 rounded-full animate-shimmer transition-all duration-700"
-                    style={{
-                      width: isChunkProcessing
-                        ? `${Math.max(5, Math.round((chunkCurrent / chunkTotal) * 100))}%`
-                        : loadingStep === 1 ? '35%' : loadingStep === 2 ? '75%' : '98%',
-                      boxShadow: '0 0 10px #8B5CF6',
-                      animationDuration: '2s',
-                      animationIterationCount: 'infinite'
-                    }}
-                  />
-                </div>
-
-                {/* Collapsible Thinking Log */}
-                {thinkingLog.length > 0 && (
-                  <div className="mt-6 w-full max-w-xs">
-                    <button
-                      onClick={() => setShowThinkingPanel(v => !v)}
-                      className="flex items-center gap-2 text-[11px] text-zinc-500 hover:text-zinc-300 font-semibold transition-colors duration-200 mx-auto"
-                    >
-                      <span className="flex items-center gap-1">
-                        {showThinkingPanel ? '▾' : '▸'}
-                        Lihat detail proses...
-                      </span>
-                    </button>
-
-                    {showThinkingPanel && (
-                      <div className="mt-2 bg-white/[0.015] border border-white/[0.05] rounded-xl p-3 text-left space-y-1.5 max-h-52 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                        {thinkingLog.map((log, i) => (
-                          <div key={i} className="flex items-start gap-2">
-                            <span className="text-[9px] font-mono text-zinc-600 pt-0.5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                            <p className="text-[10px] text-zinc-400 leading-relaxed">{log}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <ProcessingView
+                thinkingElapsed={thinkingElapsed}
+                isChunkProcessing={isChunkProcessing}
+                chunkProgress={chunkProgress}
+                statusMessage={statusMessage}
+                chunkCurrent={chunkCurrent}
+                chunkTotal={chunkTotal}
+                loadingStep={loadingStep}
+                thinkingLog={thinkingLog}
+                showThinkingPanel={showThinkingPanel}
+                onToggleThinkingPanel={() => setShowThinkingPanel(value => !value)}
+              />
             )}
 
             {/* SCREEN 1: UPLOAD AREA / RECORDER CHOOSE */}
@@ -4039,263 +3856,52 @@ export default function Home() {
                   </div>
 
                   {/* Upload vs Recording Selector Toggle */}
-                  <div className="bg-white/[0.02] p-1 rounded-2xl flex max-w-xs mx-auto mb-8 text-xs font-bold border border-white/[0.06] shadow-xl backdrop-blur-md">
-                    <button
-                      onClick={() => {
+                  <CaptureSourceTabs
+                    isRecordingMode={isRecordingMode}
+                    onSelectUpload={() => {
                         setIsRecordingMode(false);
                         clearFile();
                       }}
-                      className={`flex-1 py-2 rounded-xl transition-all duration-300 cursor-pointer ${
-                        !isRecordingMode 
-                          ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/20 border-t border-white/10' 
-                          : 'text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      Upload File
-                    </button>
-                    <button
-                      onClick={() => {
+                    onSelectRecording={() => {
                         setIsRecordingMode(true);
                         clearFile();
                       }}
-                      className={`flex-1 py-2 rounded-xl transition-all duration-300 cursor-pointer ${
-                        isRecordingMode 
-                          ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/20 border-t border-white/10' 
-                          : 'text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      Rekam Suara
-                    </button>
-                  </div>
+                  />
 
                 {/* CONDITIONAL CONTROLLER */}
                 {!isRecordingMode ? (
                   /* UPLOAD INTERFACE */
-                  <div 
-                    data-tour="upload-area"
-                    onDragEnter={handleDrag}
-                    onDragOver={handleDrag}
-                    onDragLeave={handleDrag}
+                  <UploadQueuePanel
+                    files={files}
+                    dragActive={dragActive}
+                    fileInputRef={fileInputRef}
+                    onDrag={handleDrag}
                     onDrop={handleDrop}
-                    onClick={files.length > 0 ? undefined : handleButtonClick}
-                    className={`relative rounded-3xl border-2 border-dashed p-8 md:p-12 text-center cursor-pointer transition-all duration-300 backdrop-blur-sm hover:scale-[1.005] hover:animate-pulse-glow ${
-                      dragActive 
-                        ? 'border-violet-500 bg-violet-600/15 shadow-[0_0_40px_rgba(139,92,246,0.2)] scale-[1.01] animate-pulse-glow' 
-                        : 'bg-white/[0.01] border-white/10 hover:border-violet-500/40'
-                    }`}
-                  >
-                    <input 
-                      key={files.length > 0 ? 'active' : 'empty'}
-                      ref={fileInputRef}
-                      type="file" 
-                      multiple
-                      accept="audio/*,video/*,.mp3,.m4a,.wav,.mp4,.mov,.webm,.mkv,.ogg,.aac" 
-                      className="hidden" 
-                      onChange={handleFileChange}
-                    />
-
-                    {files.length === 0 ? (
-                      <div className="flex flex-col items-center gap-5">
-                        <div className="h-16 w-16 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-center text-zinc-400 transition-all duration-300 hover:scale-105 animate-float relative group">
-                          {/* Notara Animated Logo instead of simple upload cloud */}
-                          <NotaraLogo variant="icon" animated={true} motionState={dragActive ? "loading" : "thinking"} size={36} />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-white font-extrabold text-sm md:text-base tracking-wide transition-all duration-200">
-                            {dragActive ? 'Lepaskan file untuk mengunggah' : 'Tarik & lepas file audio atau video di sini'}
-                          </p>
-                          <p className="text-zinc-500 text-xs">Atau klik untuk menjelajahi file di perangkat Anda</p>
-                        </div>
-                        <div className="text-[10px] px-3.5 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.05] text-zinc-400 font-medium font-sans max-w-sm tracking-wide shadow-sm mx-auto animate-pulse">
-                          🎧 MP3, M4A, WAV • 🎬 MP4, WEBM, MOV • Maks 3 file sekuensial
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-4 w-full max-w-md mx-auto animate-in zoom-in-95 duration-200">
-                        <div className="text-xs font-bold text-zinc-400 self-start">
-                          Daftar File Antrean ({files.length}/3):
-                        </div>
-                        <div className="w-full space-y-2.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-                          {files.map((f, index) => (
-                            <div 
-                              key={`${f.name}-${index}`}
-                              className="flex items-center justify-between p-3.5 rounded-2xl bg-violet-600/5 border border-violet-500/10 hover:border-violet-500/20 transition-all duration-200"
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 shrink-0">
-                                  <FileAudio className="h-4 w-4" />
-                                </div>
-                                <div className="text-left min-w-0">
-                                  <p className="text-xs font-bold text-white truncate max-w-[200px]" title={f.name}>
-                                    {f.name}
-                                  </p>
-                                  <span className="text-[9px] text-zinc-500 font-mono">
-                                    {formatFileSize(f.size)}
-                                  </span>
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setFiles(prev => prev.filter((_, i) => i !== index));
-                                }}
-                                className="p-2 rounded-xl text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-                                title="Hapus dari antrean"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-
-                        {files.length < 3 && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleButtonClick();
-                            }}
-                            className="mt-1 flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 font-bold px-4 py-2 rounded-xl bg-violet-500/5 border border-violet-500/10 hover:border-violet-500/20 transition-all duration-200"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            Tambah File Lain
-                          </button>
-                        )}
-
-                        <button 
-                          onClick={(e) => { 
-                            e.preventDefault();
-                            e.stopPropagation(); 
-                            clearFile(); 
-                          }}
-                          className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500 hover:text-rose-400 font-bold px-3.5 py-2 rounded-xl bg-white/5 hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 transition-all duration-300 active:scale-95 shadow-sm"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Hapus Semua File
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    onFileChange={handleFileChange}
+                    onBrowse={handleButtonClick}
+                    onRemoveFile={(index) => setFiles(previous => previous.filter((_, fileIndex) => fileIndex !== index))}
+                    onClearFiles={clearFile}
+                  />
                 ) : (
                   /* VOICE RECORD PANEL INTERFACE */
-                  <div className="rounded-3xl border border-white/10 bg-white/[0.01] p-8 md:p-12 text-center flex flex-col items-center gap-6 relative overflow-hidden animate-in zoom-in-95 duration-200">
-                    
-                    {/* Visualizer audio canvas */}
-                    <div className="w-full h-32 bg-black/40 rounded-2xl border border-white/[0.04] overflow-hidden relative flex items-center justify-center">
-                      <canvas 
-                        ref={canvasRef} 
-                        className="absolute inset-0 w-full h-full"
-                        width={600}
-                        height={128}
-                      />
-                      
-                      {!isRecording && !audioBlob && (
-                        <div className="relative text-xs text-zinc-500 font-bold flex items-center gap-2">
-                          <NotaraLogo variant="icon" animated motionState="thinking" size={18} />
-                          Siap merekam suara...
-                        </div>
-                      )}
-
-                      {audioBlob && !isRecording && (
-                        <div className="relative text-xs text-emerald-400 font-bold flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full shadow-lg">
-                          <Check className="h-4 w-4" />
-                          Audio rekaman ter-cache di browser!
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Timer view */}
-                    <div className="flex flex-col items-center shrink-0">
-                      <span className="text-3xl font-mono font-bold tracking-wider text-white select-none">
-                        {formatDuration(recordingDuration)}
-                      </span>
-                      {isRecording && (
-                        <span className="text-[10px] text-rose-500 font-bold uppercase tracking-widest mt-1.5 animate-pulse flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping"></span>
-                          Recording Live
-                        </span>
-                      )}
-                      {isPaused && (
-                        <span className="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1.5">
-                          Recording Paused
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Audio Preview controls */}
-                    {audioUrl && !isRecording && (
-                      <div className="w-full max-w-sm mt-1 animate-in fade-in duration-300">
-                        <audio src={audioUrl} controls className="w-full focus:outline-none" />
-                      </div>
-                    )}
-
-                    {/* Action buttons controls row */}
-                    <div className="flex items-center gap-3">
-                      {!isRecording && !audioBlob ? (
-                        /* Initial state */
-                        <button
-                          onClick={startRecording}
-                          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs tracking-wide shadow-lg shadow-violet-500/20 transition-all duration-300 active:scale-95"
-                        >
-                          <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-                          Mulai Merekam
-                        </button>
-                      ) : isRecording ? (
-                        /* Recording state */
-                        <>
-                          {isPaused ? (
-                            <button
-                              onClick={resumeRecording}
-                              className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white font-bold text-xs transition-all active:scale-95"
-                            >
-                              Lanjutkan
-                            </button>
-                          ) : (
-                            <button
-                              onClick={pauseRecording}
-                              className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white font-bold text-xs transition-all active:scale-95"
-                            >
-                              Jeda Merekam
-                            </button>
-                          )}
-                          <button
-                            onClick={stopRecording}
-                            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs tracking-wide shadow-lg shadow-rose-950/20 transition-all active:scale-95"
-                          >
-                            Hentikan & Simpan
-                          </button>
-                        </>
-                      ) : (
-                        /* Finished state */
-                        <>
-                          <button
-                            onClick={startRecording}
-                            className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-400 hover:text-white font-bold text-xs transition-all active:scale-95"
-                          >
-                            Rekam Ulang
-                          </button>
-                          <button
-                            onClick={handleDownloadAudio}
-                            className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-300 hover:text-white font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5"
-                          >
-                            <FileAudio className="h-3.5 w-3.5 text-violet-400" />
-                            Unduh Audio
-                          </button>
-                          <button
-                            onClick={() => {
-                              setAudioBlob(null);
-                              setAudioUrl(null);
-                              setRecordingDuration(0);
-                            }}
-                            className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-rose-500/10 hover:border-rose-500/20 text-zinc-500 hover:text-rose-400 font-bold text-xs transition-all active:scale-95"
-                          >
-                            Batal
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  <RecordingPanel
+                    canvasRef={canvasRef}
+                    isRecording={isRecording}
+                    isPaused={isPaused}
+                    audioBlob={audioBlob}
+                    audioUrl={audioUrl}
+                    formattedDuration={formatDuration(recordingDuration)}
+                    onStart={startRecording}
+                    onPause={pauseRecording}
+                    onResume={resumeRecording}
+                    onStop={stopRecording}
+                    onDownload={handleDownloadAudio}
+                    onReset={() => {
+                      setAudioBlob(null);
+                      setAudioUrl(null);
+                      setRecordingDuration(0);
+                    }}
+                  />
                 )}
 
                 {/* SUBMIT BUTTON CONTROL ACTION & FOLDER SELECTOR */}

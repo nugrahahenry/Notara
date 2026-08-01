@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "incremental": false,
+    "isolatedModules": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": "./build",
+    "rootDir": ".",
+    "target": "ES2020",
+    "types": ["node"]
+  },
+  "include": [
+    "lib/db.ts",
+    "lib/supabase.ts",
+    "lib/types.ts",
+    "lib/capture/constants.ts",
+    "lib/capture/policy.ts"
+  ],
+  "exclude": ["node_modules", "build"]
+}
