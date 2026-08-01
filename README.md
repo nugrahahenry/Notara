@@ -1,7 +1,7 @@
 # Notara
 
 > Status: MVP aktif dan sedang diuji. Terakhir diverifikasi: 28 Juli 2026.
-> Sumber kebenaran: route aplikasi, migrasi Supabase, dan [indeks spesifikasi](spec/README.md).
+> Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
 
 Notara membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, rangkuman terstruktur, dan ruang tanya-jawab berbasis materi. Tujuannya bukan sekadar menghasilkan teks, tetapi mempersingkat jalan dari rekaman panjang ke bahan belajar yang bisa dicari dan dipahami kembali.
@@ -15,7 +15,7 @@ Notara membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - Chat streaming dengan scope satu rangkuman, satu folder, atau koleksi pengguna.
 - Share page publik yang dapat diaktifkan pemilik rangkuman dan tombol fork untuk pengguna yang login.
 - Study group dan berbagi folder di dalam grup.
-- UI checkout Midtrans serta tabel/pipeline subscription sudah ada, tetapi **billing nyata belum boleh dipakai** sampai gap webhook dan otorisasi pada [DATA-SECURITY-REQUIREMENTS.md](spec/DATA-SECURITY-REQUIREMENTS.md) ditutup.
+- UI checkout Midtrans serta tabel/pipeline subscription sudah ada, tetapi **billing nyata belum boleh dipakai** sebelum webhook dan otorisasi diperbaiki serta diuji end-to-end.
 
 ## Arsitektur singkat
 
@@ -83,7 +83,7 @@ npm run build
 ## Keterbatasan yang diketahui
 
 - Dashboard masih satu file besar (`app/dashboard/page.tsx`), sehingga redesign harus diawali component extraction bertahap.
-- Speaker diarization, formula capture/renderer matematika, Study Canvas, dan integrasi Neurova belum diimplementasikan. Kontraknya ada di [STUDY-CANVAS.md](spec/STUDY-CANVAS.md) dan [SPEAKER-CONTEXT.md](docs/SPEAKER-CONTEXT.md).
+- Speaker diarization, formula capture/renderer matematika, Study Canvas, dan integrasi Neurova belum diimplementasikan.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; ini bukan jaminan kemampuan semua perangkat.
 - Endpoint API AI belum memiliki rate limit server-side dan tidak boleh diekspos ke publik tanpa perbaikan autentikasi/abuse protection.
@@ -96,4 +96,4 @@ npm run build
 3. Audit prototype v2 lalu implementasikan Study Canvas bertahap.
 4. Riset provider diarization sebelum membangun Speaker Context; lanjutkan Formula Notes setelah ada bukti transkrip dan renderer matematika.
 
-Dokumentasi lengkap dan urutan kerja aman tersedia di [spec/README.md](spec/README.md) dan [docs/DOCUMENTATION-AUDIT.md](docs/DOCUMENTATION-AUDIT.md).
+Catatan produk, desain, dan prototype internal sengaja disimpan terpisah dari repository publik.

@@ -44,8 +44,11 @@ next-env.d.ts
 /docs/
 !/docs/
 /docs/*
-!/docs/SPEAKER-CONTEXT.md
-!/docs/DOCUMENTATION-AUDIT.md
+/spec/
+
+# Private product/design working material — never publish with the portfolio repo
+/.private/
+/notara-design-documentation-candidate-v1.0.zip
 
 
 # ─── Windows launcher scripts (lokal, jangan masuk GitHub) ───
