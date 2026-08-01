@@ -49,6 +49,7 @@ next-env.d.ts
 # Private product/design working material — never publish with the portfolio repo
 /.private/
 /notara-design-documentation-candidate-v1.0.zip
+/notara-app-shell-v4.1.4-codex-implementation-pack-v1.0.zip
 
 
 # ─── Windows launcher scripts (lokal, jangan masuk GitHub) ───
