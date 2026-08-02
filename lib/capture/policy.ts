@@ -76,4 +76,3 @@ export function getCaptureLimits(tier: CaptureTier): CaptureLimits {
     folderSummaryLimit: isPaid ? null : FREE_FOLDER_SUMMARY_LIMIT,
   };
 }
-

@@ -1,6 +1,6 @@
 # Notara
 
-> Status: MVP aktif dan sedang diuji. Terakhir diverifikasi: 28 Juli 2026.
+> Status: MVP aktif; App Shell v4 telah lulus QA lokal dan menunggu keputusan merge/deploy manual. Terakhir diverifikasi: 2 Agustus 2026.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
 
@@ -10,9 +10,12 @@ Notara membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 
 - Login email/password dan Google melalui Supabase Auth, onboarding, profil, serta MFA di dashboard.
 - Rekam dari browser atau unggah audio/video, lalu transkripsi Bahasa Indonesia dan rangkuman terstruktur.
-- Pemrosesan berkas besar di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian sebelum ditranskripsikan; rangkuman dibuat sekali dari transkrip gabungan.
+- App Shell responsif dengan tema System/Light/Dark, sidebar desktop/mobile, Home, Mata Kuliah, Dibagikan, Tanya Notara, dan Capture sebagai workspace yang jelas.
+- Antrean Capture maksimal tiga file secara sekuensial, dengan preview metadata, validasi, progress yang hanya muncul saat benar-benar terukur, kegagalan per item, serta retry dari awal tanpa menghapus hasil item lain.
+- Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform; rangkuman dibuat sekali dari transkrip gabungan.
 - Folder/mata kuliah, pencarian, pengelolaan rangkuman, ekspor Word, dan riwayat chat.
 - Chat streaming dengan scope satu rangkuman, satu folder, atau koleksi pengguna.
+- Study Canvas, Study Dock, serta slot Learning Lab untuk konsep, rumus, visual, quiz, dan pembicara sudah memiliki fondasi UI; kemampuan analisis Learning Lab belum tersedia.
 - Share page publik yang dapat diaktifkan pemilik rangkuman dan tombol fork untuk pengguna yang login.
 - Study group dan berbagi folder di dalam grup.
 - UI checkout Midtrans serta tabel/pipeline subscription sudah ada, tetapi **billing nyata belum boleh dipakai** sebelum webhook dan otorisasi diperbaiki serta diuji end-to-end.
@@ -22,8 +25,9 @@ Notara membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 ```text
 Browser
   ├─ rekam / unggah
-  ├─ berkas > 4 MB: decode → 16 kHz mono → chunk ±2 menit
-  └─ /api/summarize (per chunk) → Groq Whisper
+  ├─ berkas ≤ 20 MB: /api/summarize → transkripsi + rangkuman dalam satu request
+  └─ berkas > 20 MB: decode → 16 kHz mono → chunk ±2 menit (≤ 4 MB/request)
+                         └─ /api/summarize (per chunk) → Groq Whisper
                                   └─ transkrip gabungan → /api/summarize-transcript → Groq LLM
                                                                         └─ Supabase Postgres
 
@@ -82,18 +86,19 @@ npm run build
 
 ## Keterbatasan yang diketahui
 
-- Dashboard masih satu file besar (`app/dashboard/page.tsx`), sehingga redesign harus diawali component extraction bertahap.
-- Speaker diarization, formula capture/renderer matematika, Study Canvas, dan integrasi Neurova belum diimplementasikan.
+- `app/dashboard/page.tsx` masih menjadi orchestrator besar. Shell, tema, workspace, dan capture sudah memiliki batas komponen stabil, tetapi ekstraksi logic berikutnya tetap harus bertahap agar flow lama tidak regresi.
+- Study Canvas baru berupa fondasi produksi. Speaker diarization, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
-- Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; ini bukan jaminan kemampuan semua perangkat.
+- Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
 - Endpoint API AI belum memiliki rate limit server-side dan tidak boleh diekspos ke publik tanpa perbaikan autentikasi/abuse protection.
 - Billing harus dianggap belum siap production sampai webhook dapat menerima request tanpa sesi pengguna, menggunakan service role server-only, dan RPC sensitif dicabut dari akses publik.
 
 ## Roadmap terdekat
 
-1. Tutup rantai keamanan billing dan verifikasi pembayaran sandbox end-to-end.
-2. Pecah dashboard monolitik tanpa mengubah perilaku yang ada.
-3. Audit prototype v2 lalu implementasikan Study Canvas bertahap.
-4. Riset provider diarization sebelum membangun Speaker Context; lanjutkan Formula Notes setelah ada bukti transkrip dan renderer matematika.
+1. Review dan merge App Shell secara manual, lalu lakukan smoke test preview/production dengan auth Supabase sebelum rilis.
+2. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
+3. Tutup rantai keamanan billing dan abuse protection API sebelum pemakaian publik yang lebih luas.
+4. Bangun retrieval/provenance dan progress belajar yang nyata sebelum mengaktifkan scope global/course serta Learning Lab berbasis AI.
+5. Riset provider diarization sebelum membangun Speaker Context; lanjutkan Formula Notes dan Neurova setelah kontrak bukti sumber serta renderer matematika dikunci.
 
 Catatan produk, desain, dan prototype internal sengaja disimpan terpisah dari repository publik.

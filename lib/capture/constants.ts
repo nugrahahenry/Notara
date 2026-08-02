@@ -20,4 +20,3 @@ export const SUPPORTED_MEDIA_EXTENSIONS = [
   '.ogg',
   '.aac',
 ] as const;
-

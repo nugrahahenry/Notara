@@ -122,4 +122,3 @@ export function formatFileSize(bytes: number): string {
 
   return `${parseFloat((bytes / unit ** unitIndex).toFixed(2))} ${sizes[unitIndex]}`;
 }
-
