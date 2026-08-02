@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, Zap, MessageSquare, FolderGit2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { NotaraLogo } from '../components/brand/NotaraLogo';
+import { NotaraBrand } from '../components/brand/NotaraBrand';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
 import StarryBackground from '../components/ui/StarryBackground';
 
@@ -296,7 +296,7 @@ function LoginForm() {
           {/* Logo */}
           <div className="flex items-center space-x-3.5 group">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/25 ring-1 ring-violet-400/30 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_25px_rgba(139,92,246,0.35)]">
-              <NotaraLogo variant="icon" size={28} />
+              <NotaraBrand variant="icon" size={28} />
             </div>
             <div>
               <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-violet-200 via-fuchsia-200 to-white bg-clip-text text-transparent">
@@ -363,7 +363,7 @@ function LoginForm() {
             {/* Header for Mobile */}
             <div className="flex flex-col items-center text-center lg:hidden space-y-2 mb-2">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/30">
-                <NotaraLogo variant="icon" size={20} />
+                <NotaraBrand variant="icon" size={20} />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-violet-200 to-white bg-clip-text text-transparent">
                 Notara
@@ -396,7 +396,7 @@ function LoginForm() {
             {successMsg && (
               <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs md:text-sm flex flex-col items-center text-center gap-3 animate-fadeIn">
                 <div className="h-10 w-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-950/20">
-                  <NotaraLogo variant="icon" animated={true} motionState="idle" size={20} />
+                  <NotaraBrand variant="icon" animated={true} motionState="idle" size={20} />
                 </div>
                 <div>
                   <h4 className="font-extrabold text-white text-sm">Pendaftaran Sukses!</h4>

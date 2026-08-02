@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { NotaraLogo } from '../brand/NotaraLogo';
+import { NotaraBrand } from '../brand/NotaraBrand';
 
 interface LoginSuccessScreenProps {
   userName?: string;
@@ -211,7 +211,7 @@ export function LoginSuccessScreen({
       >
         {/* Animated Notara Logo */}
         <div style={{ marginBottom: '2.5rem', transform: 'scale(1.15)' }}>
-          <NotaraLogo
+          <NotaraBrand
             variant="icon"
             size={84}
             animated

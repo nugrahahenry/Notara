@@ -15,7 +15,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import { BrandMark } from '../brand/BrandSlots';
+import { NotaraBrand } from '../brand/NotaraBrand';
 import type { ChatMessage, ChatThread, Folder, Summary } from '@/lib/types';
 
 interface NotaraWorkspaceProps {
@@ -71,7 +71,7 @@ export function NotaraWorkspace({
     <div className="notara-workspace-page mx-auto flex h-full max-w-6xl flex-col gap-5">
       <header className="notara-notara-heading">
         <div className="flex min-w-0 items-center gap-3">
-          <BrandMark size={36} />
+          <NotaraBrand size={36} />
           <div>
             <span className="notara-eyebrow">Notara</span>
             <h1>Pemandu belajar lintas materi</h1>

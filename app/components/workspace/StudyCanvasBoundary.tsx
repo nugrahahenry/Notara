@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   BarChart3,
@@ -16,13 +16,14 @@ import {
 } from 'lucide-react';
 import type { Folder, Summary } from '@/lib/types';
 
-interface StudyCanvasFoundationProps {
+interface StudyCanvasBoundaryProps {
   summary: Summary;
   folder: Folder | null;
   activeTab: 'summary' | 'transcript';
   onTabChange: (tab: 'summary' | 'transcript') => void;
   onBack: () => void;
   onAskMaterial: () => void;
+  children: ReactNode;
 }
 
 const labTools = [
@@ -33,20 +34,26 @@ const labTools = [
   { id: 'speaker', label: 'Pembicara', icon: Users },
 ] as const;
 
-export function StudyCanvasFoundation({
+/**
+ * Owns the Study Canvas frame while legacy summary actions/content remain in a
+ * replaceable presentation slot. The next visual checkpoint can replace that
+ * slot without reopening dashboard orchestration or data callbacks.
+ */
+export function StudyCanvasBoundary({
   summary,
   folder,
   activeTab,
   onTabChange,
   onBack,
   onAskMaterial,
-}: StudyCanvasFoundationProps) {
+  children,
+}: StudyCanvasBoundaryProps) {
   const [labOpen, setLabOpen] = useState(false);
   const [dockExpanded, setDockExpanded] = useState(false);
   const [activeTool, setActiveTool] = useState<(typeof labTools)[number]['id']>('concept');
 
   return (
-    <div className="mb-6 space-y-4">
+    <section className="notara-study-canvas-boundary" aria-label={`Study Canvas: ${summary.title}`}>
       <header className="notara-canvas-heading">
         <button type="button" onClick={onBack} className="notara-icon-button" aria-label="Kembali ke mata kuliah"><ArrowLeft className="h-4 w-4" /></button>
         <div className="min-w-0 flex-1">
@@ -61,6 +68,10 @@ export function StudyCanvasFoundation({
           <Sparkles className="h-4 w-4" /> Learning Lab
         </button>
       </header>
+
+      <div className="notara-study-canvas-legacy-slot" data-presentation="legacy-summary-detail">
+        {children}
+      </div>
 
       {labOpen && (
         <section className="notara-learning-lab" aria-label="Learning Lab preview">
@@ -93,6 +104,6 @@ export function StudyCanvasFoundation({
           </div>
         )}
       </section>
-    </div>
+    </section>
   );
 }

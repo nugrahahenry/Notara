@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { NotaraLogo } from '../brand/NotaraLogo';
+import { NotaraBrand } from '../brand/NotaraBrand';
 
 // ─────────────────────────────────────────────────────────────
 // OnboardingModal — Survei Onboarding Interaktif Notara
@@ -237,7 +237,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
 
         {/* ─── Header ─── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', position: 'relative', zIndex: 10 }}>
-          <NotaraLogo variant="icon" size={36} animated motionState={step === 4 ? 'thinking' : 'idle'} showGlow />
+          <NotaraBrand variant="icon" size={36} animated motionState={step === 4 ? 'thinking' : 'idle'} showGlow />
           <div>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', color: '#A78BFA', textTransform: 'uppercase' }}>Selamat Datang</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#F8FAFC', lineHeight: 1.2 }}>Halo, {firstName}! 👋</div>
@@ -386,7 +386,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                   </div>
                 </div>
                 <div style={{ marginLeft: 'auto' }}>
-                  <NotaraLogo variant="icon" size={24} />
+                  <NotaraBrand variant="icon" size={24} />
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -565,7 +565,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
         {step === 4 && (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <div style={{ marginBottom: '2rem' }}>
-              <NotaraLogo
+              <NotaraBrand
                 variant="icon"
                 size={80}
                 animated

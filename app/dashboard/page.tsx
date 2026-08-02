@@ -12,8 +12,7 @@ import {
   ImageDown, Smartphone, Square, Download, Clock, Settings, RefreshCw,
   House, GraduationCap
 } from 'lucide-react';
-import { NotaraLogo } from '../components/brand/NotaraLogo';
-import { BrandMark, Wordmark } from '../components/brand/BrandSlots';
+import { NotaraBrand } from '../components/brand/NotaraBrand';
 import { OnboardingModal } from '../components/ui/OnboardingModal';
 import { DashboardTour, DEFAULT_TOUR_STEPS } from '../components/ui/DashboardTour';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
@@ -37,7 +36,7 @@ import { HomeWorkspace } from '../components/workspace/HomeWorkspace';
 import { CoursesWorkspace } from '../components/workspace/CoursesWorkspace';
 import { SharedWorkspace } from '../components/workspace/SharedWorkspace';
 import { NotaraWorkspace } from '../components/workspace/NotaraWorkspace';
-import { StudyCanvasFoundation } from '../components/workspace/StudyCanvasFoundation';
+import { StudyCanvasBoundary } from '../components/workspace/StudyCanvasBoundary';
 import type { WorkspaceView } from '../components/workspace/types';
 import {
   getFolders,
@@ -3552,8 +3551,7 @@ export default function Home() {
           <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] p-4">
             <div className="animate-in fade-in duration-300">
               <div className="flex items-center gap-2.5" aria-label="Notara">
-                <BrandMark size={32} />
-                <Wordmark />
+                <NotaraBrand variant="horizontal" size={32} />
               </div>
             </div>
             {/* Lock Pin Button */}
@@ -3572,7 +3570,7 @@ export default function Home() {
               className="flex h-11 w-11 items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
               title="Buka Menu Sidebar"
             >
-              <BrandMark size={32} />
+              <NotaraBrand size={32} />
             </button>
           </div>
         )}
@@ -4004,7 +4002,7 @@ export default function Home() {
                 )}
                 {filteredSummaries.length === 0 && (
                   <div className="py-10 px-4 text-center flex flex-col items-center justify-center gap-3 bg-white/[0.01] border border-white/[0.03] rounded-2xl mx-3 my-4 animate-in fade-in duration-300">
-                    <NotaraLogo variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
+                    <NotaraBrand variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
                     <div>
                       <p className="text-zinc-400 font-extrabold text-xs">Belum Ada Rangkuman</p>
                       <p className="text-[10px] text-zinc-500 mt-1 max-w-[160px] mx-auto leading-normal">
@@ -4621,8 +4619,9 @@ export default function Home() {
             )
           )}
 
+            {/* SCREEN 2: SUMMARY DETAIL VIEW */}
             {selectedSummary && !loading && (
-              <StudyCanvasFoundation
+              <StudyCanvasBoundary
                 summary={selectedSummary}
                 folder={folders.find(folder => folder.id === selectedSummary.folder_id) ?? null}
                 activeTab={activeTab}
@@ -4634,12 +4633,8 @@ export default function Home() {
                   setIsChatOpenMobile(true);
                   localStorage.setItem('isMaterialTutorPanelOpen', 'true');
                 }}
-              />
-            )}
-
-            {/* SCREEN 2: SUMMARY DETAIL VIEW */}
-            {selectedSummary && !loading && (
-              <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+              >
+                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
                 
                 {/* DETAILS METADATA CARD */}
                 <div className="p-6 rounded-3xl bg-white/[0.01] border border-white/[0.04] backdrop-blur-md shadow-2xl space-y-4 relative z-20">
@@ -4929,32 +4924,7 @@ export default function Home() {
                 {/* TAB WINDOW DISPLAY CARD */}
                 <div className="rounded-3xl bg-white/[0.01] border border-white/[0.04] backdrop-blur-md shadow-2xl flex flex-col overflow-hidden min-h-[500px]">
                   
-                  <div className="bg-[#0C0A12]/40 px-6 py-4 border-b border-white/[0.04] flex items-center justify-between shrink-0">
-                    <div className="bg-white/5 p-1 rounded-xl flex">
-                      <button 
-                        onClick={() => setActiveTab('summary')}
-                          className={`flex min-h-11 items-center gap-2 rounded-lg px-4 text-xs font-bold transition-all duration-200 ${
-                          activeTab === 'summary' 
-                            ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
-                            : 'text-zinc-400 hover:text-white'
-                        }`}
-                      >
-                        <BookOpen className="h-3.5 w-3.5" />
-                        Rangkuman Materi
-                      </button>
-                      <button 
-                        onClick={() => setActiveTab('transcript')}
-                          className={`flex min-h-11 items-center gap-2 rounded-lg px-4 text-xs font-bold transition-all duration-200 ${
-                          activeTab === 'transcript' 
-                            ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
-                            : 'text-zinc-400 hover:text-white'
-                        }`}
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        Salinan Transkrip
-                      </button>
-                    </div>
-
+                  <div className="bg-[#0C0A12]/40 px-6 py-4 border-b border-white/[0.04] flex items-center justify-end shrink-0">
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <button
                         onClick={() => {
@@ -5056,7 +5026,8 @@ export default function Home() {
                   </div>
                 </div>
 
-              </div>
+                </div>
+              </StudyCanvasBoundary>
             )}
 
           </main>
@@ -5086,7 +5057,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="h-7 w-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                        <NotaraLogo variant="icon" size={16} />
+                        <NotaraBrand variant="icon" size={16} />
                       </div>
                       <div>
                         <h4 className="text-xs font-black text-white leading-none">Neural Nexus</h4>
@@ -5188,7 +5159,7 @@ export default function Home() {
                   <div className="flex-1 overflow-y-auto p-4 space-y-2.5 scrollbar-thin">
                     {chatThreads.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500 py-12 space-y-2">
-                        <NotaraLogo variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
+                        <NotaraBrand variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
                         <div>
                           <p className="text-xs font-bold text-zinc-300">Belum Ada Riwayat Chat</p>
                           <p className="text-[10px] text-zinc-600 mt-1 max-w-[180px] mx-auto leading-normal">
@@ -5260,7 +5231,7 @@ export default function Home() {
                       {chatMessages.length === 0 ? (
                         <div className="flex gap-2.5 items-start max-w-[85%]">
                           <div className="h-6 w-6 shrink-0 flex items-center justify-center">
-                            <NotaraLogo variant="icon" size={24} />
+                            <NotaraBrand variant="icon" size={24} />
                           </div>
                           <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed font-sans">
                             {selectedSummary 
@@ -5279,7 +5250,7 @@ export default function Home() {
                           ) : (
                             <div key={msg.id} className="flex gap-2.5 items-start max-w-[85%] animate-in slide-in-from-left-2 duration-200">
                               <div className="h-6 w-6 shrink-0 flex items-center justify-center">
-                                <NotaraLogo variant="icon" size={24} animated={msg.content === ''} motionState="thinking" />
+                                <NotaraBrand variant="icon" size={24} animated={msg.content === ''} motionState="thinking" />
                               </div>
                               <div className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed select-text break-words w-full">
                                 {msg.content ? (
@@ -6815,7 +6786,7 @@ export default function Home() {
                   <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border border-violet-500/15">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                        <NotaraLogo variant="icon" size={20} showGlow />
+                        <NotaraBrand variant="icon" size={20} showGlow />
                       </div>
                       <div>
                         <p className="text-xs font-extrabold text-white">Notara</p>

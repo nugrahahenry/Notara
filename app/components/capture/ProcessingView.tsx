@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2, TriangleAlert } from 'lucide-react';
-import { ProcessingMark } from '../brand/BrandSlots';
+import { NotaraBrand } from '../brand/NotaraBrand';
 
 interface ProcessingViewProps {
   thinkingElapsed: number;
@@ -47,7 +47,7 @@ export function ProcessingView({
       aria-describedby="capture-processing-status capture-tab-warning"
     >
       <div className="relative flex items-center justify-center" aria-hidden="true">
-        <ProcessingMark size={112} />
+        <NotaraBrand variant="processing" size={112} motionState="thinking" />
       </div>
 
       <div className="mt-7 flex flex-col items-center gap-1">

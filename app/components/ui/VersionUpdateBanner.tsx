@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { NotaraLogo } from '../brand/NotaraLogo';
+import { NotaraBrand } from '../brand/NotaraBrand';
 
 // ─────────────────────────────────────────────────────────────
 // VersionUpdateBanner — Deteksi Deployment Vercel Baru
@@ -192,7 +192,7 @@ export function VersionUpdateBanner({ appVersion }: VersionUpdateBannerProps) {
                   flexShrink: 0,
                   animation: 'vub-logo-pulse 2.5s ease-in-out infinite',
                 }}>
-                  <NotaraLogo variant="icon" size={36} animated motionState="thinking" showGlow />
+                  <NotaraBrand variant="icon" size={36} animated motionState="thinking" showGlow />
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>

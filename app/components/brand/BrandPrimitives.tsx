@@ -42,8 +42,8 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
 
 export function ProcessingMark({ size = 112 }: { size?: number }) {
   return (
-    <div className="notara-processing-mark" role="status" aria-label="Notara sedang memproses">
+    <span className="notara-processing-mark" role="status" aria-label="Notara sedang memproses">
       <BrandMark size={size} animated aria-hidden="true" />
-    </div>
+    </span>
   );
 }

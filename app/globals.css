@@ -290,6 +290,32 @@ body {
   color: var(--brand-primary);
 }
 
+.notara-brand {
+  display: inline-flex;
+  width: fit-content;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--brand-primary);
+}
+
+.notara-brand--horizontal {
+  gap: 9px;
+}
+
+.notara-brand--stacked {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notara-brand--processing {
+  line-height: 0;
+}
+
+.notara-brand--glow {
+  border-radius: 999px;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--brand-primary) 38%, transparent));
+}
+
 .notara-brand-mark path {
   fill: none;
   stroke: currentColor;
@@ -980,6 +1006,9 @@ body {
 
 .notara-canvas-heading { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 14px; }
 .notara-canvas-heading h1 { margin-top: 3px; color: var(--text-primary); font-size: 18px; font-weight: 900; }
+.notara-study-canvas-boundary { width: 100%; min-width: 0; margin: 0 auto 24px; }
+.notara-study-canvas-boundary > * + * { margin-top: 16px; }
+.notara-study-canvas-legacy-slot { min-width: 0; }
 .notara-learning-lab { display: grid; grid-template-columns: 58px minmax(0, 1fr); border: 1px solid var(--border-subtle); border-radius: 18px; background: var(--surface-tool); overflow: hidden; }
 .notara-lab-rail { display: flex; flex-direction: column; gap: 3px; border-right: 1px solid var(--border-subtle); padding: 8px; }
 .notara-lab-rail button { display: grid; min-width: 44px; min-height: 44px; place-items: center; border-radius: 10px; color: var(--text-tertiary); }

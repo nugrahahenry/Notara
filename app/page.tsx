@@ -8,7 +8,7 @@ import {
   MessageSquare, Users, Crown, Check, X, Star,
   Globe, Eye, Folder
 } from 'lucide-react';
-import { NotaraLogo } from './components/brand/NotaraLogo';
+import { NotaraBrand } from './components/brand/NotaraBrand';
 import { StarryBackground } from './components/ui/StarryBackground';
 import { supabase } from '@/lib/supabase';
 
@@ -206,7 +206,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <NotaraLogo variant="horizontal" size={36} />
+              <NotaraBrand variant="horizontal" size={36} />
             </div>
 
             {/* Desktop Nav Links */}
@@ -737,7 +737,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
             {/* Brand */}
             <div>
-              <NotaraLogo variant="horizontal" size={32} />
+              <NotaraBrand variant="horizontal" size={32} />
               <p className="text-sm text-zinc-500 mt-3 leading-relaxed">
                 AI-powered audio summarizer untuk pelajar & profesional. Rekam, transkrip, dan rangkum secara otomatis.
               </p>
