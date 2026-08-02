@@ -1,28 +1,22 @@
 'use client';
 
 import {
-  useEffect,
-  useRef,
-  useState,
   type ChangeEvent,
   type DragEvent,
   type RefObject,
 } from 'react';
 import { AlertCircle, CheckCircle2, Plus, Trash2, UploadCloud } from 'lucide-react';
-import { getAudioDuration } from '@/lib/capture/audio';
 import { MAX_QUEUE_FILES } from '@/lib/capture/constants';
-import { createSelectedCaptureTask, type CaptureTask } from '@/lib/capture/task';
+import type { CaptureTask } from '@/lib/capture/task';
 import { NotaraLogo } from '../brand/NotaraLogo';
 import { CaptureTaskList } from './CaptureTaskList';
 
 export type CaptureDragState = 'idle' | 'valid' | 'invalid';
 
 interface UploadQueuePanelProps {
-  files: File[];
-  taskIds: string[];
+  tasks: CaptureTask<File>[];
   dragState: CaptureDragState;
   notice: string | null;
-  destinationLabel: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
   onDrag: (event: DragEvent<HTMLDivElement>) => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
@@ -31,10 +25,9 @@ interface UploadQueuePanelProps {
   onReplaceFile: (index: number, file: File) => void;
   onRemoveFile: (index: number) => void;
   onClearFiles: () => void;
+  onRetryTask: (taskId: string) => void;
+  actionsDisabled?: boolean;
 }
-
-const getFallbackTaskId = (file: File, index: number) =>
-  `capture-${file.lastModified}-${file.size}-${index}`;
 
 const DROP_COPY: Record<CaptureDragState, { title: string; description: string }> = {
   idle: {
@@ -52,11 +45,9 @@ const DROP_COPY: Record<CaptureDragState, { title: string; description: string }
 };
 
 export function UploadQueuePanel({
-  files,
-  taskIds,
+  tasks,
   dragState,
   notice,
-  destinationLabel,
   fileInputRef,
   onDrag,
   onDrop,
@@ -65,43 +56,10 @@ export function UploadQueuePanel({
   onReplaceFile,
   onRemoveFile,
   onClearFiles,
+  onRetryTask,
+  actionsDisabled = false,
 }: UploadQueuePanelProps) {
-  const requestedDurationsRef = useRef(new WeakSet<File>());
-  const [durationsByTaskId, setDurationsByTaskId] = useState<Record<string, number>>({});
-
-  const tasks: CaptureTask<File>[] = files.map((file, index) => {
-    const taskId = taskIds[index] ?? getFallbackTaskId(file, index);
-    return createSelectedCaptureTask({
-      id: taskId,
-      reference: file,
-      file,
-      destinationLabel,
-      durationSeconds: durationsByTaskId[taskId],
-    });
-  });
-
-  useEffect(() => {
-    let mounted = true;
-
-    files.forEach((file, index) => {
-      if (requestedDurationsRef.current.has(file)) return;
-      requestedDurationsRef.current.add(file);
-      const taskId = taskIds[index] ?? getFallbackTaskId(file, index);
-
-      void getAudioDuration(file).then((durationSeconds) => {
-        if (!mounted || durationSeconds <= 0) return;
-        setDurationsByTaskId((current) => ({
-          ...current,
-          [taskId]: durationSeconds,
-        }));
-      });
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [files, taskIds]);
-
+  const files = tasks.map((task) => task.reference);
   const dropCopy = DROP_COPY[dragState];
   const queueIsFull = files.length >= MAX_QUEUE_FILES;
   const dropStateStyles = {
@@ -185,6 +143,8 @@ export function UploadQueuePanel({
             tasks={tasks}
             onReplace={onReplaceFile}
             onRemove={onRemoveFile}
+            onRetry={onRetryTask}
+            actionsDisabled={actionsDisabled}
           />
 
           <div className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] p-4 text-left sm:flex-row sm:items-center sm:justify-between">

@@ -19,6 +19,7 @@ import { DashboardTour, DEFAULT_TOUR_STEPS } from '../components/ui/DashboardTou
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
 import { VersionUpdateBanner } from '../components/ui/VersionUpdateBanner';
 import { CaptureSourceTabs } from '../components/capture/CaptureSourceTabs';
+import { CaptureTaskList } from '../components/capture/CaptureTaskList';
 import { ProcessingView } from '../components/capture/ProcessingView';
 import { RecordingPanel } from '../components/capture/RecordingPanel';
 import {
@@ -84,6 +85,23 @@ import {
   isSupportedMediaFile,
   mergeCaptureQueue,
 } from '@/lib/capture/policy';
+import {
+  CapturePipelineError,
+  requestCaptureJson,
+  toCapturePipelineError,
+} from '@/lib/capture/pipeline';
+import {
+  createSelectedCaptureTask,
+  getNextQueuedCaptureTask,
+  patchCaptureTask,
+  removeCaptureTask,
+  shouldWarnBeforeLeaving,
+  startCaptureTaskAttempt,
+  type CaptureTask,
+  type CaptureTaskError,
+  type CaptureTaskProgress,
+  type CaptureTaskStatus,
+} from '@/lib/capture/task';
 
 // Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
 // membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
@@ -137,8 +155,10 @@ export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [showUserDropdown, setShowUserDropdown] = useState<boolean>(false);
-  const [files, setFiles] = useState<File[]>([]);
-  const [captureFileIds, setCaptureFileIds] = useState<string[]>([]);
+  const [captureTasks, setCaptureTasks] = useState<CaptureTask<File>[]>([]);
+  const files = captureTasks
+    .filter((task) => task.source === 'upload')
+    .map((task) => task.reference);
   const [captureDragState, setCaptureDragState] = useState<CaptureDragState>('idle');
   const [captureInputNotice, setCaptureInputNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -265,6 +285,7 @@ export default function Home() {
 
   // Pending summary states for folder assignment (Sprint 7)
   const [pendingSummary, setPendingSummary] = useState<{
+    captureTaskId: string;
     title: string;
     file_name: string | null;
     duration_sec: number | null;
@@ -287,7 +308,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captureDragDepthRef = useRef<number>(0);
   const [processingQueueActive, setProcessingQueueActive] = useState<boolean>(false);
-  const [currentQueueIndex, setCurrentQueueIndex] = useState<number>(0);
+  const [, setCurrentQueueIndex] = useState<number>(0);
   const [inlineEditingSummaryId, setInlineEditingSummaryId] = useState<string | null>(null);
   const [inlineEditingTitleText, setInlineEditingTitleText] = useState<string>('');
   const [studySeconds, setStudySeconds] = useState<number>(0);
@@ -1197,7 +1218,7 @@ export default function Home() {
   // Capture jobs are still browser-bound. Protect work that would otherwise
   // disappear when the tab is closed or refreshed mid-process.
   useEffect(() => {
-    if (!loading && !processingQueueActive) return;
+    if (!shouldWarnBeforeLeaving(captureTasks)) return;
 
     const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -1206,7 +1227,7 @@ export default function Home() {
 
     window.addEventListener('beforeunload', warnBeforeLeaving);
     return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
-  }, [loading, processingQueueActive]);
+  }, [captureTasks]);
 
   // Recording cleanup
   useEffect(() => {
@@ -1872,9 +1893,97 @@ export default function Home() {
     }
   };
 
+  const setCaptureTaskStage = (
+    taskId: string,
+    status: CaptureTaskStatus,
+    options: {
+      progress?: CaptureTaskProgress;
+      stageLabel?: string;
+      stageDescription?: string;
+      destinationLabel?: string;
+    } = {},
+  ) => {
+    const patch: Partial<CaptureTask<File>> = {
+      status,
+      progress: options.progress,
+      error: undefined,
+      stageLabel: options.stageLabel,
+      stageDescription: options.stageDescription,
+    };
+    if (options.destinationLabel !== undefined) {
+      patch.destinationLabel = options.destinationLabel;
+    }
+    setCaptureTasks((current) => patchCaptureTask(current, taskId, patch));
+  };
+
+  const markCaptureTaskFailed = (
+    taskId: string,
+    error: unknown,
+    fallbackMessage: string,
+  ) => {
+    const pipelineError = toCapturePipelineError(error, fallbackMessage);
+    const taskError: CaptureTaskError = {
+      code: pipelineError.code,
+      message: pipelineError.retryable
+        ? `${pipelineError.message} Coba lagi akan memulai ulang file ini dari awal.`
+        : pipelineError.message,
+      retryable: pipelineError.retryable,
+    };
+
+    setCaptureTasks((current) => patchCaptureTask(current, taskId, {
+      status: 'failed',
+      progress: undefined,
+      error: taskError,
+      stageLabel: undefined,
+      stageDescription: undefined,
+    }));
+    setProcessingQueueActive(false);
+    setError(null);
+  };
+
+  async function completeSavedCaptureTask(taskId: string) {
+    const next = getNextQueuedCaptureTask(captureTasks, taskId);
+    setCaptureTasks((current) => patchCaptureTask(current, taskId, {
+      status: 'succeeded',
+      progress: undefined,
+      error: undefined,
+      stageLabel: undefined,
+      stageDescription: undefined,
+    }));
+    setPendingSummary(null);
+    setShowSaveFolderModal(false);
+
+    if (next) {
+      setSelectedSummary(null);
+      setCurrentQueueIndex(next.index);
+      setProcessingQueueActive(true);
+      await startProcessing(
+        next.task.reference,
+        next.task.name,
+        next.task.source === 'upload' ? next.index : null,
+        next.task.id,
+      );
+      return;
+    }
+
+    setProcessingQueueActive(false);
+    setCurrentQueueIndex(0);
+  }
+
   // Save pending summary (Sprint 7)
   const handleSavePendingSummary = async (folderId: string | null) => {
     if (!pendingSummary) return;
+    const captureTaskId = pendingSummary.captureTaskId;
+    const destinationFolder = folderId
+      ? folders.find((folder) => folder.id === folderId) ?? null
+      : null;
+
+    setCaptureTaskStage(captureTaskId, 'saving', {
+      progress: { kind: 'indeterminate' },
+      destinationLabel: destinationFolder
+        ? `Mata kuliah • ${destinationFolder.name}`
+        : 'Belum Dikategorikan',
+    });
 
     // Dalam mode tes lokal, hasil tetap bisa dibuka dan diuji tanpa menulis
     // ke Supabase. Data ini hanya hidup selama tab browser masih terbuka.
@@ -1894,12 +2003,8 @@ export default function Home() {
 
       setSummaries((previous) => [localSummary, ...previous]);
       setSelectedSummary(localSummary);
-      setFiles([]);
-      setPendingSummary(null);
-      setShowSaveFolderModal(false);
-      setProcessingQueueActive(false);
-      setCurrentQueueIndex(0);
       showToast('Rangkuman disimpan sementara di tab ini.', 'success');
+      await completeSavedCaptureTask(captureTaskId);
       return;
     }
 
@@ -1909,9 +2014,13 @@ export default function Home() {
       if (folderSummariesCount >= captureLimits.folderSummaryLimit) {
         showToast('Batas 3 rangkuman per mata kuliah tercapai untuk paket gratis.', 'delete');
         setShowUpgradeModal(true);
-        // Reset queue if limit reached
-        setFiles([]);
-        setProcessingQueueActive(false);
+        markCaptureTaskFailed(captureTaskId, new CapturePipelineError({
+          code: 'folder-limit',
+          message: 'Tujuan ini sudah mencapai batas tiga rangkuman paket gratis.',
+          retryable: false,
+        }), 'Batas penyimpanan tercapai.');
+        setPendingSummary(null);
+        setShowSaveFolderModal(false);
         return;
       }
     }
@@ -1933,36 +2042,31 @@ export default function Home() {
         setSelectedSummary(newSummary);
         showToast(`Rangkuman "${newSummary.title}" berhasil disimpan!`, 'success');
         
-        // If we are processing a queue, go to the next file
-        if (processingQueueActive && currentQueueIndex < files.length - 1) {
-          const nextIndex = currentQueueIndex + 1;
-          setCurrentQueueIndex(nextIndex);
-          setPendingSummary(null);
-          setShowSaveFolderModal(false);
-          await startProcessing(files[nextIndex], files[nextIndex].name, nextIndex);
-        } else {
-          // Reset queue
-          setFiles([]);
-          setPendingSummary(null);
-          setShowSaveFolderModal(false);
-          setProcessingQueueActive(false);
-          setCurrentQueueIndex(0);
-        }
+        await completeSavedCaptureTask(captureTaskId);
       } else {
         throw new Error('Gagal menyimpan rangkuman ke database.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Gagal menyimpan rangkuman.');
-      setFiles([]);
-      setProcessingQueueActive(false);
+      markCaptureTaskFailed(captureTaskId, new CapturePipelineError({
+        code: 'save-failed',
+        message: err instanceof Error ? err.message : 'Gagal menyimpan rangkuman.',
+        retryable: true,
+      }), 'Gagal menyimpan rangkuman.');
+      setPendingSummary(null);
+      setShowSaveFolderModal(false);
     } finally {
       setLoading(false);
     }
   };
 
   // Process Large Audio / Video Files Slicing
-  const processLargeAudio = async (largeFile: File | Blob, fileName: string, queueIndex: number | null = null) => {
+  const processLargeAudio = async (
+    largeFile: File,
+    fileName: string,
+    queueIndex: number | null,
+    taskId: string,
+  ) => {
     setLoading(true);
     setIsChunkProcessing(true);
     setChunkTotal(0);
@@ -1972,18 +2076,31 @@ export default function Home() {
     setShowThinkingPanel(false);
     startThinkingTimer();
 
-    const isVideo = largeFile instanceof File && largeFile.type.startsWith('video/');
+    const isVideo = largeFile.type.startsWith('video/');
     const fileLabel = isVideo ? 'video' : 'audio';
-    const queueLabel = queueIndex !== null ? ` (Berkas ${queueIndex + 1} dari ${files.length})` : '';
+    const queueLabel = queueIndex !== null ? ` (Berkas ${queueIndex + 1} dari ${captureTasks.length})` : '';
+    let audioCtx: AudioContext | null = null;
 
     addThinkingLog(`📂 Membaca berkas ${fileLabel} besar${queueLabel} ke memori browser...`);
     setChunkProgress(`Membaca berkas ${fileLabel} besar${queueLabel}...`);
+    setCaptureTaskStage(taskId, 'preparing', {
+      progress: { kind: 'indeterminate' },
+      stageDescription: `Browser sedang membaca dan mendekode ${fileLabel}.`,
+    });
 
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) throw new Error('Browser Anda tidak mendukung Web Audio API.');
+      const AudioContextClass = window.AudioContext || (
+        window as Window & { webkitAudioContext?: typeof AudioContext }
+      ).webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new CapturePipelineError({
+          code: 'browser-audio-unsupported',
+          message: 'Browser Anda tidak mendukung Web Audio API.',
+          retryable: false,
+        });
+      }
       
-      const audioCtx = new AudioContextClass();
+      audioCtx = new AudioContextClass();
       const arrayBuffer = await largeFile.arrayBuffer();
       
       addThinkingLog(`🔊 Mengekstrak jalur audio dari berkas ${fileLabel}...`);
@@ -1992,12 +2109,12 @@ export default function Home() {
       let audioBuffer: AudioBuffer;
       try {
         audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-      } catch (decodeErr) {
-        throw new Error(
-          'Gagal mendekode audio dari berkas ' + fileLabel + '. ' +
-          'Codec yang digunakan mungkin tidak didukung browser. ' +
-          'Coba konversikan ke format MP3 atau WAV terlebih dahulu menggunakan aplikasi seperti VLC.'
-        );
+      } catch {
+        throw new CapturePipelineError({
+          code: 'unsupported-codec',
+          message: `Gagal mendekode ${fileLabel}. Codec mungkin tidak didukung browser; ganti dengan MP3 atau WAV.`,
+          retryable: false,
+        });
       }
       const totalDuration = audioBuffer.duration;
       const fileDurationSec = Math.round(totalDuration);
@@ -2010,21 +2127,37 @@ export default function Home() {
       let concatenatedTranscript = '';
       
       for (let c = 0; c < totalChunks; c++) {
-        setChunkCurrent(c + 1);
+        const activePart = c + 1;
+        setChunkCurrent(activePart);
         const start = c * chunkDuration;
         const end = Math.min((c + 1) * chunkDuration, totalDuration);
+        const partProgress: CaptureTaskProgress = {
+          kind: 'parts',
+          completedParts: c,
+          totalParts: totalChunks,
+          activePart,
+        };
         
-        addThinkingLog(`🔪 Memotong bagian ${c + 1}/${totalChunks} (menit ${Math.floor(start/60)}–${Math.floor(end/60)})...`);
-        setChunkProgress(`Memotong bagian ${c + 1} dari ${totalChunks}...`);
+        addThinkingLog(`🔪 Memotong bagian ${activePart}/${totalChunks} (menit ${Math.floor(start / 60)}–${Math.floor(end / 60)})...`);
+        setChunkProgress(`Menyiapkan bagian ${activePart} dari ${totalChunks}...`);
+        setCaptureTaskStage(taskId, 'preparing', {
+          progress: partProgress,
+          stageLabel: `Menyiapkan bagian ${activePart}`,
+          stageDescription: 'Decode dan resample di browser tidak memiliki persentase byte yang akurat.',
+        });
         
         const slicedBuffer = await sliceAudioBuffer(audioBuffer, start, end);
         
-        setChunkProgress(`Mengubah bagian ${c + 1} menjadi WAV...`);
+        setChunkProgress(`Mengubah bagian ${activePart} menjadi WAV...`);
         const wavBlob = bufferToWav(slicedBuffer);
-        const wavFile = new File([wavBlob], `chunk-${c + 1}.wav`, { type: 'audio/wav' });
+        const wavFile = new File([wavBlob], `chunk-${activePart}.wav`, { type: 'audio/wav' });
         
-        addThinkingLog(`🎙️ Notara mendengarkan bagian ${c + 1}/${totalChunks}...`);
-        setChunkProgress(`Notara mendengarkan bagian ${c + 1} dari ${totalChunks}...`);
+        addThinkingLog(`🎙️ Notara mendengarkan bagian ${activePart}/${totalChunks}...`);
+        setChunkProgress(`Notara mendengarkan bagian ${activePart} dari ${totalChunks}...`);
+        setCaptureTaskStage(taskId, 'transcribing', {
+          progress: partProgress,
+          stageDescription: `Bagian ${activePart} sedang dikirim dan ditranskrip.`,
+        });
         
         const formData = new FormData();
         formData.append('file', wavFile);
@@ -2033,41 +2166,41 @@ export default function Home() {
         // banyak rangkuman penuh sekaligus dan gampang kena limit Groq.
         formData.append('transcribeOnly', 'true');
         
-        const response = await fetch('/api/summarize', {
-          method: 'POST',
+        const data = await requestCaptureJson<{ transcript: string }>('/api/summarize', {
           body: formData,
         });
-        
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || `Gagal memproses audio chunk ke-${c + 1}`);
-        }
-        
-        addThinkingLog(`✅ Bagian ${c + 1} selesai ditranskripsi!`);
-        concatenatedTranscript += (data.transcript + ' ');
-        setChunkCompleted(c + 1);
+
+        addThinkingLog(`✅ Bagian ${activePart} selesai ditranskripsi!`);
+        concatenatedTranscript += `${data.transcript} `;
+        setChunkCompleted(activePart);
+        setCaptureTaskStage(taskId, 'transcribing', {
+          progress: {
+            kind: 'parts',
+            completedParts: activePart,
+            totalParts: totalChunks,
+          },
+        });
       }
       
       addThinkingLog('📝 Semua bagian selesai! Notara sedang merangkum keseluruhan isi...');
       setChunkProgress('Semua bagian selesai! Notara sedang menyusun rangkuman final...');
-      
-      const summarizeResponse = await fetch('/api/summarize-transcript', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ transcript: concatenatedTranscript }),
+      setCaptureTaskStage(taskId, 'summarizing', {
+        progress: { kind: 'indeterminate' },
       });
-      
-      const summarizeData = await summarizeResponse.json();
-      if (!summarizeResponse.ok) {
-        throw new Error(summarizeData.error || 'Gagal merangkum seluruh transkrip.');
-      }
+
+      const summarizeData = await requestCaptureJson<{ summary: string }>(
+        '/api/summarize-transcript',
+        {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: concatenatedTranscript }),
+        },
+      );
       
       const title = extractTitleFromSummary(summarizeData.summary);
       const targetFolderId = chosenSaveFolderId !== 'null' ? chosenSaveFolderId : (activeFolderId !== 'all' && activeFolderId !== 'uncategorized' && activeFolderId !== 'recent' ? activeFolderId : 'null');
       
       setPendingSummary({
+        captureTaskId: taskId,
         title,
         file_name: fileName,
         duration_sec: fileDurationSec || null,
@@ -2076,27 +2209,33 @@ export default function Home() {
         word_count: concatenatedTranscript.split(/\s+/).length,
       });
       setChosenSaveFolderId(targetFolderId);
+      setCaptureTaskStage(taskId, 'awaiting_save');
       setShowSaveFolderModal(true);
-      
-      if (queueIndex === null) {
-        clearFile();
-      }
-      
-    } catch (err: any) {
+
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Gagal memproses file audio besar.');
-      setProcessingQueueActive(false);
+      markCaptureTaskFailed(taskId, err, 'Gagal memproses file audio besar.');
     } finally {
       setLoading(false);
       setIsChunkProcessing(false);
       setChunkProgress('');
       setStatusMessage('');
       stopThinkingTimer();
+      void audioCtx?.close();
     }
   };
 
   // Main Audio Processor
-  const startProcessing = async (sourceFile: File | Blob, name: string, queueIndex: number | null = null) => {
+  async function startProcessing(
+    sourceFile: File,
+    name: string,
+    queueIndex: number | null,
+    taskId: string,
+  ) {
+    setCaptureTasks((current) => startCaptureTaskAttempt(current, taskId));
+    setProcessingQueueActive(true);
+    setError(null);
+
     // Check monthly limit for Free tier
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -2111,8 +2250,11 @@ export default function Home() {
     ) {
       showToast('Batas bulanan akun gratis tercapai (maksimal 5 rangkuman per bulan).', 'delete');
       setShowUpgradeModal(true);
-      setProcessingQueueActive(false);
-      setFiles([]);
+      markCaptureTaskFailed(taskId, new CapturePipelineError({
+        code: 'monthly-limit',
+        message: 'Batas rangkuman bulanan paket gratis sudah tercapai.',
+        retryable: false,
+      }), 'Batas bulanan tercapai.');
       return;
     }
 
@@ -2123,26 +2265,28 @@ export default function Home() {
       if (folderSummariesCount >= captureLimits.folderSummaryLimit) {
         showToast('Batas 3 rangkuman per mata kuliah tercapai untuk paket gratis.', 'delete');
         setShowUpgradeModal(true);
-        setProcessingQueueActive(false);
-        setFiles([]);
+        markCaptureTaskFailed(taskId, new CapturePipelineError({
+          code: 'folder-limit',
+          message: 'Tujuan ini sudah mencapai batas tiga rangkuman paket gratis.',
+          retryable: false,
+        }), 'Batas penyimpanan tercapai.');
         return;
       }
     }
 
-    const isVideoFile = sourceFile instanceof File && sourceFile.type.startsWith('video/');
     // Block files larger than 150MB to prevent browser memory exhaust / tab crash
-    if (sourceFile instanceof File && exceedsMaxFileSize(sourceFile)) {
-      setError(
-        'Ukuran berkas terlalu besar (>' + Math.round(sourceFile.size / 1024 / 1024) + 'MB). ' +
-        'Batas maksimal unggahan langsung adalah 150MB. Silakan kompres video Anda atau ekstrak audio-nya menjadi MP3/M4A terlebih dahulu.'
-      );
-      setProcessingQueueActive(false);
+    if (exceedsMaxFileSize(sourceFile)) {
+      markCaptureTaskFailed(taskId, new CapturePipelineError({
+        code: 'file-too-large',
+        message: `Ukuran berkas ${Math.round(sourceFile.size / 1024 / 1024)} MB melebihi batas 150 MB.`,
+        retryable: false,
+      }), 'Ukuran berkas terlalu besar.');
       return;
     }
 
     // Any file > 20MB (audio or video) goes through browser chunking
-    if (sourceFile instanceof File && sourceFile.size > CHUNK_THRESHOLD_BYTES) {
-      await processLargeAudio(sourceFile, name, queueIndex);
+    if (sourceFile.size > CHUNK_THRESHOLD_BYTES) {
+      await processLargeAudio(sourceFile, name, queueIndex, taskId);
       return;
     }
     
@@ -2157,32 +2301,46 @@ export default function Home() {
     setStatusMessage(`Audio sedang dikirim untuk ditranskrip dan dirangkum${fileLabel}.`);
 
     try {
-      let duration = 0;
-      if (sourceFile instanceof File) {
-        duration = await getAudioDuration(sourceFile);
-      } else if (sourceFile instanceof Blob) {
-        duration = recordingDuration;
-      }
+      const duration = sourceFile.size > 0
+        ? await getAudioDuration(sourceFile)
+        : recordingDuration;
       
       const formData = new FormData();
       formData.append('file', sourceFile, name);
 
-      const response = await fetch('/api/summarize', {
-        method: 'POST',
-        body: formData,
+      setCaptureTaskStage(taskId, 'uploading', {
+        progress: {
+          kind: 'bytes',
+          completedBytes: 0,
+          totalBytes: sourceFile.size,
+        },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Terjadi kesalahan saat memproses audio.');
-      }
+      const data = await requestCaptureJson<{ transcript: string; summary: string }>(
+        '/api/summarize',
+        {
+          body: formData,
+          onUploadProgress: ({ completedBytes, totalBytes }) => {
+            setCaptureTaskStage(taskId, 'uploading', {
+              progress: { kind: 'bytes', completedBytes, totalBytes },
+            });
+          },
+          onUploadComplete: () => {
+            setCaptureTaskStage(taskId, 'transcribing', {
+              progress: { kind: 'indeterminate' },
+              stageLabel: 'Memproses audio',
+              stageDescription: 'File sudah terkirim. Endpoint ini mentranskrip dan merangkum dalam satu proses yang tidak dapat diukur terpisah.',
+            });
+          },
+        },
+      );
 
       // Auto-save to Supabase
       const title = extractTitleFromSummary(data.summary);
       const targetFolderId = chosenSaveFolderId !== 'null' ? chosenSaveFolderId : (activeFolderId !== 'all' && activeFolderId !== 'uncategorized' && activeFolderId !== 'recent' ? activeFolderId : 'null');
 
       setPendingSummary({
+        captureTaskId: taskId,
         title,
         file_name: name,
         duration_sec: duration || null,
@@ -2191,32 +2349,71 @@ export default function Home() {
         word_count: data.transcript.split(/\s+/).length,
       });
       setChosenSaveFolderId(targetFolderId);
+      setCaptureTaskStage(taskId, 'awaiting_save');
       setShowSaveFolderModal(true);
 
       if (queueIndex === null) {
-        clearFile();
         setAudioBlob(null);
         setAudioUrl(null);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Gagal memproses audio. Silakan coba lagi.');
-      setProcessingQueueActive(false);
+      markCaptureTaskFailed(taskId, err, 'Gagal memproses audio. Silakan coba lagi.');
     } finally {
       setLoading(false);
       setStatusMessage('');
       stopThinkingTimer();
     }
-  };
+  }
 
   const handleSubmit = async () => {
     if (files.length > 0) {
-      setProcessingQueueActive(true);
-      setCurrentQueueIndex(0);
-      await startProcessing(files[0], files[0].name, 0);
+      const firstTaskIndex = captureTasks.findIndex(
+        (task) => task.status === 'selected' || task.status === 'queued',
+      );
+      if (firstTaskIndex < 0) return;
+      const firstTask = captureTasks[firstTaskIndex];
+      setCaptureTasks((current) => current.map((task) =>
+        task.status === 'selected' || task.status === 'queued'
+          ? { ...task, destinationLabel: captureDestinationLabel }
+          : task,
+      ));
+      setCurrentQueueIndex(firstTaskIndex);
+      await startProcessing(firstTask.reference, firstTask.name, firstTaskIndex, firstTask.id);
     } else if (audioBlob) {
-      await startProcessing(audioBlob, `rekaman-${new Date().toISOString().slice(0, 10)}.webm`, null);
+      const name = `rekaman-${new Date().toISOString().slice(0, 10)}.webm`;
+      const recordingFile = new File([audioBlob], name, {
+        type: audioBlob.type || 'audio/webm',
+      });
+      const task = createSelectedCaptureTask({
+        id: createCaptureTaskId(),
+        reference: recordingFile,
+        file: recordingFile,
+        source: 'recording',
+        destinationLabel: captureDestinationLabel,
+        durationSeconds: recordingDuration,
+      });
+      setCaptureTasks([task]);
+      setCurrentQueueIndex(0);
+      await startProcessing(recordingFile, name, null, task.id);
     }
+  };
+
+  const handleRetryCaptureTask = async (taskId: string) => {
+    const taskIndex = captureTasks.findIndex((task) => task.id === taskId);
+    if (taskIndex < 0) return;
+    const task = captureTasks[taskIndex];
+    if (task.status !== 'failed' || task.error?.retryable !== true) return;
+
+    setPendingSummary(null);
+    setShowSaveFolderModal(false);
+    setCurrentQueueIndex(taskIndex);
+    await startProcessing(
+      task.reference,
+      task.name,
+      task.source === 'upload' ? taskIndex : null,
+      task.id,
+    );
   };
 
   // Convert Markdown to clean HTML for MS Word (Sprint 9)
@@ -2497,12 +2694,22 @@ export default function Home() {
     }
 
     if (validFiles.length > 0 && availableSlots > 0) {
-      setFiles(queueResult.files);
-      const addedCount = Math.max(0, queueResult.files.length - files.length);
-      setCaptureFileIds((currentIds) => [
-        ...currentIds.slice(0, files.length),
-        ...Array.from({ length: addedCount }, createCaptureTaskId),
-      ]);
+      const addedFiles = queueResult.files.slice(files.length);
+      const addedTasks = addedFiles.map((file) => createSelectedCaptureTask({
+        id: createCaptureTaskId(),
+        reference: file,
+        file,
+        destinationLabel: captureDestinationLabel,
+      }));
+      setCaptureTasks((current) => [...current, ...addedTasks]);
+      addedTasks.forEach((task) => {
+        void getAudioDuration(task.reference).then((durationSeconds) => {
+          if (durationSeconds <= 0) return;
+          setCaptureTasks((current) => patchCaptureTask(current, task.id, {
+            durationSeconds,
+          }));
+        });
+      });
       setError(null);
     }
 
@@ -2536,21 +2743,37 @@ export default function Home() {
       return;
     }
 
-    setFiles((currentFiles) =>
-      currentFiles.map((file, fileIndex) => (fileIndex === index ? replacement : file)),
+    const currentTask = captureTasks[index];
+    if (!currentTask) return;
+    const replacementTask = createSelectedCaptureTask({
+      id: createCaptureTaskId(),
+      reference: replacement,
+      file: replacement,
+      source: currentTask.source,
+      destinationLabel: captureDestinationLabel,
+    });
+    setCaptureTasks((current) =>
+      current.map((task, taskIndex) => taskIndex === index ? replacementTask : task),
     );
-    setCaptureFileIds((currentIds) =>
-      currentIds.map((taskId, fileIndex) =>
-        fileIndex === index ? createCaptureTaskId() : taskId,
-      ),
-    );
+    void getAudioDuration(replacement).then((durationSeconds) => {
+      if (durationSeconds <= 0) return;
+      setCaptureTasks((current) => patchCaptureTask(current, replacementTask.id, {
+        durationSeconds,
+      }));
+    });
     setCaptureInputNotice(null);
     setError(null);
   };
 
   const handleRemoveCaptureFile = (index: number) => {
-    setFiles((currentFiles) => currentFiles.filter((_, fileIndex) => fileIndex !== index));
-    setCaptureFileIds((currentIds) => currentIds.filter((_, fileIndex) => fileIndex !== index));
+    const removedTask = captureTasks[index];
+    if (!removedTask) return;
+    setCaptureTasks((current) => removeCaptureTask(current, removedTask.id));
+    if (removedTask?.source === 'recording') {
+      setAudioBlob(null);
+      setAudioUrl(null);
+      setRecordingDuration(0);
+    }
     setCaptureInputNotice(null);
   };
 
@@ -2559,8 +2782,7 @@ export default function Home() {
   };
 
   const clearFile = () => {
-    setFiles([]);
-    setCaptureFileIds([]);
+    setCaptureTasks([]);
     setError(null);
     setCaptureInputNotice(null);
     setCaptureDragState('idle');
@@ -2577,6 +2799,24 @@ export default function Home() {
   const captureDestinationLabel = selectedCaptureFolder
     ? `Mata kuliah • ${selectedCaptureFolder.name}`
     : 'Belum Dikategorikan';
+  const captureTasksForDisplay = captureTasks.map((task) =>
+    task.status === 'selected'
+      ? { ...task, destinationLabel: captureDestinationLabel }
+      : task,
+  );
+  const uploadCaptureTasks = captureTasksForDisplay.filter(
+    (task) => task.source === 'upload',
+  );
+  const recordingCaptureTasks = captureTasksForDisplay.filter(
+    (task) => task.source === 'recording',
+  );
+  const canSubmitCapture = isRecordingMode
+    ? Boolean(audioBlob) && recordingCaptureTasks.length === 0
+    : !loading &&
+      !processingQueueActive &&
+      uploadCaptureTasks.some(
+        (task) => task.status === 'selected' || task.status === 'queued',
+      );
 
   // Inline folder creation inside Save Folder Modal
   const handleCreateFolderInline = async () => {
@@ -4037,18 +4277,31 @@ export default function Home() {
 
             {/* UNIFIED NOTARA THINKING LOADER */}
             {loading && (
-              <ProcessingView
-                thinkingElapsed={thinkingElapsed}
-                isChunkProcessing={isChunkProcessing}
-                chunkProgress={chunkProgress}
-                statusMessage={statusMessage}
-                chunkCurrent={chunkCurrent}
-                chunkCompleted={chunkCompleted}
-                chunkTotal={chunkTotal}
-                thinkingLog={thinkingLog}
-                showThinkingPanel={showThinkingPanel}
-                onToggleThinkingPanel={() => setShowThinkingPanel(value => !value)}
-              />
+              <>
+                <ProcessingView
+                  thinkingElapsed={thinkingElapsed}
+                  isChunkProcessing={isChunkProcessing}
+                  chunkProgress={chunkProgress}
+                  statusMessage={statusMessage}
+                  chunkCurrent={chunkCurrent}
+                  chunkCompleted={chunkCompleted}
+                  chunkTotal={chunkTotal}
+                  thinkingLog={thinkingLog}
+                  showThinkingPanel={showThinkingPanel}
+                  onToggleThinkingPanel={() => setShowThinkingPanel(value => !value)}
+                />
+                {captureTasksForDisplay.length > 0 && (
+                  <div className="mx-auto mt-8 max-w-3xl">
+                    <CaptureTaskList
+                      tasks={captureTasksForDisplay}
+                      onReplace={handleReplaceCaptureFile}
+                      onRemove={handleRemoveCaptureFile}
+                      onRetry={handleRetryCaptureTask}
+                      actionsDisabled
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             {!selectedSummary && !loading && isDataLoading && workspaceView !== 'capture' && (
@@ -4173,11 +4426,9 @@ export default function Home() {
                 {!isRecordingMode ? (
                   /* UPLOAD INTERFACE */
                   <UploadQueuePanel
-                    files={files}
-                    taskIds={captureFileIds}
+                    tasks={uploadCaptureTasks}
                     dragState={captureDragState}
                     notice={captureInputNotice}
-                    destinationLabel={captureDestinationLabel}
                     fileInputRef={fileInputRef}
                     onDrag={handleDrag}
                     onDrop={handleDrop}
@@ -4186,31 +4437,47 @@ export default function Home() {
                     onReplaceFile={handleReplaceCaptureFile}
                     onRemoveFile={handleRemoveCaptureFile}
                     onClearFiles={clearFile}
+                    onRetryTask={handleRetryCaptureTask}
+                    actionsDisabled={loading || processingQueueActive}
                   />
                 ) : (
                   /* VOICE RECORD PANEL INTERFACE */
-                  <RecordingPanel
-                    canvasRef={canvasRef}
-                    isRecording={isRecording}
-                    isPaused={isPaused}
-                    audioBlob={audioBlob}
-                    audioUrl={audioUrl}
-                    formattedDuration={formatDuration(recordingDuration)}
-                    onStart={startRecording}
-                    onPause={pauseRecording}
-                    onResume={resumeRecording}
-                    onStop={stopRecording}
-                    onDownload={handleDownloadAudio}
-                    onReset={() => {
-                      setAudioBlob(null);
-                      setAudioUrl(null);
-                      setRecordingDuration(0);
-                    }}
-                  />
+                  <>
+                    <RecordingPanel
+                      canvasRef={canvasRef}
+                      isRecording={isRecording}
+                      isPaused={isPaused}
+                      audioBlob={audioBlob}
+                      audioUrl={audioUrl}
+                      formattedDuration={formatDuration(recordingDuration)}
+                      onStart={startRecording}
+                      onPause={pauseRecording}
+                      onResume={resumeRecording}
+                      onStop={stopRecording}
+                      onDownload={handleDownloadAudio}
+                      onReset={() => {
+                        setAudioBlob(null);
+                        setAudioUrl(null);
+                        setRecordingDuration(0);
+                        setCaptureTasks([]);
+                      }}
+                    />
+                    {recordingCaptureTasks.length > 0 && (
+                      <div className="mt-5">
+                        <CaptureTaskList
+                          tasks={recordingCaptureTasks}
+                          onReplace={handleReplaceCaptureFile}
+                          onRemove={handleRemoveCaptureFile}
+                          onRetry={handleRetryCaptureTask}
+                          actionsDisabled={loading || processingQueueActive}
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* SUBMIT BUTTON CONTROL ACTION & FOLDER SELECTOR */}
-                {(files.length > 0 || audioBlob) && (
+                {canSubmitCapture && (
                   <div className="mx-auto mt-8 flex max-w-md flex-col items-center gap-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] p-6 animate-in fade-in">
                     
                     {/* Folder Assignment Before Processing */}

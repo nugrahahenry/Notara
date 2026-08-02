@@ -26,6 +26,7 @@ interface CaptureTaskListProps {
   onReplace: (index: number, file: File) => void;
   onRemove: (index: number) => void;
   onRetry?: (taskId: string) => void;
+  actionsDisabled?: boolean;
 }
 
 const TONE_STYLES: Record<CaptureTaskTone, string> = {
@@ -59,6 +60,7 @@ export function CaptureTaskList({
   onReplace,
   onRemove,
   onRetry,
+  actionsDisabled = false,
 }: CaptureTaskListProps) {
   const queueSummary = getCaptureQueueSummary(tasks);
 
@@ -191,6 +193,7 @@ export function CaptureTaskList({
                   {task.error && (
                     <p
                       id={errorId}
+                      role="alert"
                       className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-xs font-semibold leading-relaxed text-[var(--danger-accent)]"
                     >
                       {task.error.message}
@@ -198,7 +201,7 @@ export function CaptureTaskList({
                   )}
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {presentation.canRetry && onRetry && (
+                    {presentation.canRetry && onRetry && !actionsDisabled && (
                       <button
                         type="button"
                         onClick={() => onRetry(task.id)}
@@ -206,11 +209,11 @@ export function CaptureTaskList({
                         aria-describedby={errorId}
                       >
                         <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                        Coba lagi
+                        Coba lagi dari awal
                       </button>
                     )}
 
-                    {presentation.canReplace && (
+                    {presentation.canReplace && task.source === 'upload' && !actionsDisabled && (
                       <>
                         <input
                           id={replaceInputId}
@@ -231,7 +234,7 @@ export function CaptureTaskList({
                       </>
                     )}
 
-                    {presentation.canRemove && (
+                    {presentation.canRemove && !actionsDisabled && (
                       <button
                         type="button"
                         onClick={() => onRemove(index)}

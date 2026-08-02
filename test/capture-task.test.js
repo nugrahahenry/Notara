@@ -10,7 +10,11 @@ const {
   getCaptureMediaKind,
   getCaptureQueueSummary,
   getCaptureTaskPresentation,
+  getNextQueuedCaptureTask,
+  patchCaptureTask,
+  removeCaptureTask,
   shouldWarnBeforeLeaving,
+  startCaptureTaskAttempt,
 } = require('../build/lib/capture/task.js');
 const { MAX_FILE_SIZE_BYTES } = require('../build/lib/capture/constants.js');
 
@@ -82,16 +86,18 @@ test('capture queue summary separates ready, active, successful, and failed item
       status: 'failed',
       error: { code: 'network', message: 'Jaringan terputus.', retryable: true },
     }),
+    fakeTaskAdapter({ id: 'task-5', status: 'awaiting_save' }),
   ]);
 
   assert.deepEqual(summary, {
-    total: 4,
+    total: 5,
     ready: 1,
     active: 1,
+    awaitingSave: 1,
     succeeded: 1,
     failed: 1,
     cancelled: 0,
-    label: '1 siap • 1 diproses • 1 selesai • 1 perlu perhatian',
+    label: '1 siap • 1 diproses • 1 siap disimpan • 1 selesai • 1 perlu perhatian',
   });
 });
 
@@ -216,6 +222,69 @@ test('capture leave warning is limited to work that is actively browser-bound', 
     shouldWarnBeforeLeaving([fakeTaskAdapter({ status: 'succeeded' })]),
     false,
   );
+  assert.equal(
+    shouldWarnBeforeLeaving([fakeTaskAdapter({ status: 'awaiting_save' })]),
+    true,
+  );
+});
+
+test('starting one item queues selected siblings and preserves completed results', () => {
+  const tasks = [
+    fakeTaskAdapter({ id: 'done', status: 'succeeded' }),
+    fakeTaskAdapter({ id: 'active' }),
+    fakeTaskAdapter({ id: 'later' }),
+  ];
+  const next = startCaptureTaskAttempt(tasks, 'active', 1000);
+
+  assert.equal(next[0].status, 'succeeded');
+  assert.equal(next[1].status, 'preparing');
+  assert.equal(next[1].attempts, 1);
+  assert.equal(next[1].startedAt, 1000);
+  assert.equal(next[2].status, 'queued');
+});
+
+test('task-local failure and retry do not erase successful or queued siblings', () => {
+  const initial = [
+    fakeTaskAdapter({ id: 'done', status: 'succeeded' }),
+    fakeTaskAdapter({ id: 'failed', status: 'transcribing', attempts: 1 }),
+    fakeTaskAdapter({ id: 'later', status: 'queued' }),
+  ];
+  const failed = patchCaptureTask(initial, 'failed', {
+    status: 'failed',
+    progress: undefined,
+    error: { code: 'network', message: 'Jaringan terputus.', retryable: true },
+  });
+  const retried = startCaptureTaskAttempt(failed, 'failed', 2000);
+
+  assert.equal(retried[0].status, 'succeeded');
+  assert.equal(retried[1].status, 'preparing');
+  assert.equal(retried[1].attempts, 2);
+  assert.equal(retried[2].status, 'queued');
+});
+
+test('the sequential queue advances only to the next waiting item', () => {
+  const tasks = [
+    fakeTaskAdapter({ id: 'done', status: 'succeeded' }),
+    fakeTaskAdapter({ id: 'current', status: 'succeeded' }),
+    fakeTaskAdapter({ id: 'next', status: 'queued' }),
+  ];
+  const next = getNextQueuedCaptureTask(tasks, 'current');
+
+  assert.equal(next.index, 2);
+  assert.equal(next.task.id, 'next');
+});
+
+test('removing one waiting or failed item preserves the rest of the queue', () => {
+  const tasks = [
+    fakeTaskAdapter({ id: 'done', status: 'succeeded' }),
+    fakeTaskAdapter({ id: 'remove', status: 'failed' }),
+    fakeTaskAdapter({ id: 'later', status: 'queued' }),
+  ];
+  const remaining = removeCaptureTask(tasks, 'remove');
+
+  assert.deepEqual(remaining.map((task) => task.id), ['done', 'later']);
+  assert.equal(remaining[0].status, 'succeeded');
+  assert.equal(remaining[1].status, 'queued');
 });
 
 test('capture metadata formatters produce compact Indonesian-friendly values', () => {

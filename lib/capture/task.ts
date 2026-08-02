@@ -8,6 +8,7 @@ export type CaptureTaskStatus =
   | 'uploading'
   | 'transcribing'
   | 'summarizing'
+  | 'awaiting_save'
   | 'saving'
   | 'succeeded'
   | 'failed'
@@ -56,6 +57,8 @@ export interface CaptureTask<TReference = unknown> {
   error?: CaptureTaskError;
   attempts: number;
   destinationLabel: string;
+  stageLabel?: string;
+  stageDescription?: string;
 }
 
 export type CaptureTaskTone = 'neutral' | 'active' | 'success' | 'warning' | 'danger';
@@ -79,6 +82,7 @@ export interface CaptureQueueSummary {
   total: number;
   ready: number;
   active: number;
+  awaitingSave: number;
   succeeded: number;
   failed: number;
   cancelled: number;
@@ -106,6 +110,11 @@ const REMOVABLE_STATUSES = new Set<CaptureTaskStatus>([
   'succeeded',
   'failed',
   'cancelled',
+]);
+
+const LEAVE_WARNING_STATUSES = new Set<CaptureTaskStatus>([
+  ...ACTIVE_STATUSES,
+  'awaiting_save',
 ]);
 
 const STATUS_COPY: Record<
@@ -141,6 +150,11 @@ const STATUS_COPY: Record<
     label: 'Menyusun rangkuman',
     description: 'Notara sedang mengubah transkrip menjadi materi belajar.',
     tone: 'active',
+  },
+  awaiting_save: {
+    label: 'Siap disimpan',
+    description: 'Rangkuman selesai diproses. Konfirmasi tujuan penyimpanannya.',
+    tone: 'warning',
   },
   saving: {
     label: 'Menyimpan hasil',
@@ -186,11 +200,12 @@ export function createSelectedCaptureTask<TReference>(options: {
   file: MediaFileLike;
   destinationLabel: string;
   durationSeconds?: number;
+  source?: CaptureTaskSource;
 }): CaptureTask<TReference> {
   return {
     id: options.id,
     reference: options.reference,
-    source: 'upload',
+    source: options.source ?? 'upload',
     mediaKind: getCaptureMediaKind(options.file),
     name: options.file.name,
     mimeType: options.file.type,
@@ -300,7 +315,11 @@ export function getCaptureTaskPresentation(task: CaptureTask): CaptureTaskPresen
         description: task.error.message,
         tone: 'danger' as const,
       }
-    : STATUS_COPY[task.status];
+    : {
+        ...STATUS_COPY[task.status],
+        label: task.stageLabel ?? STATUS_COPY[task.status].label,
+        description: task.stageDescription ?? STATUS_COPY[task.status].description,
+      };
   const isActive = isCaptureTaskActive(task.status);
   const progress = getProgressPresentation(task);
 
@@ -325,6 +344,8 @@ export function getCaptureQueueSummary(tasks: CaptureTask[]): CaptureQueueSummar
         counts.ready += 1;
       } else if (isCaptureTaskActive(task.status)) {
         counts.active += 1;
+      } else if (task.status === 'awaiting_save') {
+        counts.awaitingSave += 1;
       } else if (task.status === 'succeeded') {
         counts.succeeded += 1;
       } else if (task.status === 'failed') {
@@ -334,12 +355,13 @@ export function getCaptureQueueSummary(tasks: CaptureTask[]): CaptureQueueSummar
       }
       return counts;
     },
-    { ready: 0, active: 0, succeeded: 0, failed: 0, cancelled: 0 },
+    { ready: 0, active: 0, awaitingSave: 0, succeeded: 0, failed: 0, cancelled: 0 },
   );
 
   const parts = [
     summary.ready > 0 ? `${summary.ready} siap` : null,
     summary.active > 0 ? `${summary.active} diproses` : null,
+    summary.awaitingSave > 0 ? `${summary.awaitingSave} siap disimpan` : null,
     summary.succeeded > 0 ? `${summary.succeeded} selesai` : null,
     summary.failed > 0 ? `${summary.failed} perlu perhatian` : null,
     summary.cancelled > 0 ? `${summary.cancelled} dibatalkan` : null,
@@ -353,7 +375,72 @@ export function getCaptureQueueSummary(tasks: CaptureTask[]): CaptureQueueSummar
 }
 
 export function shouldWarnBeforeLeaving(tasks: CaptureTask[]): boolean {
-  return tasks.some((task) => isCaptureTaskActive(task.status));
+  return tasks.some((task) => LEAVE_WARNING_STATUSES.has(task.status));
+}
+
+export function startCaptureTaskAttempt<TReference>(
+  tasks: CaptureTask<TReference>[],
+  taskId: string,
+  startedAt = Date.now(),
+): CaptureTask<TReference>[] {
+  return tasks.map((task) => {
+    if (task.id === taskId) {
+      return {
+        ...task,
+        status: 'preparing',
+        progress: { kind: 'indeterminate' },
+        startedAt,
+        attempts: task.attempts + 1,
+        error: undefined,
+        stageLabel: undefined,
+        stageDescription: undefined,
+      };
+    }
+
+    if (task.status === 'selected') {
+      return {
+        ...task,
+        status: 'queued',
+        progress: undefined,
+        error: undefined,
+        stageLabel: undefined,
+        stageDescription: undefined,
+      };
+    }
+
+    return task;
+  });
+}
+
+export function patchCaptureTask<TReference>(
+  tasks: CaptureTask<TReference>[],
+  taskId: string,
+  patch: Partial<CaptureTask<TReference>>,
+): CaptureTask<TReference>[] {
+  return tasks.map((task) => task.id === taskId ? { ...task, ...patch } : task);
+}
+
+export function getNextQueuedCaptureTask<TReference>(
+  tasks: CaptureTask<TReference>[],
+  taskId: string,
+): { task: CaptureTask<TReference>; index: number } | null {
+  const currentIndex = tasks.findIndex((task) => task.id === taskId);
+  if (currentIndex < 0) return null;
+
+  const relativeIndex = tasks
+    .slice(currentIndex + 1)
+    .findIndex((task) => task.status === 'queued' || task.status === 'selected');
+  if (relativeIndex < 0) return null;
+
+  const index = currentIndex + relativeIndex + 1;
+  return { task: tasks[index], index };
+}
+
+export function removeCaptureTask<TReference>(
+  tasks: CaptureTask<TReference>[],
+  taskId: string,
+): CaptureTask<TReference>[] {
+  return tasks.filter((task) => task.id !== taskId);
 }
 
 export function formatCaptureDuration(totalSeconds: number): string {
