@@ -431,11 +431,14 @@ function LoginForm() {
             <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
               {isSignUp && (
                 <div className="space-y-1.5 text-left">
-                  <label className="text-xs text-zinc-400 font-medium">Nama Lengkap</label>
+                  <label htmlFor="notara-full-name" className="text-xs text-zinc-400 font-medium">Nama Lengkap</label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                     <input
+                      id="notara-full-name"
+                      name="fullName"
                       type="text"
+                      autoComplete="name"
                       placeholder="Henry Nugraha"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
@@ -447,11 +450,14 @@ function LoginForm() {
               )}
 
               <div className="space-y-1.5 text-left">
-                <label className="text-xs text-zinc-400 font-medium">Email</label>
+                <label htmlFor="notara-email" className="text-xs text-zinc-400 font-medium">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
+                    id="notara-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
                     placeholder="nama@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -462,11 +468,14 @@ function LoginForm() {
               </div>
 
               <div className="space-y-1.5 text-left">
-                <label className="text-xs text-zinc-400 font-medium">Password</label>
+                <label htmlFor="notara-password" className="text-xs text-zinc-400 font-medium">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
+                    id="notara-password"
+                    name="password"
                     type="password"
+                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -478,11 +487,14 @@ function LoginForm() {
 
               {isSignUp && (
                 <div className="space-y-1.5 text-left animate-fadeIn">
-                  <label className="text-xs text-zinc-400 font-medium">Konfirmasi Password</label>
+                  <label htmlFor="notara-password-confirmation" className="text-xs text-zinc-400 font-medium">Konfirmasi Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                     <input
+                      id="notara-password-confirmation"
+                      name="passwordConfirmation"
                       type="password"
+                      autoComplete="new-password"
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}

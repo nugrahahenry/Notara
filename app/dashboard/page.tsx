@@ -282,6 +282,9 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchFolderFilter, setSearchFolderFilter] = useState<string>('all');
   const [selectedSearchResultIdx, setSelectedSearchResultIdx] = useState<number>(0);
+  const searchDialogRef = useRef<HTMLDivElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const searchWasOpenRef = useRef<boolean>(false);
 
   // Pending summary states for folder assignment (Sprint 7)
   const [pendingSummary, setPendingSummary] = useState<{
@@ -1662,6 +1665,38 @@ export default function Home() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [showSearchModal, searchResults, selectedSearchResultIdx]);
+
+  useEffect(() => {
+    if (!showSearchModal) {
+      if (searchWasOpenRef.current) searchTriggerRef.current?.focus();
+      searchWasOpenRef.current = false;
+      return;
+    }
+
+    searchWasOpenRef.current = true;
+    const handleSearchFocusTrap = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const focusableElements = Array.from(
+        searchDialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.offsetParent !== null);
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleSearchFocusTrap);
+    return () => document.removeEventListener('keydown', handleSearchFocusTrap);
+  }, [showSearchModal]);
 
   // Recording triggers
   const startRecording = async () => {
@@ -3524,7 +3559,7 @@ export default function Home() {
             {/* Lock Pin Button */}
             <button 
               onClick={() => updateSidebarExpanded(!sidebarExpanded)}
-              className="hidden rounded-lg p-2 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] md:block"
+              className="hidden h-11 w-11 items-center justify-center rounded-lg text-[var(--text-tertiary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] md:flex"
               title={sidebarExpanded ? "Ciutkan Sidebar" : "Kunci Lebar Sidebar"}
             >
               <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${sidebarExpanded ? 'rotate-180' : ''}`} />
@@ -3534,7 +3569,7 @@ export default function Home() {
           <div className="flex h-16 shrink-0 items-center justify-center border-b border-[var(--border-subtle)]">
             <button 
               onClick={() => updateSidebarExpanded(true)}
-              className="hover:scale-105 active:scale-95 transition-all"
+              className="flex h-11 w-11 items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
               title="Buka Menu Sidebar"
             >
               <BrandMark size={32} />
@@ -3991,7 +4026,7 @@ export default function Home() {
                   setSelectedSummary(null);
                   setWorkspaceView('courses');
                 }}
-                className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
+                className={`h-11 w-11 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
                   activeFolderId === 'all' ? 'bg-white/5 text-violet-400' : 'text-zinc-500'
                 }`}
                 title="Semua Rangkuman"
@@ -4005,7 +4040,7 @@ export default function Home() {
                   setSelectedSummary(null);
                   setWorkspaceView('courses');
                 }}
-                className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
+                className={`h-11 w-11 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
                   activeFolderId === 'recent' ? 'bg-white/5 text-violet-400' : 'text-zinc-500'
                 }`}
                 title="Baru Ditambahkan (7 hari terakhir)"
@@ -4019,7 +4054,7 @@ export default function Home() {
                   setSelectedSummary(null);
                   setWorkspaceView('courses');
                 }}
-                className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
+                className={`h-11 w-11 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all ${
                   activeFolderId === 'uncategorized' ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)]' : 'text-[var(--text-tertiary)]'
                 }`}
                 title="Belum Dikategorikan"
@@ -4042,7 +4077,7 @@ export default function Home() {
                       setSelectedSummary(null);
                       setWorkspaceView('courses');
                     }}
-                    className={`h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all relative ${
+                    className={`h-11 w-11 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all relative ${
                       isActive ? 'bg-[var(--nav-selected)] border border-[var(--brand-primary)] scale-105' : ''
                     }`}
                     title={folder.name}
@@ -4064,7 +4099,7 @@ export default function Home() {
                   setFolderIcon('📁');
                   setShowFolderModal(true);
                 }}
-                className="h-10 w-10 rounded-xl flex items-center justify-center hover:bg-white/5 hover:text-violet-400 text-zinc-600 transition-all border border-dashed border-white/5"
+                className="h-11 w-11 rounded-xl flex items-center justify-center hover:bg-white/5 hover:text-violet-400 text-zinc-600 transition-all border border-dashed border-white/5"
                 title="Tambah Folder Baru"
               >
                 <FolderPlus className="h-4 w-4" />
@@ -4126,7 +4161,7 @@ export default function Home() {
             {isSidebarOpen ? (
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 rounded-xl transition-all cursor-pointer text-left"
+                className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-400 transition-all hover:bg-rose-500/10 active:bg-rose-500/20 cursor-pointer"
               >
                 <LogOut className="h-4 w-4 shrink-0" />
                 <span>Keluar</span>
@@ -4134,7 +4169,7 @@ export default function Home() {
             ) : (
               <button
                 onClick={handleLogout}
-                className="h-9 w-9 mx-auto flex items-center justify-center rounded-xl text-rose-400 hover:bg-rose-500/10 active:bg-rose-500/20 transition-all cursor-pointer"
+                className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl text-rose-400 transition-all hover:bg-rose-500/10 active:bg-rose-500/20 cursor-pointer"
                 title="Keluar"
               >
                 <LogOut className="h-4 w-4 shrink-0" />
@@ -4162,6 +4197,7 @@ export default function Home() {
             </button>
 
             <button
+              ref={searchTriggerRef}
               type="button"
               onClick={() => {
                 setShowSearchModal(true);
@@ -4235,7 +4271,7 @@ export default function Home() {
 
                 <button
                   onClick={openSettings}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)] text-xs font-bold text-[var(--text-on-brand)] ring-offset-2 ring-offset-[var(--surface-header)] transition-shadow hover:ring-2 hover:ring-[var(--focus-ring)]"
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[var(--brand-primary)] text-xs font-bold text-[var(--text-on-brand)] ring-offset-2 ring-offset-[var(--surface-header)] transition-shadow hover:ring-2 hover:ring-[var(--focus-ring)]"
                   title={user.user_metadata?.full_name || user.email || 'Profil Saya'}
                 >
                   {user.user_metadata?.avatar_url ? (
@@ -4641,7 +4677,7 @@ export default function Home() {
                           </h2>
                           <button
                             onClick={handleStartRename}
-                            className="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5 opacity-0 group-hover/title:opacity-100 transition-all duration-200"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-zinc-500 opacity-0 transition-all duration-200 hover:bg-white/5 hover:text-white group-hover/title:opacity-100 focus-visible:opacity-100"
                             title="Ubah Judul"
                           >
                             <FileSignature className="h-4 w-4" />
@@ -4654,12 +4690,14 @@ export default function Home() {
                       {/* POP PANEL BERBAGI */}
                       <button
                         onClick={() => setShowSharePopover(!showSharePopover)}
-                        className={`p-2.5 rounded-xl border transition-all duration-200 flex items-center gap-2 text-xs font-bold ${
+                        className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all duration-200 ${
                           showSharePopover
                             ? 'bg-violet-600 border-violet-500 text-white shadow shadow-violet-500/20'
                             : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white hover:border-white/20'
                         }`}
                         title="Bagikan Rangkuman"
+                        aria-expanded={showSharePopover}
+                        aria-controls="summary-share-popover"
                       >
                         <Share2 className="h-4 w-4" />
                         <span>Bagikan</span>
@@ -4671,12 +4709,13 @@ export default function Home() {
                             className="fixed inset-0 z-30" 
                             onClick={() => setShowSharePopover(false)}
                           />
-                          <div className="absolute right-0 mt-12 w-80 rounded-2xl bg-[#0F0E17]/95 border border-white/[0.08] backdrop-blur-xl p-4 shadow-2xl z-40 animate-in fade-in slide-in-from-top-2 duration-200 text-left space-y-4">
+                          <div id="summary-share-popover" className="absolute right-0 z-40 mt-12 w-80 space-y-4 rounded-2xl border border-white/[0.08] bg-[#0F0E17]/95 p-4 text-left shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
                             <div className="flex justify-between items-center pb-2 border-b border-white/[0.06]">
                               <h4 className="text-sm font-black text-white">Bagikan Rangkuman</h4>
                               <button
                                 onClick={() => setShowSharePopover(false)}
-                                className="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5"
+                                className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/5 hover:text-white"
+                                aria-label="Tutup opsi berbagi"
                               >
                                 <X className="h-3.5 w-3.5" />
                               </button>
@@ -4700,7 +4739,7 @@ export default function Home() {
                                 
                                 <button
                                   onClick={handleTogglePublic}
-                                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 ${
+                                  className={`min-h-11 rounded-lg px-3 text-xs font-bold transition-all duration-200 ${
                                     selectedSummary.is_public
                                       ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'
                                       : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
@@ -4753,7 +4792,7 @@ export default function Home() {
                       {/* Share Card (4.5C) Button */}
                       <button
                         onClick={() => setShowShareCardModal(true)}
-                        className="p-2.5 rounded-xl bg-white/5 hover:bg-violet-500/10 border border-white/10 hover:border-violet-500/20 text-zinc-500 hover:text-violet-400 transition-all duration-200"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 hover:border-violet-500/20 hover:bg-violet-500/10 hover:text-violet-400"
                         title="Buat Kartu untuk Sosmed"
                       >
                         <ImageDown className="h-4 w-4" />
@@ -4761,7 +4800,7 @@ export default function Home() {
 
                       <button
                         onClick={(e) => handleDeleteSummary(selectedSummary.id, e)}
-                        className="p-2.5 rounded-xl bg-white/5 hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/20 text-zinc-500 hover:text-rose-400 transition-all duration-200"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400"
                         title="Hapus Rangkuman"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -4777,7 +4816,7 @@ export default function Home() {
                     <div className="relative">
                       <button 
                         onClick={() => setShowFolderSelectDropdown(!showFolderSelectDropdown)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:border-violet-500/40 text-xs font-semibold text-zinc-300 hover:text-white transition-all duration-200 shadow-sm"
+                        className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-zinc-300 shadow-sm transition-all duration-200 hover:border-violet-500/40 hover:text-white"
                       >
                         <Folder className="h-3.5 w-3.5 text-violet-400" />
                         <span>Mata Kuliah:</span>
@@ -4894,7 +4933,7 @@ export default function Home() {
                     <div className="bg-white/5 p-1 rounded-xl flex">
                       <button 
                         onClick={() => setActiveTab('summary')}
-                        className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg transition-all duration-200 ${
+                          className={`flex min-h-11 items-center gap-2 rounded-lg px-4 text-xs font-bold transition-all duration-200 ${
                           activeTab === 'summary' 
                             ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
                             : 'text-zinc-400 hover:text-white'
@@ -4905,7 +4944,7 @@ export default function Home() {
                       </button>
                       <button 
                         onClick={() => setActiveTab('transcript')}
-                        className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg transition-all duration-200 ${
+                          className={`flex min-h-11 items-center gap-2 rounded-lg px-4 text-xs font-bold transition-all duration-200 ${
                           activeTab === 'transcript' 
                             ? 'bg-violet-600 text-white shadow shadow-violet-500/10' 
                             : 'text-zinc-400 hover:text-white'
@@ -4916,7 +4955,7 @@ export default function Home() {
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
                       <button
                         onClick={() => {
                           const printStyle = document.createElement('style');
@@ -4955,7 +4994,7 @@ export default function Home() {
                             document.body.removeChild(printArea);
                           }, 1000);
                         }}
-                        className="flex items-center gap-1.5 text-xs font-bold text-zinc-300 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] hover:border-white/10 active:scale-95 transition-all duration-200"
+                        className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/5 px-3.5 text-xs font-bold text-zinc-300 transition-all duration-200 hover:border-white/10 hover:bg-white/10 active:scale-95"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         Export PDF
@@ -4963,7 +5002,7 @@ export default function Home() {
 
                       <button
                         onClick={handleExportWord}
-                        className="flex items-center gap-1.5 text-xs font-bold text-zinc-300 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] hover:border-white/10 active:scale-95 transition-all duration-200"
+                        className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/5 px-3.5 text-xs font-bold text-zinc-300 transition-all duration-200 hover:border-white/10 hover:bg-white/10 active:scale-95"
                       >
                         <FileSignature className="h-3.5 w-3.5 text-indigo-400" />
                         Export Word
@@ -4972,7 +5011,7 @@ export default function Home() {
                       {audioBlob && (
                         <button
                           onClick={handleDownloadAudio}
-                          className="flex items-center gap-1.5 text-xs font-bold text-zinc-300 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] hover:border-white/10 active:scale-95 transition-all duration-200"
+                          className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/5 px-3.5 text-xs font-bold text-zinc-300 transition-all duration-200 hover:border-white/10 hover:bg-white/10 active:scale-95"
                         >
                           <FileAudio className="h-3.5 w-3.5 text-violet-400" />
                           Unduh Audio
@@ -4981,7 +5020,7 @@ export default function Home() {
 
                       <button
                         onClick={handleCopy}
-                        className="flex items-center gap-1.5 text-xs font-bold text-white px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:scale-95 transition-all duration-200"
+                        className="flex min-h-11 items-center gap-1.5 rounded-xl bg-violet-600 px-3.5 text-xs font-bold text-white transition-all duration-200 hover:bg-violet-500 active:scale-95"
                       >
                         {copied ? (
                           <>
@@ -5280,6 +5319,7 @@ export default function Home() {
                             }
                           }}
                           disabled={isSendingChat}
+                          aria-label="Pertanyaan untuk tutor materi"
                           placeholder={
                             isListening
                               ? "🎙️ Sedang mendengarkan..."
@@ -5291,7 +5331,7 @@ export default function Home() {
                                       : "Tanya lintas seluruh rangkuman...")
                                 : "Tanya asisten global Notara..."
                           }
-                          className={`w-full bg-black/40 border rounded-2xl pl-4 pr-20 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none disabled:opacity-50 font-sans resize-none max-h-[120px] overflow-y-auto transition-colors duration-300 ${
+                          className={`min-h-11 w-full max-h-[120px] resize-none overflow-y-auto rounded-2xl border bg-black/40 py-2.5 pl-4 pr-24 font-sans text-xs text-zinc-200 placeholder-zinc-600 transition-colors duration-300 focus:outline-none disabled:opacity-50 ${
                             isListening 
                               ? 'border-rose-500/50 focus:border-rose-400' 
                               : 'border-white/10 focus:border-violet-500/50'
@@ -5302,12 +5342,13 @@ export default function Home() {
                           type="button"
                           onClick={handleToggleMic}
                           disabled={isSendingChat || voiceNotSupported}
-                          className={`absolute right-10 bottom-1 p-1.5 rounded-xl transition-all active:scale-95 duration-200 flex items-center justify-center ${
+                          className={`absolute bottom-0 right-11 flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 active:scale-95 ${
                             isListening 
                               ? 'w-9 h-8 bg-black/50 border border-rose-500/30' 
                               : 'text-zinc-500 hover:text-violet-400 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed'
                           }`}
                           title={isListening ? "Hentikan rekaman" : "Input suara (Bahasa Indonesia)"}
+                          aria-label={isListening ? "Hentikan input suara" : "Mulai input suara"}
                         >
                           {isListening ? (
                             /* Google-style 5-bar wave */
@@ -5327,7 +5368,8 @@ export default function Home() {
                         <button 
                           type="submit"
                           disabled={isSendingChat || !chatInput.trim()}
-                          className="absolute right-2 bottom-1.5 p-2 rounded-xl bg-violet-600 text-white disabled:bg-white/5 disabled:text-zinc-600 transition-all active:scale-95 duration-200"
+                          className="absolute bottom-0 right-0 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-600 text-white transition-all duration-200 active:scale-95 disabled:bg-white/5 disabled:text-zinc-600"
+                          aria-label="Kirim pertanyaan materi"
                         >
                           {isSendingChat ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -5693,7 +5735,13 @@ export default function Home() {
             onClick={() => setShowSearchModal(false)} 
           />
           
-          <div className="relative w-full max-w-2xl rounded-3xl bg-[#0F0E17]/95 border border-white/[0.08] p-5 shadow-2xl flex flex-col max-h-[60vh] backdrop-blur-xl animate-in zoom-in-95 duration-200 z-50">
+          <div
+            ref={searchDialogRef}
+            className="relative z-50 flex max-h-[60vh] w-full max-w-2xl flex-col rounded-3xl border border-white/[0.08] bg-[#0F0E17]/95 p-5 shadow-2xl backdrop-blur-xl animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Pencarian materi"
+          >
             {/* Input & Filter Header */}
             <div className="flex items-center gap-3 border-b border-white/10 pb-4 shrink-0">
               <Search className="h-5 w-5 text-violet-400 shrink-0" />
@@ -5706,6 +5754,7 @@ export default function Home() {
                   setSelectedSearchResultIdx(0);
                 }}
                 placeholder="Cari judul, kata kunci, atau rangkuman..."
+                aria-label="Kata kunci pencarian"
                 className="bg-transparent text-sm text-white focus:outline-none placeholder-zinc-600 flex-1 font-sans"
               />
               
@@ -5716,7 +5765,8 @@ export default function Home() {
                   setSearchFolderFilter(e.target.value);
                   setSelectedSearchResultIdx(0);
                 }}
-                className="bg-white/5 border border-white/10 hover:border-violet-500/30 rounded-xl px-3 py-1.5 text-xs text-zinc-300 focus:outline-none cursor-pointer font-sans"
+                aria-label="Filter mata kuliah"
+                className="min-h-11 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 font-sans text-xs text-zinc-300 cursor-pointer hover:border-violet-500/30 focus:outline-none"
               >
                 <option value="all" className="bg-[#0F0E17] text-zinc-300">Semua Folder</option>
                 <option value="uncategorized" className="bg-[#0F0E17] text-zinc-300">Belum Dikategorikan</option>
@@ -5728,8 +5778,10 @@ export default function Home() {
               </select>
               
               <button 
+                type="button"
                 onClick={() => setShowSearchModal(false)}
-                className="text-zinc-500 hover:text-white p-1 rounded-lg hover:bg-white/5"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/5 hover:text-white"
+                aria-label="Tutup pencarian"
               >
                 <X className="h-4.5 w-4.5" />
               </button>
@@ -5748,14 +5800,16 @@ export default function Home() {
                   searchResults.map((result, idx) => {
                     const isSelected = idx === selectedSearchResultIdx;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={result.id}
                         onMouseEnter={() => setSelectedSearchResultIdx(idx)}
+                        onFocus={() => setSelectedSearchResultIdx(idx)}
                         onClick={() => {
                           setSelectedSummary(result);
                           setShowSearchModal(false);
                         }}
-                        className={`p-3 rounded-2xl cursor-pointer border transition-all duration-200 ${
+                        className={`w-full rounded-2xl border p-3 text-left cursor-pointer transition-all duration-200 ${
                           isSelected
                             ? 'bg-violet-600/10 border-violet-500/30 text-white'
                             : 'bg-white/[0.01] border-transparent hover:bg-white/[0.02] text-zinc-400'
@@ -5771,7 +5825,7 @@ export default function Home() {
                               : '📁 Belum Dikategorikan'}
                           </span>
                         </div>
-                      </div>
+                      </button>
                     );
                   })
                 )}
