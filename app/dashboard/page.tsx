@@ -163,7 +163,7 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  
+
   // Database States
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [summaries, setSummaries] = useState<SummaryType[]>([]);
@@ -191,9 +191,6 @@ export default function Home() {
   const [isChatOpenMobile, setIsChatOpenMobile] = useState<boolean>(false); // Mobile chatbot active
   const [chatScope, setChatScope] = useState<'summary' | 'folder' | 'global'>('summary'); // Chat context scope
   const [isChatPanelOpen, setIsChatPanelOpen] = useState<boolean>(false); // Material tutor opens only from Study Dock
-  
-  // Folder Selector Prominent Dropdown
-  const [showFolderSelectDropdown, setShowFolderSelectDropdown] = useState<boolean>(false);
 
   // Folder Form Modal States
   const [showFolderModal, setShowFolderModal] = useState<boolean>(false);
@@ -203,12 +200,8 @@ export default function Home() {
   const [folderIcon, setFolderIcon] = useState<string>('📁');
 
   // Summary Edit States
-  const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
-  const [editingTitleText, setEditingTitleText] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'summary' | 'transcript'>('summary');
   const [copied, setCopied] = useState<boolean>(false);
-  const [showSharePopover, setShowSharePopover] = useState<boolean>(false);
-  const [copiedShareLink, setCopiedShareLink] = useState<boolean>(false);
 
   // Thinking Panel States
   const [thinkingLog, setThinkingLog] = useState<string[]>([]);
@@ -2581,6 +2574,44 @@ export default function Home() {
     return htmlLines.join('\n');
   };
 
+  const handleExportPdf = () => {
+    if (!selectedSummary) return;
+
+    const printStyle = document.createElement('style');
+    printStyle.id = 'notara-print-style';
+    printStyle.innerHTML = `
+      @media print {
+        body > * { display: none !important; }
+        #notara-print-area { display: block !important; }
+        #notara-print-area { font-family: Georgia, serif; color: #000; background: #fff; padding: 2rem; }
+        #notara-print-area h1 { font-size: 1.5rem; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        #notara-print-area h2 { font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem; color: #5b21b6; }
+        #notara-print-area table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        #notara-print-area th { background: #f3f0ff; padding: 8px; text-align: left; border: 1px solid #ddd; }
+        #notara-print-area td { padding: 8px; border: 1px solid #ddd; }
+        #notara-print-area blockquote { border-left: 3px solid #7c3aed; padding-left: 1rem; color: #555; }
+      }
+    `;
+    document.head.appendChild(printStyle);
+
+    const printArea = document.createElement('div');
+    printArea.id = 'notara-print-area';
+    printArea.style.display = 'none';
+    const title = document.createElement('h1');
+    title.textContent = selectedSummary.title;
+    printArea.appendChild(title);
+    const content = document.createElement('div');
+    content.innerHTML = convertMarkdownToHtml(selectedSummary.summary);
+    printArea.appendChild(content);
+    document.body.appendChild(printArea);
+
+    window.print();
+    window.setTimeout(() => {
+      printStyle.remove();
+      printArea.remove();
+    }, 1000);
+  };
+
   // Export Summary to Word Document (.doc) (Sprint 9)
   const handleExportWord = () => {
     if (!selectedSummary) return;
@@ -3161,29 +3192,22 @@ export default function Home() {
     }
   };
 
-  const handleStartRename = () => {
-
-    if (!selectedSummary) return;
-    setEditingTitleText(selectedSummary.title);
-    setIsEditingTitle(true);
-  };
-
-  const handleSaveRename = async () => {
-    if (!selectedSummary || !editingTitleText.trim()) return;
+  const handleRenameSummaryTitle = async (nextTitle: string): Promise<boolean> => {
+    if (!selectedSummary || !nextTitle.trim()) return false;
     try {
-      const success = await renameSummary(selectedSummary.id, editingTitleText);
+      const success = await renameSummary(selectedSummary.id, nextTitle);
       if (success) {
-        const updatedSummary = { ...selectedSummary, title: editingTitleText };
+        const updatedSummary = { ...selectedSummary, title: nextTitle };
         setSummaries(prev => prev.map(s => s.id === selectedSummary.id ? updatedSummary : s));
         setSelectedSummary(updatedSummary);
         showToast('Judul rangkuman berhasil diubah.', 'success');
+        return true;
       } else {
         throw new Error('Gagal mengubah judul di database.');
       }
     } catch (err: any) {
       setError(err.message);
-    } finally {
-      setIsEditingTitle(false);
+      return false;
     }
   };
 
@@ -4622,9 +4646,14 @@ export default function Home() {
             {/* SCREEN 2: SUMMARY DETAIL VIEW */}
             {selectedSummary && !loading && (
               <StudyCanvasBoundary
+                key={selectedSummary.id}
                 summary={selectedSummary}
                 folder={folders.find(folder => folder.id === selectedSummary.folder_id) ?? null}
+                folders={folders}
                 activeTab={activeTab}
+                studySeconds={studySeconds}
+                copied={copied}
+                hasAudio={Boolean(audioBlob)}
                 onTabChange={setActiveTab}
                 onBack={() => openWorkspace('courses')}
                 onAskMaterial={() => {
@@ -4633,400 +4662,34 @@ export default function Home() {
                   setIsChatOpenMobile(true);
                   localStorage.setItem('isMaterialTutorPanelOpen', 'true');
                 }}
+                onRenameTitle={handleRenameSummaryTitle}
+                onMoveFolder={handleMoveFolder}
+                onCreateCourse={() => {
+                  setEditingFolder(null);
+                  setFolderName('');
+                  setFolderColor('#8B5CF6');
+                  setFolderIcon('ðŸ“');
+                  setShowFolderModal(true);
+                }}
+                onTogglePublic={handleTogglePublic}
+                onCopyPublicLink={() => handleCopySharedLink(selectedSummary)}
+                onCreateShareCard={() => setShowShareCardModal(true)}
+                onDelete={() => void handleDeleteSummary(selectedSummary.id)}
+                onExportPdf={handleExportPdf}
+                onExportWord={handleExportWord}
+                onDownloadAudio={handleDownloadAudio}
+                onCopy={handleCopy}
+                content={activeTab === 'summary' ? (
+                  <div className="notara-study-summary-content">
+                    {renderMarkdown(selectedSummary.summary)}
+                  </div>
+                ) : (
+                  <section className="notara-study-transcript" aria-label="Salinan suara">
+                    <div><FileText className="h-4 w-4" /><span>Transkrip asli</span></div>
+                    <p>{selectedSummary.transcript}</p>
+                  </section>
+                )}
               >
-                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
-                
-                {/* DETAILS METADATA CARD */}
-                <div className="p-6 rounded-3xl bg-white/[0.01] border border-white/[0.04] backdrop-blur-md shadow-2xl space-y-4 relative z-20">
-                  
-                  {/* Inline title rename & Actions */}
-                  <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
-                    <div className="flex-1 w-full">
-                      {isEditingTitle ? (
-                        <div className="flex gap-2 items-center w-full max-w-xl">
-                          <input
-                            type="text"
-                            value={editingTitleText}
-                            onChange={(e) => setEditingTitleText(e.target.value)}
-                            className="bg-black/40 border border-violet-500/40 rounded-xl px-4 py-2 text-white font-bold text-base focus:outline-none focus:border-violet-500 flex-1 w-full font-sans"
-                            placeholder="Masukkan judul rangkuman..."
-                            onKeyDown={(e) => e.key === 'Enter' && handleSaveRename()}
-                          />
-                          <button
-                            onClick={handleSaveRename}
-                            className="p-2.5 rounded-xl bg-violet-600 text-white hover:bg-violet-500 transition-colors"
-                          >
-                            <Check className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setIsEditingTitle(false)}
-                            className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 group/title w-full">
-                          <h2 className="text-xl md:text-2xl font-black text-white leading-tight tracking-tight select-text">
-                            {selectedSummary.title}
-                          </h2>
-                          <button
-                            onClick={handleStartRename}
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-zinc-500 opacity-0 transition-all duration-200 hover:bg-white/5 hover:text-white group-hover/title:opacity-100 focus-visible:opacity-100"
-                            title="Ubah Judul"
-                          >
-                            <FileSignature className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 sm:self-center shrink-0 relative">
-                      {/* POP PANEL BERBAGI */}
-                      <button
-                        onClick={() => setShowSharePopover(!showSharePopover)}
-                        className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all duration-200 ${
-                          showSharePopover
-                            ? 'bg-violet-600 border-violet-500 text-white shadow shadow-violet-500/20'
-                            : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white hover:border-white/20'
-                        }`}
-                        title="Bagikan Rangkuman"
-                        aria-expanded={showSharePopover}
-                        aria-controls="summary-share-popover"
-                      >
-                        <Share2 className="h-4 w-4" />
-                        <span>Bagikan</span>
-                      </button>
-
-                      {showSharePopover && (
-                        <>
-                          <div 
-                            className="fixed inset-0 z-30" 
-                            onClick={() => setShowSharePopover(false)}
-                          />
-                          <div id="summary-share-popover" className="absolute right-0 z-40 mt-12 w-80 space-y-4 rounded-2xl border border-white/[0.08] bg-[#0F0E17]/95 p-4 text-left shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="flex justify-between items-center pb-2 border-b border-white/[0.06]">
-                              <h4 className="text-sm font-black text-white">Bagikan Rangkuman</h4>
-                              <button
-                                onClick={() => setShowSharePopover(false)}
-                                className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/5 hover:text-white"
-                                aria-label="Tutup opsi berbagi"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-zinc-400 font-semibold flex items-center gap-1.5">
-                                  {selectedSummary.is_public ? (
-                                    <>
-                                      <Globe className="h-3.5 w-3.5 text-emerald-400" />
-                                      <span className="text-emerald-400 font-bold">Publik</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Lock className="h-3.5 w-3.5 text-zinc-500" />
-                                      <span>Privat (Hanya Anda)</span>
-                                    </>
-                                  )}
-                                </span>
-                                
-                                <button
-                                  onClick={handleTogglePublic}
-                                  className={`min-h-11 rounded-lg px-3 text-xs font-bold transition-all duration-200 ${
-                                    selectedSummary.is_public
-                                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20'
-                                      : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                                  }`}
-                                >
-                                  {selectedSummary.is_public ? 'Ubah ke Privat' : 'Aktifkan Link'}
-                                </button>
-                              </div>
-
-                              {selectedSummary.is_public && selectedSummary.public_slug && (
-                                <div className="space-y-2 pt-2 animate-in fade-in duration-200">
-                                  <p className="text-[10px] text-zinc-400 font-medium">Siapa saja yang memiliki link ini dapat membaca rangkuman:</p>
-                                  <div className="flex gap-2 items-center bg-black/40 border border-white/[0.08] p-2 rounded-xl">
-                                    <input
-                                      type="text"
-                                      readOnly
-                                      value={typeof window !== 'undefined' ? `${window.location.origin}/s/${selectedSummary.public_slug}` : ''}
-                                      className="bg-transparent text-xs text-zinc-300 font-mono focus:outline-none flex-1 select-all"
-                                    />
-                                    <button
-                                      onClick={() => {
-                                        const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/s/${selectedSummary.public_slug}` : '';
-                                        navigator.clipboard.writeText(shareUrl);
-                                        setCopiedShareLink(true);
-                                        showToast('Link berhasil disalin! 📋', 'success');
-                                        setTimeout(() => setCopiedShareLink(false), 2000);
-                                      }}
-                                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-                                      title="Salin Link"
-                                    >
-                                      {copiedShareLink ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                                    </button>
-                                    <a
-                                      href={`/s/${selectedSummary.public_slug}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-                                      title="Buka Halaman Publik"
-                                    >
-                                      <ExternalLink className="h-3.5 w-3.5" />
-                                    </a>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      )}
-
-                      {/* Share Card (4.5C) Button */}
-                      <button
-                        onClick={() => setShowShareCardModal(true)}
-                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 hover:border-violet-500/20 hover:bg-violet-500/10 hover:text-violet-400"
-                        title="Buat Kartu untuk Sosmed"
-                      >
-                        <ImageDown className="h-4 w-4" />
-                      </button>
-
-                      <button
-                        onClick={(e) => handleDeleteSummary(selectedSummary.id, e)}
-                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-500 transition-all duration-200 hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400"
-                        title="Hapus Rangkuman"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-
-
-                  {/* Prominent popover matkul selector & detail row */}
-                  <div className="flex flex-wrap items-center gap-y-3 gap-x-5 text-xs text-zinc-400 border-t border-white/[0.04] pt-4">
-                    
-                    {/* PROMINENT CATEGORY POPULAR DROPDOWN */}
-                    <div className="relative">
-                      <button 
-                        onClick={() => setShowFolderSelectDropdown(!showFolderSelectDropdown)}
-                        className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-zinc-300 shadow-sm transition-all duration-200 hover:border-violet-500/40 hover:text-white"
-                      >
-                        <Folder className="h-3.5 w-3.5 text-violet-400" />
-                        <span>Mata Kuliah:</span>
-                        <span className="font-extrabold text-violet-300">
-                          {selectedSummary.folder_id 
-                            ? folders.find(f => f.id === selectedSummary.folder_id)?.name || 'Belum Dikategorikan'
-                            : 'Belum Dikategorikan'}
-                        </span>
-                        <ChevronDown className="h-3 w-3 text-zinc-500" />
-                      </button>
-
-                      {showFolderSelectDropdown && (
-                        <>
-                          <div 
-                            className="fixed inset-0 z-10" 
-                            onClick={() => setShowFolderSelectDropdown(false)}
-                          />
-                          <div className="absolute left-0 mt-2 w-56 rounded-2xl bg-[#0F0E17] border border-white/[0.08] p-2 shadow-2xl z-20 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <p className="px-2.5 py-1.5 text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
-                              Pindahkan ke:
-                            </p>
-                            <button
-                              onClick={() => {
-                                handleMoveFolder('null');
-                                setShowFolderSelectDropdown(false);
-                              }}
-                              className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs text-left transition-colors ${
-                                !selectedSummary.folder_id 
-                                  ? 'bg-violet-600 text-white font-bold' 
-                                  : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
-                              }`}
-                            >
-                              📁 Belum Dikategorikan
-                            </button>
-                            {folders.map(f => (
-                              <button
-                                key={f.id}
-                                onClick={() => {
-                                  handleMoveFolder(f.id);
-                                  setShowFolderSelectDropdown(false);
-                                }}
-                                className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs text-left transition-colors ${
-                                  selectedSummary.folder_id === f.id 
-                                    ? 'bg-violet-600 text-white font-bold' 
-                                    : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200'
-                                }`}
-                              >
-                                <span>{f.icon}</span>
-                                <span className="truncate">{f.name}</span>
-                                <span className="h-1.5 w-1.5 rounded-full ml-auto" style={{ backgroundColor: f.color }} />
-                              </button>
-                            ))}
-
-                            {/* Tambah Mata Kuliah Baru Shortcut */}
-                            <div className="border-t border-white/5 mt-1.5 pt-1.5">
-                              <button
-                                onClick={() => {
-                                  setShowFolderSelectDropdown(false);
-                                  setEditingFolder(null);
-                                  setFolderName('');
-                                  setFolderColor('#8B5CF6');
-                                  setFolderIcon('📁');
-                                  setShowFolderModal(true);
-                                }}
-                                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs text-left text-violet-400 hover:bg-violet-500/10 hover:text-violet-300 transition-colors font-bold"
-                              >
-                                <Plus className="h-3.5 w-3.5" />
-                                <span>Buat Mata Kuliah Baru</span>
-                              </button>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {selectedSummary.file_name && (
-                      <div className="flex items-center gap-1.5">
-                        <FileAudio className="h-3.5 w-3.5 text-zinc-500" />
-                        <span className="truncate max-w-[160px]" title={selectedSummary.file_name}>{selectedSummary.file_name}</span>
-                      </div>
-                    )}
-
-                    {selectedSummary.duration_sec && (
-                      <div>
-                        <span className="font-semibold text-zinc-500">Durasi:</span>{' '}
-                        <span className="text-zinc-300 font-mono">{formatDuration(selectedSummary.duration_sec)}</span>
-                      </div>
-                    )}
-
-                    {selectedSummary.word_count && (
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <div>
-                          <span className="font-semibold text-zinc-500">Total Kata:</span>{' '}
-                          <span className="text-zinc-300 font-medium">{selectedSummary.word_count} kata</span>
-                        </div>
-                        <span className="text-zinc-600">•</span>
-                        <span className="text-emerald-400 font-medium flex items-center gap-1 font-mono bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">
-                          ⏱️ Fokus aktif: {formatDuration(studySeconds)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-zinc-500" />
-                      <span>{new Date(selectedSummary.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* TAB WINDOW DISPLAY CARD */}
-                <div className="rounded-3xl bg-white/[0.01] border border-white/[0.04] backdrop-blur-md shadow-2xl flex flex-col overflow-hidden min-h-[500px]">
-                  
-                  <div className="bg-[#0C0A12]/40 px-6 py-4 border-b border-white/[0.04] flex items-center justify-end shrink-0">
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          const printStyle = document.createElement('style');
-                          printStyle.id = 'notara-print-style';
-                          printStyle.innerHTML = `
-                            @media print {
-                              body > * { display: none !important; }
-                              #notara-print-area { display: block !important; }
-                              #notara-print-area { font-family: Georgia, serif; color: #000; background: #fff; padding: 2rem; }
-                              #notara-print-area h1 { font-size: 1.5rem; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-                              #notara-print-area h2 { font-size: 1.2rem; font-weight: bold; margin-top: 1.5rem; color: #5b21b6; }
-                              #notara-print-area table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-                              #notara-print-area th { background: #f3f0ff; padding: 8px; text-align: left; border: 1px solid #ddd; }
-                              #notara-print-area td { padding: 8px; border: 1px solid #ddd; }
-                              #notara-print-area blockquote { border-left: 3px solid #7c3aed; padding-left: 1rem; color: #555; }
-                            }
-                          `;
-                          document.head.appendChild(printStyle);
-
-                          const printArea = document.createElement('div');
-                          printArea.id = 'notara-print-area';
-                          printArea.style.display = 'none';
-                          const titleEl = document.createElement('h1');
-                          titleEl.textContent = selectedSummary.title;
-                          printArea.appendChild(titleEl);
-                          const contentEl = document.createElement('div');
-                          // Render summary text as simple text for print
-                          contentEl.innerHTML = convertMarkdownToHtml(selectedSummary.summary);
-                          printArea.appendChild(contentEl);
-                          document.body.appendChild(printArea);
-
-                          window.print();
-
-                          setTimeout(() => {
-                            document.head.removeChild(printStyle);
-                            document.body.removeChild(printArea);
-                          }, 1000);
-                        }}
-                        className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/5 px-3.5 text-xs font-bold text-zinc-300 transition-all duration-200 hover:border-white/10 hover:bg-white/10 active:scale-95"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        Export PDF
-                      </button>
-
-                      <button
-                        onClick={handleExportWord}
-                        className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/5 px-3.5 text-xs font-bold text-zinc-300 transition-all duration-200 hover:border-white/10 hover:bg-white/10 active:scale-95"
-                      >
-                        <FileSignature className="h-3.5 w-3.5 text-indigo-400" />
-                        Export Word
-                      </button>
-
-                      {audioBlob && (
-                        <button
-                          onClick={handleDownloadAudio}
-                          className="flex min-h-11 items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/5 px-3.5 text-xs font-bold text-zinc-300 transition-all duration-200 hover:border-white/10 hover:bg-white/10 active:scale-95"
-                        >
-                          <FileAudio className="h-3.5 w-3.5 text-violet-400" />
-                          Unduh Audio
-                        </button>
-                      )}
-
-                      <button
-                        onClick={handleCopy}
-                        className="flex min-h-11 items-center gap-1.5 rounded-xl bg-violet-600 px-3.5 text-xs font-bold text-white transition-all duration-200 hover:bg-violet-500 active:scale-95"
-                      >
-                        {copied ? (
-                          <>
-                            <Check className="h-3.5 w-3.5 text-emerald-300" />
-                            Tersalin!
-                          </>
-                        ) : (
-                          <>
-                            <Clipboard className="h-3.5 w-3.5" />
-                            Salin Teks
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 p-6 md:p-8 select-text overflow-y-auto">
-                    {activeTab === 'summary' ? (
-                      <div className="prose prose-invert max-w-none text-zinc-300 select-text leading-relaxed text-sm">
-                        {renderMarkdown(selectedSummary.summary)}
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-white/5 pb-2">
-                          <FileText className="h-4 w-4 text-violet-400" />
-                          Salinan Suara (Transkrip)
-                        </h3>
-                        <div className="text-zinc-300 leading-relaxed font-sans text-sm whitespace-pre-wrap select-text p-4 rounded-2xl bg-black/25 border border-white/[0.02]">
-                          {selectedSummary.transcript}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                </div>
               </StudyCanvasBoundary>
             )}
 

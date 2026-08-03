@@ -1,56 +1,56 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import {
+  getRequestBaseUrl,
+  sanitizeAuthDestination,
+} from '@/lib/auth/redirect';
+
+function redirectToLogin(baseUrl: string, reason: string) {
+  const loginUrl = new URL('/login', baseUrl);
+  loginUrl.searchParams.set('error', reason);
+  return NextResponse.redirect(loginUrl);
+}
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get('code');
-  const error = searchParams.get('error');           // e.g. 'access_denied' when user cancels
-  const errorCode = searchParams.get('error_code');  // e.g. 'flow_state_already_used'
-  const next = searchParams.get('next') ?? '/dashboard';
+  const requestUrl = new URL(request.url);
+  const baseUrl = getRequestBaseUrl(request);
+  const code = requestUrl.searchParams.get('code');
+  const error = requestUrl.searchParams.get('error');
+  const errorCode = requestUrl.searchParams.get('error_code');
+  const destination = sanitizeAuthDestination(requestUrl.searchParams.get('next'));
 
-  // ── 1. User explicitly clicked "Cancel" / "Batal" on Google's screen ──────
   if (error === 'access_denied') {
-    // Go back to login with cancelled flag — middleware allows staying on /login
-    return NextResponse.redirect(`${origin}/login?cancelled=1`);
+    const cancelledUrl = new URL('/login', baseUrl);
+    cancelledUrl.searchParams.set('cancelled', '1');
+    return NextResponse.redirect(cancelledUrl);
   }
 
-  // ── 1b. flow_state_already_used — code was used before (double-redirect) ──
   if (errorCode === 'flow_state_already_used' || error === 'invalid_request') {
-    return NextResponse.redirect(`${origin}/login?error=session-expired`);
+    return redirectToLogin(baseUrl, 'session-expired');
   }
 
-  // ── 2. Any other OAuth error before we get a code ─────────────────────────
-  if (error) {
-    return NextResponse.redirect(`${origin}/login?error=oauth-error`);
-  }
+  if (error) return redirectToLogin(baseUrl, 'oauth-error');
+  if (!code) return redirectToLogin(baseUrl, 'auth-code-exchange-failed');
 
-  // ── 3. Happy path: exchange the authorization code for a session ───────────
-  if (code) {
+  try {
     const supabase = await createClient();
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!exchangeError) {
-      const forwardedHost = request.headers.get('x-forwarded-host');
-      const isLocalEnv = process.env.NODE_ENV === 'development';
-      const baseUrl = isLocalEnv
-        ? origin
-        : forwardedHost
-          ? `https://${forwardedHost}`
-          : origin;
-
-      // Redirect to dashboard — login page already set sessionStorage flag
-      return NextResponse.redirect(`${baseUrl}${next}`);
+      return NextResponse.redirect(new URL(destination, baseUrl));
     }
 
-    // ── 3b. Code exchange failed (e.g. flow_state_already_used / expired) ──
-    const errMsg = exchangeError.message?.toLowerCase() ?? '';
-    if (errMsg.includes('flow_state') || errMsg.includes('already been used') || errMsg.includes('expired')) {
-      return NextResponse.redirect(`${origin}/login?error=session-expired`);
+    const errorMessage = exchangeError.message?.toLowerCase() ?? '';
+    if (
+      errorMessage.includes('flow_state')
+      || errorMessage.includes('already been used')
+      || errorMessage.includes('expired')
+    ) {
+      return redirectToLogin(baseUrl, 'session-expired');
     }
 
-    return NextResponse.redirect(`${origin}/login?error=auth-code-exchange-failed`);
+    return redirectToLogin(baseUrl, 'auth-code-exchange-failed');
+  } catch {
+    return redirectToLogin(baseUrl, 'auth-code-exchange-failed');
   }
-
-  // ── 4. Fallback: code missing ───────────────────────────────────────────────
-  return NextResponse.redirect(`${origin}/login?error=auth-code-exchange-failed`);
 }

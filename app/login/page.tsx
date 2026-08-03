@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { resolveAuthOrigin, sanitizeAuthDestination } from '@/lib/auth/redirect';
 import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, Zap, MessageSquare, FolderGit2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { NotaraBrand } from '../components/brand/NotaraBrand';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
@@ -133,10 +134,11 @@ function LoginForm() {
       localStorage.setItem('login_success', '1');
       sessionStorage.setItem('login_success', '1');
 
-      const redirectVal = searchParams.get('redirect') || '';
-      const redirectTo = redirectVal
-        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectVal)}`
-        : `${window.location.origin}/auth/callback`;
+      const redirectOrigin = resolveAuthOrigin(
+        window.location.origin,
+        process.env.NEXT_PUBLIC_SITE_URL,
+      );
+      const redirectTo = `${redirectOrigin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -195,11 +197,12 @@ function LoginForm() {
       setErrorMsg(null);
       setSuccessMsg(null);
 
-      const redirectVal = searchParams.get('redirect') || '';
-      const emailRedirectTo = redirectVal
-        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectVal)}`
-        : `${window.location.origin}/auth/callback`;
-      const nextParam = redirectVal || '/dashboard';
+      const redirectOrigin = resolveAuthOrigin(
+        window.location.origin,
+        process.env.NEXT_PUBLIC_SITE_URL,
+      );
+      const emailRedirectTo = `${redirectOrigin}/auth/callback`;
+      const nextParam = sanitizeAuthDestination(searchParams.get('redirect'));
 
       if (isSignUp) {
         // Sign Up Flow

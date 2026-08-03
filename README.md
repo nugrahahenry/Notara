@@ -63,6 +63,7 @@ Buat `.env.local` sendiri (jangan pernah di-commit), lalu isi hanya nama variabe
 ```text
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SITE_URL=
 GROQ_API_KEY=
 MIDTRANS_SERVER_KEY=
 NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=
@@ -81,6 +82,7 @@ npm run build
 ## Database dan deployment
 
 - Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`.
+- Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, misalnya `https://notara.example.com`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://notara.example.com/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
 - Jangan menjalankan `supabase/schema.sql` secara utuh pada project live; ia historis dan memiliki urutan/policy yang tidak aman untuk dipakai sebagai migrasi canonical.
 - Deploy di Vercel setelah environment variable tersedia pada target environment. Perubahan migrasi, RLS, atau billing harus diverifikasi dulu di lingkungan yang aman.
 

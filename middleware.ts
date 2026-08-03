@@ -1,7 +1,23 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+  buildOAuthRecoveryUrl,
+  getRequestBaseUrl,
+  sanitizeAuthDestination,
+} from '@/lib/auth/redirect';
 
 export async function middleware(request: NextRequest) {
+  // Recovery untuk konfigurasi Supabase yang masih memulangkan PKCE code ke
+  // Site URL (/). Code tetap ditukar hanya oleh route callback resmi.
+  const recoveryUrl = buildOAuthRecoveryUrl(request.nextUrl);
+  if (recoveryUrl) {
+    const publicRecoveryUrl = new URL(
+      `${recoveryUrl.pathname}${recoveryUrl.search}`,
+      getRequestBaseUrl(request),
+    );
+    return NextResponse.redirect(publicRecoveryUrl);
+  }
+
   // Jalur uji lokal: sengaja hanya berlaku saat `next dev`. Ini memungkinkan
   // perekam dan pipeline Groq dites ketika project Supabase sedang nonaktif,
   // tanpa pernah membuka dashboard pada build/deploy production.
@@ -56,7 +72,10 @@ export async function middleware(request: NextRequest) {
   // redirect ke /login
   if (!user) {
     if (!isPublicRoute) {
+      const requestedDestination = sanitizeAuthDestination(`${url.pathname}${url.search}`);
       url.pathname = '/login';
+      url.search = '';
+      url.searchParams.set('redirect', requestedDestination);
       const redirectResponse = NextResponse.redirect(url);
       // Bawa cookie sesi yang mungkin baru di-refresh oleh getUser(), kalau tidak
       // cookie itu hilang di response redirect dan session jadi desync.

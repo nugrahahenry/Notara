@@ -20,6 +20,7 @@
     "lib/capture/policy.ts",
     "lib/capture/pipeline.ts",
     "lib/capture/task.ts",
+    "lib/auth/redirect.ts",
     "lib/learning/fallback.ts"
   ],
   "exclude": ["node_modules", "build"]
