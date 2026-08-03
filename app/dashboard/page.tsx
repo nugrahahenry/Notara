@@ -4450,22 +4450,36 @@ export default function Home() {
                   </div>
                 </div>
               ) : (
-                <div className="max-w-2xl mx-auto animate-in fade-in duration-300 relative">
-                  
-                  {/* Jumbotron banner */}
-                  <div className="text-center max-w-xl mx-auto mb-8 relative">
-                    <span className="px-3.5 py-1.5 rounded-full bg-violet-500/5 border border-violet-500/15 text-violet-300 text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 mb-6">
-                      <Sparkles className="h-3 w-3 text-violet-400" />
-                      NEURAL NEXUS
+                <div className="relative mx-auto max-w-3xl animate-in fade-in px-4 py-4 duration-300 sm:px-6 md:py-8">
+                  <header className="mb-8 border-b border-[var(--border-subtle)] pb-7">
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--knowledge-accent)]">
+                      Capture
                     </span>
-                    <h2 className="mb-4 text-3xl font-black leading-tight tracking-tight text-[var(--text-primary)] md:text-4xl">
-                      Reduksi Kuliah 1 Jam <br />
-                      <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">Jadi Rangkuman 1 Halaman</span>
-                    </h2>
-                    <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                      Pilih antara mengunggah berkas audio/video rekaman atau merekam secara langsung dari browser laptopmu sekarang.
-                    </p>
-                  </div>
+                    <div className="mt-3 grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                      <div>
+                        <h1 className="font-serif text-3xl font-semibold tracking-[-0.035em] text-[var(--text-primary)] md:text-4xl">
+                          Tambahkan materi baru
+                        </h1>
+                        <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+                          Rekam kuliah atau unggah audio/video. Antrean diproses berurutan di tab ini, lalu audio dibuang setelah transkripsi selesai.
+                        </p>
+                      </div>
+                      <dl className="grid grid-cols-3 gap-2 text-center md:min-w-72">
+                        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-3 py-2.5">
+                          <dt className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Antrean</dt>
+                          <dd className="mt-1 text-xs font-extrabold text-[var(--text-primary)]">Maks. 3</dd>
+                        </div>
+                        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-3 py-2.5">
+                          <dt className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Ukuran</dt>
+                          <dd className="mt-1 text-xs font-extrabold text-[var(--text-primary)]">150 MB</dd>
+                        </div>
+                        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-3 py-2.5">
+                          <dt className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Privasi</dt>
+                          <dd className="mt-1 text-xs font-extrabold text-[var(--text-primary)]">Tanpa audio</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </header>
 
                   {/* Upload vs Recording Selector Toggle */}
                   <CaptureSourceTabs
