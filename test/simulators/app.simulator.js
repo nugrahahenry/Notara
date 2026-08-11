@@ -750,8 +750,9 @@ class AppSimulator {
       const canvas = await html2canvas(canvasEl);
       
       const link = global.document.createElement('a');
-      const safeTitle = this.selectedSummary.title.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 40).replace(/\s+/g, '_') || 'notara_card';
-      link.download = `notara_${safeTitle}_${format}.png`;
+      const safeTitle = this.selectedSummary.title.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 40).replace(/\s+/g, '_') || 'nalira_card';
+      link.download = `nalira_${safeTitle}_${format}.png`;
+      this.lastDownloadFilename = link.download;
       link.href = canvas.toDataURL('image/png');
       link.click();
       

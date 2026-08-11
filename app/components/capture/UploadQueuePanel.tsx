@@ -8,7 +8,7 @@ import {
 import { AlertCircle, CheckCircle2, Plus, Trash2, UploadCloud } from 'lucide-react';
 import { MAX_QUEUE_FILES } from '@/lib/capture/constants';
 import type { CaptureTask } from '@/lib/capture/task';
-import { NaliraBrand } from '../brand/NaliraBrand';
+import { EmptyStateArtwork } from '../brand/ProductArtwork';
 import { CaptureTaskList } from './CaptureTaskList';
 
 export type CaptureDragState = 'idle' | 'valid' | 'invalid';
@@ -96,7 +96,7 @@ export function UploadQueuePanel({
             ) : files.length > 0 ? (
               <UploadCloud className="h-8 w-8 text-[var(--action-primary)]" aria-hidden="true" />
             ) : (
-              <NaliraBrand variant="icon" animated motionState="thinking" size={36} />
+              <EmptyStateArtwork variant="capture" size={52} />
             )}
           </div>
 
@@ -121,7 +121,7 @@ export function UploadQueuePanel({
           </button>
 
           <p className="text-xs font-medium text-[var(--text-secondary)]">
-            MP3, M4A, WAV, MP4, WEBM, MOV • maksimal 150 MB per file • {files.length}/{MAX_QUEUE_FILES} terpilih
+            MP3, M4A, WAV, MP4, WEBM, MOV / maksimal 150 MB per file / {files.length}/{MAX_QUEUE_FILES} terpilih
           </p>
         </div>
       </div>

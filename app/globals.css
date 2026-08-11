@@ -203,7 +203,7 @@ body {
   flex: 1;
   flex-direction: column;
   background: var(--surface-app);
-  transition: padding-left 180ms ease, background-color 180ms ease;
+  transition: background-color 180ms ease;
 }
 
 .notara-shell-topbar {
@@ -845,14 +845,13 @@ body {
   align-items: center;
   gap: 12px;
   margin-top: 20px;
-  border: 1px solid var(--border-subtle);
-  border-left: 3px solid var(--review-accent);
+  border: 1px solid color-mix(in srgb, var(--review-accent) 34%, var(--border-subtle));
   border-radius: 16px;
   background: color-mix(in srgb, var(--surface-elevated) 72%, var(--surface-app) 28%);
   padding: 15px 17px;
 }
 
-.notara-home-processing[data-state="failed"] { border-left-color: var(--danger-accent); }
+.notara-home-processing[data-state="failed"] { border-color: color-mix(in srgb, var(--danger-accent) 42%, var(--border-subtle)); }
 .notara-home-processing-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--review-accent); }
 .notara-home-processing[data-state="failed"] .notara-home-processing-dot { background: var(--danger-accent); }
 .notara-home-processing strong,
@@ -1417,8 +1416,7 @@ body {
   display: flex;
   align-items: center;
   gap: 18px;
-  border: 1px solid var(--border-subtle);
-  border-left: 3px solid var(--knowledge-accent);
+  border: 1px solid color-mix(in srgb, var(--knowledge-accent) 32%, var(--border-subtle));
   border-radius: 14px;
   background: var(--surface-tool);
   padding: 16px 18px;
@@ -1936,4 +1934,195 @@ body {
   .notara-learning-lab[data-open="true"] .notara-lab-rail button { min-width: 76px; grid-template-columns: 18px auto; place-items: center start; padding: 6px 8px; }
   .notara-learning-lab[data-open="true"] .notara-lab-rail button span { display: block; }
   .notara-learning-lab:not([data-open="true"]) .notara-lab-panel { visibility: visible; }
+}
+
+/* Nalira centralized product visuals */
+.notara-brand-mark__frame {
+  fill: color-mix(in srgb, var(--surface-elevated) 78%, var(--brand-primary) 22%);
+  stroke: color-mix(in srgb, currentColor 56%, var(--border-subtle));
+  stroke-width: 1.25;
+}
+
+.notara-brand-mark--animated .notara-brand-mark__source {
+  transform-origin: 22px 16px;
+}
+
+.notara-recording-visual {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--brand-primary);
+}
+
+.notara-recording-visual canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.notara-recording-visual__baseline {
+  position: absolute;
+  right: 8%;
+  left: 8%;
+  height: 1px;
+  background: color-mix(in srgb, var(--brand-primary) 24%, transparent);
+}
+
+.notara-recording-visual__pulse {
+  width: 76px;
+  height: 76px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 36%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-primary) 8%, transparent);
+}
+
+.notara-recording-visual__bars {
+  position: absolute;
+  display: flex;
+  height: 42px;
+  align-items: center;
+  gap: 5px;
+}
+
+.notara-recording-visual__bars i {
+  width: 3px;
+  height: 12px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.56;
+  transform-origin: center;
+}
+
+.notara-recording-visual__bars i:nth-child(2),
+.notara-recording-visual__bars i:nth-child(4) { height: 24px; }
+.notara-recording-visual__bars i:nth-child(3) { height: 34px; }
+
+.notara-recording-visual[data-state="recording"] .notara-recording-visual__pulse {
+  animation: notara-recording-pulse 1.8s ease-out infinite;
+}
+
+.notara-recording-visual[data-state="recording"] .notara-recording-visual__bars i {
+  animation: notara-recording-bar 760ms ease-in-out infinite alternate;
+}
+
+.notara-recording-visual[data-state="recording"] .notara-recording-visual__bars i:nth-child(2),
+.notara-recording-visual[data-state="recording"] .notara-recording-visual__bars i:nth-child(4) { animation-delay: 110ms; }
+.notara-recording-visual[data-state="recording"] .notara-recording-visual__bars i:nth-child(3) { animation-delay: 220ms; }
+.notara-recording-visual[data-state="paused"] { color: var(--review-accent); }
+.notara-recording-visual[data-state="ready"] { color: var(--success-accent); }
+
+.notara-recording-status {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+  padding: 6px 11px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.notara-recording-status--ready {
+  border-color: color-mix(in srgb, var(--success-accent) 30%, var(--border-subtle));
+  color: var(--success-accent);
+}
+
+.notara-processing-visual {
+  position: relative;
+  display: grid;
+  width: var(--notara-visual-size, 112px);
+  height: var(--notara-visual-size, 112px);
+  place-items: center;
+  color: var(--brand-primary);
+}
+
+.notara-processing-visual__orbit {
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 34%, transparent);
+  border-top-color: var(--brand-primary);
+  border-radius: 999px;
+  animation: notara-processing-orbit 2.3s linear infinite;
+}
+
+.notara-processing-visual__orbit--inner {
+  inset: 12%;
+  border-top-color: var(--knowledge-accent);
+  animation-duration: 1.65s;
+  animation-direction: reverse;
+}
+
+.notara-processing-visual > .notara-brand-mark {
+  width: 58%;
+  height: 58%;
+}
+
+.notara-processing-visual[data-state="success"] { color: var(--success-accent); }
+.notara-processing-visual[data-state="error"] { color: var(--danger-accent); }
+.notara-processing-visual:not([data-state="processing"]) .notara-processing-visual__orbit { animation: none; }
+
+.notara-empty-artwork {
+  flex: 0 0 auto;
+  overflow: visible;
+  color: var(--brand-primary);
+}
+
+.notara-empty-artwork rect {
+  fill: color-mix(in srgb, var(--brand-primary) 7%, var(--surface-elevated));
+  stroke: color-mix(in srgb, var(--brand-primary) 32%, var(--border-subtle));
+  stroke-width: 1.5;
+}
+
+.notara-empty-artwork path,
+.notara-empty-artwork circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.notara-empty-artwork[data-variant="shared"] { color: var(--knowledge-accent); }
+.notara-empty-artwork[data-variant="capture"] { color: var(--review-accent); }
+
+.notara-home-path-controls button,
+.notara-shared-list article > div:last-child button,
+.notara-shared-list article > div:last-child a {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@keyframes notara-recording-pulse {
+  0% { opacity: 0.65; transform: scale(0.72); }
+  100% { opacity: 0; transform: scale(1.42); }
+}
+
+@keyframes notara-recording-bar {
+  from { transform: scaleY(0.56); }
+  to { transform: scaleY(1.14); }
+}
+
+@keyframes notara-processing-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 639px) {
+  .notara-recording-status { max-width: calc(100% - 24px); }
+  .notara-empty-foundation > .notara-empty-artwork { width: 64px; height: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notara-recording-visual__pulse,
+  .notara-recording-visual__bars i,
+  .notara-processing-visual__orbit {
+    animation: none !important;
+  }
 }

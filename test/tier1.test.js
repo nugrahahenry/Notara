@@ -72,6 +72,7 @@ test.describe('Tier 1: Feature Coverage', () => {
       const success = await app.generateShareCard('feed');
       assert.strictEqual(success, true);
       assert.strictEqual(app.isGeneratingCard, false);
+      assert.strictEqual(app.lastDownloadFilename, 'nalira_Calculus_Lecture_feed.png');
     });
 
     test('2.3 should format custom safe download filenames properly', async () => {

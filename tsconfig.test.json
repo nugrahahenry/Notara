@@ -24,6 +24,14 @@
     "lib/learning/fallback.ts",
     "lib/runtime/health.ts",
     "lib/brand/identity.ts",
+    "app/components/brand/BrandPrimitives.tsx",
+    "app/components/brand/ProductArtwork.tsx",
+    "app/components/capture/RecordingPanel.tsx",
+    "app/components/capture/ProcessingView.tsx",
+    "app/components/capture/CaptureSourceTabs.tsx",
+    "app/components/workspace/HomeWorkspace.tsx",
+    "app/components/workspace/CoursesWorkspace.tsx",
+    "app/components/workspace/SharedWorkspace.tsx",
     "app/api/health/route.ts"
   ],
   "exclude": ["node_modules", "build"]

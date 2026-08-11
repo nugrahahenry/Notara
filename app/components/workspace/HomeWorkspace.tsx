@@ -17,6 +17,7 @@ import {
   Upload,
 } from 'lucide-react';
 import type { Folder, Summary } from '@/lib/types';
+import { AmbientArtwork } from '../brand/ProductArtwork';
 import {
   buildLearningFallback,
   getDaypart,
@@ -84,7 +85,7 @@ function summaryPreview(value: string): string {
     .trim();
 
   if (!plain) return 'Rangkuman ini siap dibuka kembali di Study Canvas.';
-  return plain.length > 230 ? `${plain.slice(0, 227).trimEnd()}…` : plain;
+  return plain.length > 230 ? `${plain.slice(0, 227).trimEnd()}\u2026` : plain;
 }
 
 function AmbientScene({
@@ -117,19 +118,7 @@ function AmbientScene({
           <span><i aria-hidden="true" /> {firstUse ? 'Siap membuat materi pertama' : 'Fokus hari ini: 1 materi aktif'}</span>
         </div>
       </div>
-      <div className="notara-home-ambient-scene" aria-hidden="true">
-        <span className="notara-home-sky-orbit notara-home-sky-orbit--wide" />
-        <span className="notara-home-sky-orbit notara-home-sky-orbit--narrow" />
-        <span className="notara-home-sky-body" />
-        <span className="notara-home-horizon" />
-        <span className="notara-home-star notara-home-star--one" />
-        <span className="notara-home-star notara-home-star--two" />
-        <span className="notara-home-star notara-home-star--three" />
-        <svg className="notara-home-scene-signal" viewBox="0 0 190 92" fill="none">
-          <path d="M10 62c22-27 38 18 60-4s36 18 58-4 34 12 52-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-          <path d="M16 74h58c29 0 48-8 48-30v34l15-10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity=".66" />
-        </svg>
-      </div>
+      <AmbientArtwork daypart={daypart} />
     </header>
   );
 }
@@ -231,8 +220,8 @@ export function HomeWorkspace({
               <span className="notara-eyebrow">Study Canvas</span>
               <h3>Materi pertamamu akan tinggal di sini</h3>
               <div className="notara-home-preview-lines" aria-hidden="true"><i /><i /><i /></div>
-              <div className="notara-home-preview-formula">Rangkuman · Transkrip · Learning Lab</div>
-              <div className="notara-home-preview-dock"><MessageSquareText className="h-4 w-4" /><span>Tanya materi ini…</span></div>
+              <div className="notara-home-preview-formula">Rangkuman · Transkrip</div>
+              <div className="notara-home-preview-dock"><MessageSquareText className="h-4 w-4" /><span>Ruang belajar untuk materimu</span></div>
             </div>
           </div>
         </section>
@@ -263,15 +252,15 @@ export function HomeWorkspace({
 
       <div className="notara-home-grid">
         <div className="notara-home-main">
-          {learning && (
+          {learning && orderedSequence.length > 1 && (
             <section className="notara-home-learning-priority" aria-labelledby="learning-next-heading">
               <div className="notara-home-learning-head">
                 <div>
-                  <span className="notara-eyebrow">Arahan belajar sementara</span>
+                  <span className="notara-eyebrow">Pilihan berikutnya</span>
                   <h2 id="learning-next-heading">Belajar apa dulu?</h2>
-                  <p>Urutan ini memakai materi terbaru dan mata kuliah yang sudah ada. Nalira belum mengklaim analisis prasyarat atau progres otomatis.</p>
+                  <p>Nalira menempatkan materi terbaru lebih dahulu agar kamu dapat melanjutkan selagi konteksnya masih segar.</p>
                 </div>
-                <span className="notara-home-foundation-badge">Fallback transparan</span>
+                <span className="notara-home-foundation-badge">Berdasarkan aktivitas terbaru</span>
               </div>
 
               <div className="notara-home-priority-reason">
@@ -282,7 +271,7 @@ export function HomeWorkspace({
                 </div>
               </div>
 
-              <ol className="notara-home-path" aria-label="Urutan belajar sementara">
+              <ol className="notara-home-path" aria-label="Urutan materi">
                 {orderedSequence.slice(0, 3).map((item, index, visibleItems) => (
                   <li key={item.id} data-recommended={item.id === learning.recommendation.id}>
                     <button type="button" className="notara-home-path-main" onClick={() => onOpenSummary(item)}>
@@ -339,7 +328,7 @@ export function HomeWorkspace({
                 <div><dt>Tersedia</dt><dd>Rangkuman dan transkrip</dd></div>
               </dl>
               <div className="notara-home-continuation-footer">
-                <span>Rangkuman · Transkrip · Tutor Materi</span>
+                <span>Rangkuman · Transkrip</span>
                 <button type="button" onClick={() => onOpenSummary(continuation)} className="notara-primary-button">Buka Study Canvas <ArrowRight className="h-4 w-4" /></button>
               </div>
             </section>
@@ -384,7 +373,7 @@ export function HomeWorkspace({
           </section>
 
           <section className="notara-home-side-panel" aria-labelledby="add-material-heading">
-            <div className="notara-home-section-heading"><h2 id="add-material-heading">Tambahkan materi</h2><span>Utility</span></div>
+            <div className="notara-home-section-heading"><h2 id="add-material-heading">Tambahkan materi</h2><span>Cara menambah</span></div>
             <div className="notara-home-utility-grid">
               <button type="button" onClick={onRecord}><span><Mic className="h-4 w-4" /></span><strong>Rekam kuliah</strong><small>Mulai dari mikrofon</small></button>
               <button type="button" onClick={onUpload}><span><Upload className="h-4 w-4" /></span><strong>Upload file</strong><small>Audio atau video</small></button>

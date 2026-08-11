@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowRight, BookOpen, Clock3, FolderPlus, GraduationCap } from 'lucide-react';
+import { ArrowRight, BookOpen, Clock3, FolderPlus } from 'lucide-react';
+import { EmptyStateArtwork } from '../brand/ProductArtwork';
 import type { Folder, Summary } from '@/lib/types';
 
 interface CoursesWorkspaceProps {
@@ -37,8 +38,8 @@ export function CoursesWorkspace({
       <header className="notara-page-heading">
         <div>
           <span className="notara-eyebrow">Mata Kuliah</span>
-          <h1>Learning landscape</h1>
-          <p>Lihat hubungan antara mata kuliah, materi terbaru, dan titik yang bisa kamu lanjutkan.</p>
+          <h1>Ruang mata kuliah</h1>
+          <p>Di Nalira, temukan materi terbaru dan lanjutkan belajar dari konteks yang sama.</p>
         </div>
         <button type="button" onClick={onCreateCourse} className="notara-secondary-button">
           <FolderPlus className="h-4 w-4" /> Mata kuliah baru
@@ -47,7 +48,7 @@ export function CoursesWorkspace({
 
       {folders.length === 0 ? (
         <section className="notara-empty-foundation">
-          <GraduationCap className="h-7 w-7" />
+          <EmptyStateArtwork variant="courses" size={76} />
           <div>
             <h2>Belum ada mata kuliah</h2>
             <p>Buat mata kuliah untuk menjaga rangkuman dari satu konteks tetap berdekatan.</p>
@@ -89,7 +90,7 @@ export function CoursesWorkspace({
               )}
 
               <p className="mt-5 text-xs text-[var(--text-tertiary)]">
-                Progress belajar belum tersedia pada contract data saat ini; Nalira tidak menampilkan persentase palsu.
+                Progres belajar belum tersedia. Gunakan materi terbaru sebagai titik lanjut untuk saat ini.
               </p>
             </div>
 
@@ -97,7 +98,7 @@ export function CoursesWorkspace({
               <span className="notara-eyebrow">Aktivitas belajar</span>
               <dl>
                 <div><dt>Materi tersimpan</dt><dd>{activeMaterials.length}</dd></div>
-                <div><dt>Terakhir ditambah</dt><dd>{continuation ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(continuation.created_at)) : '—'}</dd></div>
+                <div><dt>Terakhir ditambah</dt><dd>{continuation ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(continuation.created_at)) : '\u2014'}</dd></div>
                 <div><dt>Status proses</dt><dd>Siap</dd></div>
               </dl>
             </aside>
@@ -118,7 +119,7 @@ export function CoursesWorkspace({
                       <span className="notara-course-icon" style={{ borderColor: folder.color }}>{folder.icon}</span>
                       <div>
                         <strong>{folder.name}</strong>
-                        <small>{materials.length} materi · {latest ? `terbaru ${latest.title}` : 'belum ada materi'}</small>
+                        <small>{materials.length} materi / {latest ? `terbaru ${latest.title}` : 'belum ada materi'}</small>
                       </div>
                       <ArrowRight className="ml-auto h-4 w-4" />
                     </button>

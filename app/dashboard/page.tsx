@@ -2663,7 +2663,7 @@ export default function Home() {
       const link = document.createElement('a');
       link.href = url;
       const cleanTitle = title.replace(/[^a-zA-Z0-9\s-_]/g, '').trim().replace(/\s+/g, '_');
-      link.download = `${cleanTitle}_Rangkuman_Notara.doc`;
+      link.download = `${cleanTitle}_Rangkuman_Nalira.doc`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -2684,7 +2684,7 @@ export default function Home() {
       const link = document.createElement('a');
       link.href = url;
       const dateStr = new Date().toISOString().slice(0, 10);
-      link.download = `Rekaman_Notara_${dateStr}.webm`;
+      link.download = `Rekaman_Nalira_${dateStr}.webm`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -3179,8 +3179,8 @@ export default function Home() {
         logging: false,
       });
       const link = document.createElement('a');
-      const safeTitle = selectedSummary.title.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 40).replace(/\s+/g, '_') || 'notara_card';
-      link.download = `notara_${safeTitle}_${shareCardFormat}.png`;
+      const safeTitle = selectedSummary.title.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 40).replace(/\s+/g, '_') || 'nalira_card';
+      link.download = `nalira_${safeTitle}_${shareCardFormat}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       showToast('Kartu berhasil diunduh! 🎉 Siap dibagikan ke sosmed.', 'success');
@@ -4333,7 +4333,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* UNIFIED NOTARA THINKING LOADER */}
+            {/* UNIFIED NALIRA THINKING LOADER */}
             {loading && (
               <>
                 <ProcessingView
@@ -5925,7 +5925,7 @@ export default function Home() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '14px',
                       }}>🧠</div>
-                      <span style={{ color: '#A78BFA', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em' }}>NOTARA</span>
+                      <span style={{ color: '#A78BFA', fontSize: '13px', fontWeight: '700', letterSpacing: '0.05em' }}>nalira</span>
                     </div>
 
                     {/* Category badge */}
@@ -5984,7 +5984,7 @@ export default function Home() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <p style={{ color: '#6B7280', fontSize: '9px', margin: 0 }}>Dibuat dengan</p>
-                        <p style={{ color: '#A78BFA', fontSize: '10px', fontWeight: '700', margin: 0 }}>notara.app</p>
+                        <p style={{ color: '#A78BFA', fontSize: '10px', fontWeight: '700', margin: 0 }}>nalira.app</p>
                       </div>
                       {shareUrl ? (
                         <div style={{

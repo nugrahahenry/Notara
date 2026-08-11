@@ -12,26 +12,32 @@ export function CaptureSourceTabs({
   onSelectRecording,
 }: CaptureSourceTabsProps) {
   return (
-    <div className="mx-auto mb-8 flex max-w-xs rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] p-1 text-xs font-bold">
+    <div className="mx-auto mb-8 flex max-w-xs rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] p-1 text-xs font-bold" role="tablist" aria-label="Sumber materi">
       <button
+        type="button"
+        role="tab"
+        aria-selected={!isRecordingMode}
         onClick={onSelectUpload}
-        className={`min-h-11 flex-1 cursor-pointer rounded-xl py-2 transition-colors ${
+        className={`min-h-11 flex-1 cursor-pointer rounded-xl px-3 py-2 transition-colors ${
           !isRecordingMode
             ? 'bg-[var(--surface-elevated)] text-[var(--nav-selected-text)] shadow-sm'
             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
         }`}
       >
-        Upload File
+        Upload file
       </button>
       <button
+        type="button"
+        role="tab"
+        aria-selected={isRecordingMode}
         onClick={onSelectRecording}
-        className={`min-h-11 flex-1 cursor-pointer rounded-xl py-2 transition-colors ${
+        className={`min-h-11 flex-1 cursor-pointer rounded-xl px-3 py-2 transition-colors ${
           isRecordingMode
             ? 'bg-[var(--surface-elevated)] text-[var(--nav-selected-text)] shadow-sm'
             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
         }`}
       >
-        Rekam Suara
+        Rekam suara
       </button>
     </div>
   );

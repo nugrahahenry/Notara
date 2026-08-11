@@ -330,7 +330,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1 mx-4">
                   <div className="mx-auto max-w-xs h-6 rounded-lg bg-white/[0.06] flex items-center justify-center px-3">
-                    <span className="text-[10px] text-zinc-500 font-mono">notara-hengs.vercel.app/dashboard</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">Nalira workspace</span>
                   </div>
                 </div>
               </div>

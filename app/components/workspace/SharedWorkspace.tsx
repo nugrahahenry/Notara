@@ -7,10 +7,9 @@ import {
   Copy,
   ExternalLink,
   Link2Off,
-  ShieldCheck,
-  Users,
 } from 'lucide-react';
 import type { Summary } from '@/lib/types';
+import { EmptyStateArtwork } from '../brand/ProductArtwork';
 
 type SharedFilter = 'all' | 'friends' | 'mine';
 
@@ -59,12 +58,12 @@ export function SharedWorkspace({ summaries, onOpenSummary, onCopyLink, onDisabl
             <div><span className="notara-eyebrow">Dari teman</span><h2 id="shared-friends-heading">Masuk ke ruang belajarmu</h2></div>
           </div>
           <div className="notara-honest-unavailable">
-            <Users className="h-5 w-5" />
+            <EmptyStateArtwork variant="shared" size={64} />
             <div>
               <strong>Inbox berbagi langsung belum tersedia</strong>
-              <p>Contract database saat ini mendukung link publik dan fork dari halaman berbagi, tetapi belum menyediakan daftar materi yang dikirim langsung kepadamu, permission, atau expiry.</p>
+              <p>Saat ini teman dapat berbagi melalui link publik. Kotak masuk langsung, pengaturan izin, dan batas waktu link akan hadir setelah alurnya siap.</p>
             </div>
-            <span>Fallback jujur</span>
+            <span>Tersedia lewat link</span>
           </div>
         </section>
       )}
@@ -77,7 +76,7 @@ export function SharedWorkspace({ summaries, onOpenSummary, onCopyLink, onDisabl
           </div>
           {publicSummaries.length === 0 ? (
             <div className="notara-empty-foundation">
-              <ShieldCheck className="h-6 w-6" />
+              <EmptyStateArtwork variant="shared" size={72} />
               <div><h2>Belum ada link publik</h2><p>Buka sebuah materi lalu aktifkan link dari tindakan Bagikan.</p></div>
             </div>
           ) : (
@@ -90,8 +89,8 @@ export function SharedWorkspace({ summaries, onOpenSummary, onCopyLink, onDisabl
                       <strong className="block truncate text-[var(--text-primary)]">{summary.title}</strong>
                     </button>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-tertiary)]">
-                      <span>Publik · siapa pun dengan link</span>
-                      <span>Tanpa expiry otomatis</span>
+                      <span>Publik / siapa pun dengan link</span>
+                      <span>Tanpa batas waktu otomatis</span>
                       <span>Metrik pembuka/komentar belum tersedia</span>
                     </div>
                   </div>
