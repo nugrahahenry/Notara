@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2, TriangleAlert } from 'lucide-react';
-import { NotaraBrand } from '../brand/NotaraBrand';
+import { NaliraBrand } from '../brand/NaliraBrand';
 
 interface ProcessingViewProps {
   thinkingElapsed: number;
@@ -47,12 +47,12 @@ export function ProcessingView({
       aria-describedby="capture-processing-status capture-tab-warning"
     >
       <div className="relative flex items-center justify-center" aria-hidden="true">
-        <NotaraBrand variant="processing" size={112} motionState="thinking" />
+        <NaliraBrand variant="processing" size={112} motionState="thinking" />
       </div>
 
       <div className="mt-7 flex flex-col items-center gap-1">
         <h2 id="capture-processing-title" className="text-xl font-black tracking-tight text-[var(--text-primary)]">
-          Notara sedang bekerja
+          Nalira sedang bekerja
         </h2>
         <p className="font-mono text-xs font-bold text-[var(--action-primary)]">
           {thinkingElapsed} detik berlalu

@@ -8,12 +8,12 @@ import {
   MessageSquare, Users, Crown, Check, X, Star,
   Globe, Eye, Folder
 } from 'lucide-react';
-import { NotaraBrand } from './components/brand/NotaraBrand';
+import { NaliraBrand } from './components/brand/NaliraBrand';
 import { StarryBackground } from './components/ui/StarryBackground';
 import { supabase } from '@/lib/supabase';
 
 // ==========================================
-// LANDING PAGE — Notara Neural Nexus
+// LANDING PAGE — Nalira
 // ==========================================
 
 export default function LandingPage() {
@@ -50,20 +50,20 @@ export default function LandingPage() {
   // FAQ Data
   const faqItems = [
     {
-      q: 'Apakah Notara gratis?',
+      q: 'Apakah Nalira gratis?',
       a: 'Ya! Paket Free memungkinkan Anda merekam dan merangkum hingga 5 catatan per bulan tanpa biaya apapun. Jika Anda membutuhkan kuota lebih, upgrade ke paket Pro atau Max.'
     },
     {
       q: 'Format audio apa yang didukung?',
-      a: 'Notara mendukung MP3, WAV, M4A, OGG, WebM, dan format audio utama lainnya. Anda juga bisa merekam langsung dari browser tanpa instal apapun.'
+      a: 'Nalira mendukung MP3, WAV, M4A, OGG, WebM, dan format audio utama lainnya. Anda juga bisa merekam langsung dari browser tanpa instal apapun.'
     },
     {
-      q: 'Bagaimana Notara melindungi privasi saya?',
-      a: 'Catatan dan transkrip Anda 100% milik Anda. Kami tidak pernah mempublikasikan, menjual, atau membagikan data Anda ke pihak ketiga. Arsitektur kami dibangun Private by Default.'
+      q: 'Bagaimana Nalira melindungi privasi saya?',
+      a: 'Audio diproses untuk transkripsi lalu tidak disimpan oleh aplikasi. Transkrip dan rangkuman tersimpan di akun Anda; materi hanya menjadi publik ketika Anda mengaktifkan link berbagi.'
     },
     {
       q: 'Apakah bisa digunakan untuk rapat kerja?',
-      a: 'Tentu! Notara dirancang untuk semua jenis audio — kuliah, rapat, podcast, wawancara, presentasi, dan lainnya. Neural Nexus AI menganalisis konteks apapun.'
+      a: 'Tentu! Nalira dirancang untuk semua jenis audio — kuliah, rapat, podcast, wawancara, presentasi, dan lainnya. Nalira AI menganalisis konteks apapun.'
     },
     {
       q: 'Metode pembayaran apa yang tersedia?',
@@ -90,7 +90,7 @@ export default function LandingPage() {
         { text: 'Rekam langsung dari browser', included: true },
         { text: 'Transkripsi Whisper AI', included: true },
         { text: 'Rangkuman otomatis', included: true },
-        { text: 'Neural Nexus AI Chat', included: false },
+        { text: 'Tanya Nalira', included: false },
         { text: 'Folder & organisasi', included: true },
         { text: 'Ekspor PDF', included: false },
         { text: 'Grup Studi kolaboratif', included: false },
@@ -111,7 +111,7 @@ export default function LandingPage() {
         { text: 'Rekam hingga 2 jam', included: true },
         { text: 'Transkripsi Whisper AI', included: true },
         { text: 'Rangkuman + Istilah Kunci', included: true },
-        { text: 'Neural Nexus AI Chat', included: true },
+        { text: 'Tanya Nalira', included: true },
         { text: 'Folder & organisasi', included: true },
         { text: 'Ekspor PDF & Share Card', included: true },
         { text: 'Grup Studi (maks 3)', included: true },
@@ -132,7 +132,7 @@ export default function LandingPage() {
         { text: 'Rekam tanpa batas durasi', included: true },
         { text: 'Transkripsi prioritas', included: true },
         { text: 'Rangkuman + Prediksi Soal', included: true },
-        { text: 'Neural Nexus AI — tanpa limit', included: true },
+        { text: 'Tanya Nalira — tanpa limit', included: true },
         { text: 'Keamanan 2FA & Audit Log', included: true },
         { text: 'API Access (coming soon)', included: true },
         { text: 'Grup Studi unlimited', included: true },
@@ -160,7 +160,7 @@ export default function LandingPage() {
     },
     {
       icon: <Brain className="w-8 h-8" />,
-      title: 'Neural Nexus AI Chat',
+      title: 'Tanya Nalira',
       description: 'Chatbot cerdas yang memahami konteks seluruh catatan Anda. Tanya jawab, cari info, atau minta penjelasan lebih lanjut.',
       gradient: 'from-emerald-500/20 to-teal-500/20',
       iconColor: 'text-emerald-400',
@@ -206,7 +206,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <NotaraBrand variant="horizontal" size={36} />
+              <NaliraBrand variant="horizontal" size={36} />
             </div>
 
             {/* Desktop Nav Links */}
@@ -255,7 +255,7 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold mb-8 animate-fadeIn">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Powered by Whisper AI & Llama 3.3</span>
+            <span>Didukung Groq Whisper & GPT-OSS</span>
           </div>
 
           {/* Main Heading */}
@@ -281,7 +281,7 @@ export default function LandingPage() {
               opacity: Math.max(0, 1 - scrollY / 800),
             }}
           >
-            Rekam kuliah, rapat, atau podcast langsung dari browser. Notara memotong audio,
+            Rekam kuliah, rapat, atau podcast langsung dari browser. Nalira memotong audio,
             mentranskripsikan dengan Whisper, lalu merangkum konsep kunci secara otomatis
             dengan AI — semua dalam hitungan detik.
           </p>
@@ -330,7 +330,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1 mx-4">
                   <div className="mx-auto max-w-xs h-6 rounded-lg bg-white/[0.06] flex items-center justify-center px-3">
-                    <span className="text-[10px] text-zinc-500 font-mono">notara.vercel.app/dashboard</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">notara-hengs.vercel.app/dashboard</span>
                   </div>
                 </div>
               </div>
@@ -419,7 +419,7 @@ export default function LandingPage() {
               </span>
             </h2>
             <p className="max-w-xl mx-auto text-zinc-400 text-base sm:text-lg">
-              Dari rekaman audio hingga rangkuman AI terstruktur — Notara menangani semua proses berat untuk Anda.
+              Dari rekaman audio hingga rangkuman AI terstruktur — Nalira menangani semua proses berat untuk Anda.
             </p>
           </div>
 
@@ -475,8 +475,8 @@ export default function LandingPage() {
               </h2>
               <p className="text-zinc-400 text-base sm:text-lg leading-relaxed mb-8">
                 Tidak seperti platform lain yang memaksa upload dokumen ke katalog publik,
-                Notara dibangun dengan arsitektur <strong className="text-zinc-200">Private by Default</strong>.
-                Catatan dan transkrip Anda tidak akan pernah dipublikasikan, dijual, atau dibagikan ke siapapun tanpa izin Anda.
+                Nalira dibangun dengan arsitektur <strong className="text-zinc-200">Private by Default</strong>.
+                Audio diproses untuk transkripsi lalu tidak disimpan oleh aplikasi. Transkrip dan rangkuman tersimpan di akun Anda, dan materi hanya menjadi publik ketika Anda mengaktifkan link berbagi.
               </p>
 
               {/* Privacy Features List */}
@@ -502,7 +502,7 @@ export default function LandingPage() {
             {/* Right: Visual comparison card */}
             <div className="relative">
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 space-y-6 backdrop-blur-sm">
-                <h3 className="text-lg font-bold text-white text-center mb-2">Platform Lain vs Notara</h3>
+                <h3 className="text-lg font-bold text-white text-center mb-2">Platform Lain vs Nalira</h3>
 
                 {/* Comparison items */}
                 {[
@@ -543,7 +543,7 @@ export default function LandingPage() {
                 <div className="grid grid-cols-[1fr_80px_80px] gap-3 pt-2">
                   <span />
                   <span className="text-xs text-zinc-500 text-center font-medium">Lainnya</span>
-                  <span className="text-xs text-violet-400 text-center font-bold">Notara</span>
+                  <span className="text-xs text-violet-400 text-center font-bold">Nalira</span>
                 </div>
               </div>
 
@@ -711,7 +711,7 @@ export default function LandingPage() {
               ?
             </h2>
             <p className="text-zinc-400 text-base sm:text-lg mb-8 max-w-lg mx-auto">
-              Bergabung dengan ribuan pelajar dan profesional yang sudah menggunakan Notara untuk merangkum audio secara otomatis.
+              Mulai ubah rekaman panjang menjadi materi belajar yang lebih mudah dipahami dan dicari kembali.
             </p>
             <Link
               href={isAuthenticated ? '/dashboard' : '/login'}
@@ -737,7 +737,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
             {/* Brand */}
             <div>
-              <NotaraBrand variant="horizontal" size={32} />
+              <NaliraBrand variant="horizontal" size={32} />
               <p className="text-sm text-zinc-500 mt-3 leading-relaxed">
                 AI-powered audio summarizer untuk pelajar & profesional. Rekam, transkrip, dan rangkum secara otomatis.
               </p>
@@ -773,8 +773,8 @@ export default function LandingPage() {
             <div>
               <h4 className="text-sm font-bold text-white mb-4">Kontak</h4>
               <div className="space-y-2">
-                <span className="block text-sm text-zinc-500">support@notara.app</span>
-                <span className="block text-sm text-zinc-500">Instagram: @notara.app</span>
+                <span className="block text-sm text-zinc-500">Kanal kontak resmi sedang disiapkan.</span>
+                <span className="block text-sm text-zinc-500">Pembaruan akan diumumkan di aplikasi.</span>
               </div>
             </div>
           </div>
@@ -782,7 +782,7 @@ export default function LandingPage() {
           {/* Bottom bar */}
           <div className="border-t border-white/[0.06] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-zinc-600">
-              © {new Date().getFullYear()} Notara Neural Nexus. All rights reserved.
+              © {new Date().getFullYear()} Nalira. All rights reserved.
             </p>
             <p className="text-xs text-zinc-700">
               Built with ❤️ by Henry & Team

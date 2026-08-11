@@ -89,7 +89,7 @@ export function CoursesWorkspace({
               )}
 
               <p className="mt-5 text-xs text-[var(--text-tertiary)]">
-                Progress belajar belum tersedia pada contract data saat ini; Notara tidak menampilkan persentase palsu.
+                Progress belajar belum tersedia pada contract data saat ini; Nalira tidak menampilkan persentase palsu.
               </p>
             </div>
 

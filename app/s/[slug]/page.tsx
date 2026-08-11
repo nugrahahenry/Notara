@@ -19,17 +19,17 @@ export async function generateMetadata({
 
   if (!summary) {
     return {
-      title: 'Halaman Tidak Ditemukan - Notara',
+      title: 'Halaman Tidak Ditemukan - Nalira',
       description: 'Rangkuman materi yang Anda cari tidak ditemukan atau telah diubah menjadi privat.',
     };
   }
 
   return {
-    title: `${summary.title} - Rangkuman Notara`,
-    description: `Baca rangkuman materi "${summary.title}" (${summary.word_count || 0} kata) secara gratis di Notara. Dibuat menggunakan AI asisten pintar.`,
+    title: `${summary.title} - Rangkuman Nalira`,
+    description: `Baca rangkuman materi "${summary.title}" (${summary.word_count || 0} kata) secara gratis di Nalira. Dibuat menggunakan AI asisten pintar.`,
     openGraph: {
-      title: `${summary.title} - Rangkuman Notara`,
-      description: `Baca rangkuman materi "${summary.title}" secara gratis di Notara.`,
+      title: `${summary.title} - Rangkuman Nalira`,
+      description: `Baca rangkuman materi "${summary.title}" secara gratis di Nalira.`,
       type: 'article',
     },
   };
@@ -304,7 +304,7 @@ export default async function PublicSummaryPage({
               <Brain className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-400 tracking-tight">
-              Notara
+              Nalira
             </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400">
               Bagikan
@@ -408,7 +408,7 @@ export default async function PublicSummaryPage({
           <Brain className="h-10 w-10 text-violet-400 mx-auto animate-pulse" />
           <h3 className="text-lg font-black text-white">Ingin merangkum materi belajar Anda sendiri?</h3>
           <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-            Notara membantu Anda mencatat kuliah, rapat, atau rekaman audio lainnya menjadi rangkuman super rapi menggunakan kecerdasan buatan.
+            Nalira membantu Anda mencatat kuliah, rapat, atau rekaman audio lainnya menjadi rangkuman super rapi menggunakan kecerdasan buatan.
           </p>
           <div className="pt-2 flex justify-center gap-3">
             {isLoggedIn ? (
@@ -416,7 +416,7 @@ export default async function PublicSummaryPage({
                 href="/"
                 className="h-10 px-5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all shadow-lg shadow-violet-500/10 flex items-center"
               >
-                Buka Notara Saya
+                Buka Nalira Saya
               </Link>
             ) : (
               <>
@@ -436,7 +436,7 @@ export default async function PublicSummaryPage({
 
       {/* FOOTER */}
       <footer className="py-8 border-t border-white/[0.03] text-center text-xs text-zinc-600 mt-16">
-        <p>© {new Date().getFullYear()} Notara. Semua hak cipta dilindungi.</p>
+        <p>© {new Date().getFullYear()} Nalira. Semua hak cipta dilindungi.</p>
       </footer>
 
     </div>

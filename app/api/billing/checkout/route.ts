@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         // Mencegah pembelian ulang tier yang sama, atau downgrade
         if (activeTier === 'max' || (activeTier === 'pro' && tier === 'pro')) {
           return NextResponse.json({
-            error: `Anda sudah memiliki langganan aktif untuk paket Notara ${activeTier.toUpperCase()}.`,
+            error: `Anda sudah memiliki langganan aktif untuk paket Nalira ${activeTier.toUpperCase()}.`,
             status: 'success',
             order_id: existingSub.order_id,
             amount: existingSub.amount,

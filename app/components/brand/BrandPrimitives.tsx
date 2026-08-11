@@ -1,6 +1,7 @@
 'use client';
 
 import type { ComponentPropsWithoutRef } from 'react';
+import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
 interface BrandMarkProps extends ComponentPropsWithoutRef<'svg'> {
   size?: number;
@@ -15,7 +16,7 @@ export function BrandMark({ size = 32, animated = false, className = '', ...prop
       height={size}
       className={`notara-brand-mark ${animated ? 'notara-brand-mark--animated' : ''} ${className}`}
       role="img"
-      aria-label="Notara"
+      aria-label={PRODUCT_IDENTITY.name}
       {...props}
     >
       <path
@@ -35,14 +36,18 @@ export function BrandMark({ size = 32, animated = false, className = '', ...prop
 export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
     <span className={`notara-wordmark-v4 ${compact ? 'notara-wordmark-v4--compact' : ''}`}>
-      notara
+      {PRODUCT_IDENTITY.name.toLowerCase()}
     </span>
   );
 }
 
 export function ProcessingMark({ size = 112 }: { size?: number }) {
   return (
-    <span className="notara-processing-mark" role="status" aria-label="Notara sedang memproses">
+    <span
+      className="notara-processing-mark"
+      role="status"
+      aria-label={`${PRODUCT_IDENTITY.name} sedang memproses`}
+    >
       <BrandMark size={size} animated aria-hidden="true" />
     </span>
   );

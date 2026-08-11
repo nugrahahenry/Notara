@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL, GROQ_STT_MODEL } from '../../../lib/ai';
+import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,10 +75,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ transcript });
     }
 
-    console.log('Asisten 2: Groq Llama 3.3 sedang membuat rangkuman...');
+    console.log(`Asisten rangkuman: ${GROQ_LLM_MODEL} sedang membuat rangkuman...`);
 
-    // 5. Panggil Groq LLM (Llama 3.3 70B) untuk merangkum teks — GRATIS!
-    const prompt = `Anda adalah asisten AI yang sangat cerdas dan bersahabat bernama Notara. Tugas Anda adalah menganalisis transkrip audio dan menghasilkan rangkuman yang sangat terstruktur, visual, dan informatif dalam Bahasa Indonesia.
+    // 5. Panggil model rangkuman Groq yang dikelola terpusat di lib/ai.ts.
+    const prompt = `Anda adalah asisten AI yang sangat cerdas dan bersahabat bernama ${PRODUCT_IDENTITY.name}. Tugas Anda adalah menganalisis transkrip audio dan menghasilkan rangkuman yang sangat terstruktur, visual, dan informatif dalam Bahasa Indonesia.
 
 **LANGKAH 1 — DETEKSI KONTEKS:**
 Pertama, baca dan pahami isi transkrip. Tentukan tipe konten berdasarkan isinya:
@@ -91,7 +92,7 @@ Jika **TIPE A — Kuliah / Akademis**, gunakan format berikut:
 \`\`\`
 # 📝 [Judul Kuliah yang Relevan Berdasarkan Isi]
 
-> 🎓 *Materi Akademis — Notara AI telah merangkum kuliah ini untuk kamu.*
+> 🎓 *Materi Akademis — ${PRODUCT_IDENTITY.name} AI telah merangkum kuliah ini untuk kamu.*
 
 ## 🎯 Ringkasan Singkat
 [1–2 paragraf menjelaskan topik utama dan tujuan materi kuliah ini secara padat]
@@ -119,7 +120,7 @@ Jika **TIPE B — Rapat / Meeting / Bisnis**, gunakan format berikut:
 \`\`\`
 # 🤝 [Judul Rapat / Meeting yang Relevan]
 
-> 💼 *Ringkasan Rapat — Notara AI telah merangkum meeting ini untuk kamu.*
+> 💼 *Ringkasan Rapat — ${PRODUCT_IDENTITY.name} AI telah merangkum meeting ini untuk kamu.*
 
 ## 📋 Ringkasan Eksekutif
 [1–2 paragraf inti tentang apa yang dibahas, tujuan rapat, dan hasil akhirnya]
@@ -147,7 +148,7 @@ Jika **TIPE C — Ide / Brainstorming / Catatan Suara**, gunakan format berikut:
 \`\`\`
 # 💡 [Judul Ide / Proyek yang Relevan]
 
-> 🚀 *Catatan Ide — Notara AI telah merapikan gagasan-gagasanmu.*
+> 🚀 *Catatan Ide — ${PRODUCT_IDENTITY.name} AI telah merapikan gagasan-gagasanmu.*
 
 ## ✨ Inti Ide
 [1–2 paragraf merangkum inti dari ide atau konsep yang dibicarakan]
@@ -205,7 +206,7 @@ ${transcript}
     const llmData = await llmResponse.json();
     const summary = llmData.choices[0]?.message?.content || '';
 
-    console.log('Rangkuman selesai! Proses Notara 100% berhasil! 🎉');
+    console.log(`Rangkuman selesai! Proses ${PRODUCT_IDENTITY.name} berhasil.`);
 
     // 6. Kembalikan transkrip dan rangkuman ke frontend
     return NextResponse.json({

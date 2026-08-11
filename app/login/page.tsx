@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { resolveAuthOrigin, sanitizeAuthDestination } from '@/lib/auth/redirect';
 import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, Zap, MessageSquare, FolderGit2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { NotaraBrand } from '../components/brand/NotaraBrand';
+import { NaliraBrand } from '../components/brand/NaliraBrand';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
 import StarryBackground from '../components/ui/StarryBackground';
 
@@ -130,7 +130,7 @@ function LoginForm() {
       setSuccessMsg(null);
       
       // Set flag BEFORE OAuth redirect — sessionStorage persists across
-      // cross-origin navigations in the same tab (Google → back to Notara)
+      // cross-origin navigations in the same tab (Google → back to Nalira)
       localStorage.setItem('login_success', '1');
       sessionStorage.setItem('login_success', '1');
 
@@ -299,11 +299,11 @@ function LoginForm() {
           {/* Logo */}
           <div className="flex items-center space-x-3.5 group">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/25 ring-1 ring-violet-400/30 transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_25px_rgba(139,92,246,0.35)]">
-              <NotaraBrand variant="icon" size={28} />
+              <NaliraBrand variant="icon" size={28} />
             </div>
             <div>
               <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-violet-200 via-fuchsia-200 to-white bg-clip-text text-transparent">
-                Notara
+                Nalira
               </span>
               <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-extrabold tracking-widest uppercase bg-violet-500/10 text-violet-300 border border-violet-500/20">
                 AI Agent
@@ -317,7 +317,7 @@ function LoginForm() {
               Ubah Rekaman Audio & Rapat Menjadi Rangkuman Instan
             </h1>
             <p className="text-zinc-400 text-sm leading-relaxed">
-              Notara menyalin berkas audio panjang secara cerdas, merangkum poin penting secara otomatis, dan menyediakan chatbot interaktif untuk mendiskusikan materi Anda.
+              Nalira menyalin berkas audio panjang secara cerdas, merangkum poin penting secara otomatis, dan menyediakan chatbot interaktif untuk mendiskusikan materi Anda.
             </p>
           </div>
 
@@ -329,7 +329,7 @@ function LoginForm() {
               </div>
               <div>
                 <h3 className="font-bold text-zinc-200 group-hover:text-white transition-colors">Asinkron & Multi-File Processing</h3>
-                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">Unggah hingga 3 berkas audio/video sekaligus dan biarkan Notara merangkumnya sekuensial.</p>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">Unggah hingga 3 berkas audio/video sekaligus dan biarkan Nalira merangkumnya sekuensial.</p>
               </div>
             </div>
 
@@ -366,10 +366,10 @@ function LoginForm() {
             {/* Header for Mobile */}
             <div className="flex flex-col items-center text-center lg:hidden space-y-2 mb-2">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/30">
-                <NotaraBrand variant="icon" size={20} />
+                <NaliraBrand variant="icon" size={20} />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-violet-200 to-white bg-clip-text text-transparent">
-                Notara
+                Nalira
               </span>
               <p className="text-xs text-zinc-400">
                 Ubah rekaman audio panjang Anda menjadi rangkuman AI instan.
@@ -379,7 +379,7 @@ function LoginForm() {
             {/* Title / Tab Selector */}
             <div className="text-center space-y-2">
               <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-                {isSignUp ? 'Buat Akun Notara' : 'Selamat Datang Kembali'}
+                {isSignUp ? 'Buat Akun Nalira' : 'Selamat Datang Kembali'}
               </h2>
               <p className="text-xs md:text-sm text-zinc-400">
                 {isSignUp 
@@ -399,7 +399,7 @@ function LoginForm() {
             {successMsg && (
               <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs md:text-sm flex flex-col items-center text-center gap-3 animate-fadeIn">
                 <div className="h-10 w-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-950/20">
-                  <NotaraBrand variant="icon" animated={true} motionState="idle" size={20} />
+                  <NaliraBrand variant="icon" animated={true} motionState="idle" size={20} />
                 </div>
                 <div>
                   <h4 className="font-extrabold text-white text-sm">Pendaftaran Sukses!</h4>
@@ -569,10 +569,10 @@ function LoginForm() {
                     <span className="text-[9px] text-zinc-500 font-medium">Scroll untuk membaca</span>
                   </div>
                   <div className="h-20 overflow-y-auto text-[9.5px] p-2.5 bg-black/40 border border-white/[0.04] rounded-xl text-zinc-500 leading-relaxed scrollbar-thin select-text text-left">
-                    <p className="font-bold text-zinc-400 mb-1">Syarat Penggunaan Notara AI</p>
-                    <p className="mb-1.5">Selamat datang di Notara Neural Nexus. Dengan mendaftar, Anda menyetujui ketentuan berikut:</p>
+                    <p className="font-bold text-zinc-400 mb-1">Syarat Penggunaan Nalira AI</p>
+                    <p className="mb-1.5">Selamat datang di Nalira. Dengan mendaftar, Anda menyetujui ketentuan berikut:</p>
                     <p className="mb-1.5"><strong>1. Penggunaan Layanan:</strong> Layanan transkrip dan rangkuman ini disediakan khusus untuk membantu produktivitas pribadi. Anda dilarang menggunakannya untuk aktivitas ilegal atau pelanggaran hak cipta.</p>
-                    <p className="mb-1.5"><strong>2. Kebijakan Privasi:</strong> Kami menghormati data Anda. Berkas audio dan transkrip rekaman Anda disimpan aman dan tidak akan dibagikan atau dijual ke pihak ketiga.</p>
+                    <p className="mb-1.5"><strong>2. Kebijakan Privasi:</strong> Berkas audio diproses untuk transkripsi lalu tidak disimpan oleh aplikasi. Transkrip dan rangkuman dapat tersimpan di akun Anda sesuai fitur yang digunakan.</p>
                     <p className="mb-1.5"><strong>3. Hak Cipta Materi:</strong> Anda bertanggung jawab penuh atas hak cipta materi yang Anda unggah. Pastikan Anda memiliki izin merekam dari pembicara atau pihak yang bersangkutan.</p>
                     <p className="mb-1.5"><strong>4. Batasan Akun:</strong> Akun free/gratis dibatasi oleh kapasitas penyimpanan dan durasi pemrosesan tertentu yang dapat berubah sewaktu-waktu.</p>
                   </div>
@@ -585,7 +585,7 @@ function LoginForm() {
                       className="mt-0.5 rounded border-zinc-800 text-violet-600 focus:ring-violet-500 bg-zinc-950 accent-violet-600 h-3.5 w-3.5 cursor-pointer"
                     />
                     <span className="text-[10.5px] text-zinc-400 group-hover:text-zinc-300 transition-colors leading-tight">
-                      Saya membaca dan menyetujui Syarat & Ketentuan Notara
+                      Saya membaca dan menyetujui Syarat & Ketentuan Nalira
                     </span>
                   </label>
                 </div>

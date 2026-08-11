@@ -45,8 +45,8 @@ function getResponseMessage(responseText: string, fallback: string): string {
 
 export function createCaptureHttpError(status: number, responseText = ''): CapturePipelineError {
   const fallback = status === 0
-    ? 'Koneksi ke Notara terputus.'
-    : 'Notara belum dapat memproses file ini.';
+    ? 'Koneksi ke Nalira terputus.'
+    : 'Nalira belum dapat memproses file ini.';
   const message = getResponseMessage(responseText, fallback);
   const normalizedMessage = message.toLowerCase();
 
@@ -151,7 +151,7 @@ export function requestCaptureJson<TResponse>(
       } catch {
         reject(new CapturePipelineError({
           code: 'invalid-response',
-          message: 'Notara menerima respons yang tidak dapat dibaca.',
+          message: 'Nalira menerima respons yang tidak dapat dibaca.',
           status: xhr.status,
           retryable: true,
         }));

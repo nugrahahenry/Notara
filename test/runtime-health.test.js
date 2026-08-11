@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const packageJson = require('../package.json');
 
 const {
   buildRuntimeHealth,
@@ -137,7 +138,7 @@ test('runtime health GET prioritizes public build identities and omits unrelated
       schemaVersion: 1,
       service: 'nalira-web',
       status: 'ok',
-      version: '0.1.1',
+      version: packageJson.version,
       buildId: 'server-build-id',
       servedAt: '2026-08-09T10:05:00.000Z',
     });

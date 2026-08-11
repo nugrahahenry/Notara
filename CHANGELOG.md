@@ -1,8 +1,28 @@
-# Changelog — Notara (Lecture Summarizer)
+# Changelog — Nalira
 
 Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemVer](https://semver.org/lang/id/).
 
 ## [Unreleased]
+
+Belum ada perubahan setelah kandidat rilis v0.2.0.
+
+## [0.2.0] - 2026-08-11
+### Added
+- Kontrak identitas terpusat untuk nama publik Nalira, nama asisten, deskripsi produk, runtime service, dan canonical URL yang aman.
+- Facade `NaliraBrand` dengan re-export kompatibilitas dari komponen brand legacy.
+- Tes regresi yang mencegah nama publik lama muncul kembali pada source yang berhadapan dengan pengguna.
+
+### Changed
+- Seluruh copy pengguna, metadata, halaman berbagi, status Capture, dan persona prompt AI kini memakai identitas Nalira.
+- Metadata memakai `NEXT_PUBLIC_SITE_URL` yang dinormalisasi, dengan domain Vercel legacy sebagai fallback aman.
+- Versi aplikasi disinkronkan ke `0.2.0`; identifier teknis legacy tetap dipertahankan untuk kompatibilitas.
+
+## [0.1.1] - 2026-08-09
+### Added
+- Endpoint publik `/api/health` yang dangkal, non-cacheable, dan hanya mengembalikan status runtime, versi, build ID publik, serta timestamp.
+- Tes sanitasi payload health agar environment secret tidak terekspos.
+
+## [0.1.0] - 2026-08-04
 ### Added
 - App Shell adaptif dengan sidebar desktop/compact/mobile, utility topbar, skip link, serta tema System/Light/Dark berbasis token semantik.
 - Workspace Home, Mata Kuliah, Dibagikan, Tanya Notara, dan Capture yang tetap memakai data serta kontrak backend existing.

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL } from '../../../lib/ai';
+import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,9 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Asisten 2: Menghubungi Groq Llama 3.3 untuk merangkum gabungan transkrip...');
+    console.log(`Asisten rangkuman: menghubungi ${GROQ_LLM_MODEL} untuk merangkum gabungan transkrip...`);
 
-    const prompt = `Anda adalah asisten AI yang sangat cerdas dan bersahabat bernama Notara. Tugas Anda adalah menganalisis transkrip audio dan menghasilkan rangkuman yang sangat terstruktur, visual, dan informatif dalam Bahasa Indonesia.
+    const prompt = `Anda adalah asisten AI yang sangat cerdas dan bersahabat bernama ${PRODUCT_IDENTITY.name}. Tugas Anda adalah menganalisis transkrip audio dan menghasilkan rangkuman yang sangat terstruktur, visual, dan informatif dalam Bahasa Indonesia.
 
 **LANGKAH 1 — DETEKSI KONTEKS:**
 Pertama, baca dan pahami isi transkrip. Tentukan tipe konten berdasarkan isinya:
@@ -37,7 +38,7 @@ Jika **TIPE A — Kuliah / Akademis**, gunakan format berikut:
 \`\`\`
 # 📝 [Judul Kuliah yang Relevan Berdasarkan Isi]
 
-> 🎓 *Materi Akademis — Notara AI telah merangkum kuliah ini untuk kamu.*
+> 🎓 *Materi Akademis — ${PRODUCT_IDENTITY.name} AI telah merangkum kuliah ini untuk kamu.*
 
 ## 🎯 Ringkasan Singkat
 [1–2 paragraf menjelaskan topik utama dan tujuan materi kuliah ini secara padat]
@@ -65,7 +66,7 @@ Jika **TIPE B — Rapat / Meeting / Bisnis**, gunakan format berikut:
 \`\`\`
 # 🤝 [Judul Rapat / Meeting yang Relevan]
 
-> 💼 *Ringkasan Rapat — Notara AI telah merangkum meeting ini untuk kamu.*
+> 💼 *Ringkasan Rapat — ${PRODUCT_IDENTITY.name} AI telah merangkum meeting ini untuk kamu.*
 
 ## 📋 Ringkasan Eksekutif
 [1–2 paragraf inti tentang apa yang dibahas, tujuan rapat, dan hasil akhirnya]
@@ -93,7 +94,7 @@ Jika **TIPE C — Ide / Brainstorming / Catatan Suara**, gunakan format berikut:
 \`\`\`
 # 💡 [Judul Ide / Proyek yang Relevan]
 
-> 🚀 *Catatan Ide — Notara AI telah merapikan gagasan-gagasanmu.*
+> 🚀 *Catatan Ide — ${PRODUCT_IDENTITY.name} AI telah merapikan gagasan-gagasanmu.*
 
 ## ✨ Inti Ide
 [1–2 paragraf merangkum inti dari ide atau konsep yang dibicarakan]

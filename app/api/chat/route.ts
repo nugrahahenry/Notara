@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL } from '../../../lib/ai';
+import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,12 +22,12 @@ export async function POST(request: NextRequest) {
     }
 
     const scopeGuidance = chatScope === 'global'
-      ? `Anda sedang menjawab dalam mode "Asisten Notara (Global)". Anda memiliki akses penuh ke daftar seluruh folder/mata kuliah dan berkas rangkuman milik mahasiswa (Henry). Jika mahasiswa bertanya tentang catatan yang mereka miliki, bacalah daftar struktur berkas yang diberikan. Jika mereka bertanya mengenai konsep akademik, gunakan transkrip dari materi kuliah pendukung yang relevan di bawah ini (jika ada) dan gabungkan dengan pengetahuan akademis luas Anda untuk memberikan penjelasan komprehensif.`
+      ? `Anda sedang menjawab dalam mode "Asisten ${PRODUCT_IDENTITY.name} (Global)". Anda memiliki akses penuh ke daftar seluruh folder/mata kuliah dan berkas rangkuman milik mahasiswa (Henry). Jika mahasiswa bertanya tentang catatan yang mereka miliki, bacalah daftar struktur berkas yang diberikan. Jika mereka bertanya mengenai konsep akademik, gunakan transkrip dari materi kuliah pendukung yang relevan di bawah ini (jika ada) dan gabungkan dengan pengetahuan akademis luas Anda untuk memberikan penjelasan komprehensif.`
       : chatScope === 'folder'
         ? `Anda sedang menjawab dalam mode "Satu Mata Kuliah" untuk folder mata kuliah "${folderName || 'Mata Kuliah'}". Transkrip di bawah ini merupakan gabungan dari seluruh materi perkuliahan di folder tersebut. Kaitkan konsep antar-pertemuan secara integratif apabila relevan untuk memberi pemahaman menyeluruh.`
         : `Anda sedang menjawab dalam mode "Rangkuman Ini" untuk satu sesi kuliah tunggal. Fokuskan penjelasan Anda pada isi materi perkuliahan satu pertemuan ini saja.`;
 
-    const systemPrompt = `Anda adalah Notara, asisten AI pembelajaran yang cerdas, bersahabat, komunikatif, dan sangat interaktif.
+    const systemPrompt = `Anda adalah ${PRODUCT_IDENTITY.name}, asisten AI pembelajaran yang cerdas, bersahabat, komunikatif, dan sangat interaktif.
 Tugas utama Anda adalah menjawab pertanyaan Henry secara komprehensif, terstruktur, dan jelas berbasis materi perkuliahan.
 
 Format Jawaban Anda (WAJIB):
@@ -56,7 +57,7 @@ ${contextTranscript || 'Tidak ada transkrip materi kuliah yang tersedia untuk se
       { role: 'user', content: message }
     ];
 
-    console.log(`Notara Chat: Mengirim request chat ke Groq Llama 3.3 (Stream mode)...`);
+    console.log(`${PRODUCT_IDENTITY.name} Chat: Mengirim request ke ${GROQ_LLM_MODEL} (stream mode)...`);
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',

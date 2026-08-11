@@ -8,7 +8,7 @@ import {
 import { AlertCircle, CheckCircle2, Plus, Trash2, UploadCloud } from 'lucide-react';
 import { MAX_QUEUE_FILES } from '@/lib/capture/constants';
 import type { CaptureTask } from '@/lib/capture/task';
-import { NotaraBrand } from '../brand/NotaraBrand';
+import { NaliraBrand } from '../brand/NaliraBrand';
 import { CaptureTaskList } from './CaptureTaskList';
 
 export type CaptureDragState = 'idle' | 'valid' | 'invalid';
@@ -96,7 +96,7 @@ export function UploadQueuePanel({
             ) : files.length > 0 ? (
               <UploadCloud className="h-8 w-8 text-[var(--action-primary)]" aria-hidden="true" />
             ) : (
-              <NotaraBrand variant="icon" animated motionState="thinking" size={36} />
+              <NaliraBrand variant="icon" animated motionState="thinking" size={36} />
             )}
           </div>
 

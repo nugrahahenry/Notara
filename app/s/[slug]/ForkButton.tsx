@@ -104,7 +104,7 @@ export default function ForkButton({ summary }: ForkButtonProps) {
       ) : user ? (
         <>
           <GitFork className="h-4 w-4" />
-          <span>Simpan ke Notara Saya</span>
+          <span>Simpan ke Nalira Saya</span>
         </>
       ) : (
         <>

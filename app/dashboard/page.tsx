@@ -12,7 +12,7 @@ import {
   ImageDown, Smartphone, Square, Download, Clock, Settings, RefreshCw,
   House, GraduationCap
 } from 'lucide-react';
-import { NotaraBrand } from '../components/brand/NotaraBrand';
+import { NaliraBrand } from '../components/brand/NaliraBrand';
 import { OnboardingModal } from '../components/ui/OnboardingModal';
 import { DashboardTour, DEFAULT_TOUR_STEPS } from '../components/ui/DashboardTour';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
@@ -809,7 +809,7 @@ export default function Home() {
         const webhookData = await webhookResponse.json();
         if (webhookResponse.ok && webhookData.status === 'success') {
           await loadBillingData();
-          showToast(`Pembayaran berhasil! Notara ${tier === 'max' ? 'Max' : 'Pro'} Anda telah aktif. 🎉`, 'success');
+          showToast(`Pembayaran berhasil! Nalira ${tier === 'max' ? 'Max' : 'Pro'} Anda telah aktif. 🎉`, 'success');
         } else {
           throw new Error('Gagal memproses verifikasi sukses pembayaran.');
         }
@@ -929,8 +929,8 @@ export default function Home() {
     try {
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
-        issuer: 'Notara',
-        friendlyName: 'Notara Authenticator'
+        issuer: 'Nalira',
+        friendlyName: 'Nalira Authenticator'
       });
       if (error) throw error;
       
@@ -1257,8 +1257,8 @@ export default function Home() {
           thread_id: '',
           role: 'assistant',
           content: selectedSummary
-            ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-            : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
+            ? 'Halo! Aku Nalira. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+            : 'Halo! Saya **Nalira AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Nalira, mencatat audio/rapat, atau informasi fitur lainnya?',
           created_at: new Date().toISOString(),
         },
       ]);
@@ -1281,8 +1281,8 @@ export default function Home() {
               thread_id: '',
               role: 'assistant',
               content: selectedSummary
-                ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-                : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
+                ? 'Halo! Aku Nalira. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+                : 'Halo! Saya **Nalira AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Nalira, mencatat audio/rapat, atau informasi fitur lainnya?',
               created_at: new Date().toISOString()
             }
           ]);
@@ -1306,8 +1306,8 @@ export default function Home() {
           thread_id: '',
           role: 'assistant',
           content: selectedSummary
-            ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-            : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
+            ? 'Halo! Aku Nalira. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+            : 'Halo! Saya **Nalira AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Nalira, mencatat audio/rapat, atau informasi fitur lainnya?',
           created_at: new Date().toISOString()
         }
       ]);
@@ -1339,8 +1339,8 @@ export default function Home() {
         thread_id: '',
         role: 'assistant',
         content: selectedSummary
-          ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-          : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
+          ? 'Halo! Aku Nalira. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+          : 'Halo! Saya **Nalira AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Nalira, mencatat audio/rapat, atau informasi fitur lainnya?',
         created_at: new Date().toISOString()
       }
     ]);
@@ -1575,8 +1575,8 @@ export default function Home() {
                 thread_id: activeThreadId,
                 role: 'assistant',
                 content: selectedSummary
-                  ? 'Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
-                  : 'Halo! Saya **Notara AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?',
+                  ? 'Halo! Aku Nalira. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?'
+                  : 'Halo! Saya **Nalira AI**. 🚀\n\nAda yang bisa saya bantu tentang cara menggunakan Nalira, mencatat audio/rapat, atau informasi fitur lainnya?',
                 created_at: new Date().toISOString()
               }
             ]);
@@ -1840,7 +1840,7 @@ export default function Home() {
     playSoundEffect('info');
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
-        new Notification('Notara Perekam Suara', {
+        new Notification('Nalira Perekam Suara', {
           body: 'Perekaman suara sudah berjalan selama 30 menit. Tab browser Anda masih aktif merekam.'
         });
       }
@@ -2179,8 +2179,8 @@ export default function Home() {
         const wavBlob = bufferToWav(slicedBuffer);
         const wavFile = new File([wavBlob], `chunk-${activePart}.wav`, { type: 'audio/wav' });
         
-        addThinkingLog(`🎙️ Notara mendengarkan bagian ${activePart}/${totalChunks}...`);
-        setChunkProgress(`Notara mendengarkan bagian ${activePart} dari ${totalChunks}...`);
+        addThinkingLog(`🎙️ Nalira mendengarkan bagian ${activePart}/${totalChunks}...`);
+        setChunkProgress(`Nalira mendengarkan bagian ${activePart} dari ${totalChunks}...`);
         setCaptureTaskStage(taskId, 'transcribing', {
           progress: partProgress,
           stageDescription: `Bagian ${activePart} sedang dikirim dan ditranskrip.`,
@@ -2209,8 +2209,8 @@ export default function Home() {
         });
       }
       
-      addThinkingLog('📝 Semua bagian selesai! Notara sedang merangkum keseluruhan isi...');
-      setChunkProgress('Semua bagian selesai! Notara sedang menyusun rangkuman final...');
+      addThinkingLog('📝 Semua bagian selesai! Nalira sedang merangkum keseluruhan isi...');
+      setChunkProgress('Semua bagian selesai! Nalira sedang menyusun rangkuman final...');
       setCaptureTaskStage(taskId, 'summarizing', {
         progress: { kind: 'indeterminate' },
       });
@@ -3505,7 +3505,7 @@ export default function Home() {
       await navigator.clipboard.writeText(link);
       showToast('Link publik berhasil disalin.', 'success');
     } catch {
-      setError('Browser tidak mengizinkan Notara menyalin link. Buka link lalu salin dari address bar.');
+      setError('Browser tidak mengizinkan Nalira menyalin link. Buka link lalu salin dari address bar.');
     }
   };
 
@@ -3574,8 +3574,8 @@ export default function Home() {
         {isSidebarOpen ? (
           <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] p-4">
             <div className="animate-in fade-in duration-300">
-              <div className="flex items-center gap-2.5" aria-label="Notara">
-                <NotaraBrand variant="horizontal" size={32} />
+              <div className="flex items-center gap-2.5" aria-label="Nalira">
+                <NaliraBrand variant="horizontal" size={32} />
               </div>
             </div>
             {/* Lock Pin Button */}
@@ -3594,15 +3594,15 @@ export default function Home() {
               className="flex h-11 w-11 items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
               title="Buka Menu Sidebar"
             >
-              <NotaraBrand size={32} />
+              <NaliraBrand size={32} />
             </button>
           </div>
         )}
 
         {/* GLOBAL WORKSPACE NAVIGATION */}
-        <nav className="shrink-0 space-y-1 p-3" aria-label="Ruang utama Notara">
+        <nav className="shrink-0 space-y-1 p-3" aria-label="Ruang utama Nalira">
           {([
-            ['notara', 'Tanya Notara', MessageSquare],
+            ['notara', 'Tanya Nalira', MessageSquare],
             ['home', 'Beranda', House],
             ['courses', 'Mata Kuliah', GraduationCap],
             ['shared', 'Dibagikan', Share2],
@@ -4026,7 +4026,7 @@ export default function Home() {
                 )}
                 {filteredSummaries.length === 0 && (
                   <div className="py-10 px-4 text-center flex flex-col items-center justify-center gap-3 bg-white/[0.01] border border-white/[0.03] rounded-2xl mx-3 my-4 animate-in fade-in duration-300">
-                    <NotaraBrand variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
+                    <NaliraBrand variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
                     <div>
                       <p className="text-zinc-400 font-extrabold text-xs">Belum Ada Rangkuman</p>
                       <p className="text-[10px] text-zinc-500 mt-1 max-w-[160px] mx-auto leading-normal">
@@ -4172,7 +4172,7 @@ export default function Home() {
           {/* Version Badge — shown when sidebar is expanded */}
           {isSidebarOpen && (
             <div className="px-4 pt-3 pb-1 flex items-center gap-2">
-              <span className="text-[10px] font-bold text-zinc-600 tracking-widest uppercase">Notara</span>
+              <span className="text-[10px] font-bold text-zinc-600 tracking-widest uppercase">Nalira</span>
               <span className="text-[10px] font-mono font-bold text-violet-500/60 bg-violet-500/10 border border-violet-500/15 rounded-full px-2 py-0.5">
                 v0.0.06
               </span>
@@ -4252,7 +4252,7 @@ export default function Home() {
                   ? 'border-[var(--brand-primary)] bg-[var(--nav-selected)] text-[var(--nav-selected-text)]'
                   : 'border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--brand-primary)]'
               }`}
-              aria-label="Tanya Notara"
+              aria-label="Tanya Nalira"
             >
               <MessageSquare className="h-4 w-4" />
             </button>
@@ -4264,10 +4264,10 @@ export default function Home() {
                   ? 'border-[var(--brand-primary)] bg-[var(--nav-selected)] text-[var(--nav-selected-text)]'
                   : 'border-[var(--border-subtle)] bg-[var(--surface-elevated)] text-[var(--text-secondary)]'
               }`}
-              title="Buka Tanya Notara"
+              title="Buka Tanya Nalira"
             >
               <MessageSquare className="h-4 w-4" />
-              <span>Tanya Notara</span>
+              <span>Tanya Nalira</span>
             </button>
 
             <button
@@ -4734,11 +4734,11 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="h-7 w-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                        <NotaraBrand variant="icon" size={16} />
+                        <NaliraBrand variant="icon" size={16} />
                       </div>
                       <div>
-                        <h4 className="text-xs font-black text-white leading-none">Neural Nexus</h4>
-                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">Neural Nexus</span>
+                        <h4 className="text-xs font-black text-white leading-none">Nalira</h4>
+                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">Nalira</span>
                       </div>
                     </div>
                     
@@ -4826,7 +4826,7 @@ export default function Home() {
                     </div>
                   ) : (
                     <div className="py-1 px-2.5 rounded-lg bg-white/5 text-[9px] font-bold text-violet-300 uppercase tracking-widest text-center select-none font-mono">
-                      🤖 Asisten Notara (Global)
+                      🤖 Asisten Nalira (Global)
                     </div>
                   )}
                 </div>
@@ -4836,7 +4836,7 @@ export default function Home() {
                   <div className="flex-1 overflow-y-auto p-4 space-y-2.5 scrollbar-thin">
                     {chatThreads.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500 py-12 space-y-2">
-                        <NotaraBrand variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
+                        <NaliraBrand variant="icon" animated={true} motionState="thinking" size={32} className="opacity-40" />
                         <div>
                           <p className="text-xs font-bold text-zinc-300">Belum Ada Riwayat Chat</p>
                           <p className="text-[10px] text-zinc-600 mt-1 max-w-[180px] mx-auto leading-normal">
@@ -4901,19 +4901,19 @@ export default function Home() {
                         </div>
                       ) : (
                         <div className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-2xl text-[10px] text-zinc-500 leading-relaxed italic">
-                          Tanya saya cara menggunakan Notara, unggah file besar hingga 150MB, atau kelola folder.
+                          Tanya saya cara menggunakan Nalira, unggah file besar hingga 150MB, atau kelola folder.
                         </div>
                       )}
 
                       {chatMessages.length === 0 ? (
                         <div className="flex gap-2.5 items-start max-w-[85%]">
                           <div className="h-6 w-6 shrink-0 flex items-center justify-center">
-                            <NotaraBrand variant="icon" size={24} />
+                            <NaliraBrand variant="icon" size={24} />
                           </div>
                           <div className="bg-white/[0.02] border border-white/[0.04] p-3 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed font-sans">
                             {selectedSummary 
-                              ? "Halo! Aku Notara. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?"
-                              : "Halo! Saya Notara AI. Ada yang bisa saya bantu tentang cara menggunakan Notara, mencatat audio/rapat, atau informasi fitur lainnya?"}
+                              ? "Halo! Aku Nalira. Ada bagian dari materi rekaman ini yang ingin kamu tanyakan atau minta dijelaskan ulang?"
+                              : "Halo! Saya Nalira AI. Ada yang bisa saya bantu tentang cara menggunakan Nalira, mencatat audio/rapat, atau informasi fitur lainnya?"}
                           </div>
                         </div>
                       ) : (
@@ -4927,7 +4927,7 @@ export default function Home() {
                           ) : (
                             <div key={msg.id} className="flex gap-2.5 items-start max-w-[85%] animate-in slide-in-from-left-2 duration-200">
                               <div className="h-6 w-6 shrink-0 flex items-center justify-center">
-                                <NotaraBrand variant="icon" size={24} animated={msg.content === ''} motionState="thinking" />
+                                <NaliraBrand variant="icon" size={24} animated={msg.content === ''} motionState="thinking" />
                               </div>
                               <div className="bg-white/[0.02] border border-white/[0.04] p-3.5 rounded-2xl rounded-tl-none text-xs text-zinc-300 leading-relaxed select-text break-words w-full">
                                 {msg.content ? (
@@ -4937,7 +4937,7 @@ export default function Home() {
                                 ) : (
                                   <span className="flex items-center gap-1.5 text-zinc-500 italic">
                                     <Loader2 className="h-3 w-3 animate-spin text-violet-400" />
-                                    Notara sedang mengetik...
+                                    Nalira sedang mengetik...
                                   </span>
                                 )}
                               </div>
@@ -4977,7 +4977,7 @@ export default function Home() {
                                     : chatScope === 'folder' 
                                       ? `Tanya lintas materi ${activeFolder?.name || ''}...` 
                                       : "Tanya lintas seluruh rangkuman...")
-                                : "Tanya asisten global Notara..."
+                                : "Tanya asisten global Nalira..."
                           }
                           className={`min-h-11 w-full max-h-[120px] resize-none overflow-y-auto rounded-2xl border bg-black/40 py-2.5 pl-4 pr-24 font-sans text-xs text-zinc-200 placeholder-zinc-600 transition-colors duration-300 focus:outline-none disabled:opacity-50 ${
                             isListening 
@@ -5027,7 +5027,7 @@ export default function Home() {
                         </button>
                       </div>
                       <p className="text-[9px] text-center text-zinc-600 mt-2.5 font-medium">
-                        🚀 Notara AI — Tanya apa saja tentang materi ini
+                        🚀 Nalira AI — Tanya apa saja tentang materi ini
                       </p>
                     </form>
                   </>
@@ -5741,7 +5741,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white">
-                  Upgrade ke Notara Pro 🚀
+                  Upgrade ke Nalira Pro 🚀
                 </h3>
                 <span className="text-[10px] text-zinc-500 font-bold block mt-0.5">DURASI REKAMAN GRATIS TERBATAS</span>
               </div>
@@ -5756,7 +5756,7 @@ export default function Home() {
 
               <div className="space-y-2.5">
                 <p className="text-xs font-bold text-zinc-400">
-                  Fitur Premium Notara Pro:
+                  Fitur Premium Nalira Pro:
                 </p>
                 <ul className="space-y-2 text-xs text-zinc-300 pl-1">
                   <li className="flex items-start gap-2">
@@ -5917,7 +5917,7 @@ export default function Home() {
                   {/* Content */}
                   <div style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
                     
-                    {/* Notara Brand */}
+                    {/* Nalira Brand */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                       <div style={{
                         width: '28px', height: '28px', borderRadius: '8px',
@@ -6204,7 +6204,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-sm font-extrabold text-white tracking-wide">
-                  Pengaturan Notara
+                  Pengaturan Nalira
                 </h3>
                 <span className="text-[9px] text-zinc-500 font-bold block mt-0.5 tracking-wider">PROFIL & KEAMANAN AKUN</span>
               </div>
@@ -6367,7 +6367,7 @@ export default function Home() {
                       {!mfaQrCode ? (
                         <div className="space-y-4 text-left">
                           <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                            Autentikasi Dua Faktor (2FA) memberikan tingkat keamanan tambahan dengan meminta kode verifikasi dari aplikasi authenticator (Google Authenticator, Authy, Microsoft Authenticator) saat masuk ke Notara.
+                            Autentikasi Dua Faktor (2FA) memberikan tingkat keamanan tambahan dengan meminta kode verifikasi dari aplikasi authenticator (Google Authenticator, Authy, Microsoft Authenticator) saat masuk ke Nalira.
                           </p>
                           <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
                             <button
@@ -6463,10 +6463,10 @@ export default function Home() {
                   <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border border-violet-500/15">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                        <NotaraBrand variant="icon" size={20} showGlow />
+                        <NaliraBrand variant="icon" size={20} showGlow />
                       </div>
                       <div>
-                        <p className="text-xs font-extrabold text-white">Notara</p>
+                        <p className="text-xs font-extrabold text-white">Nalira</p>
                         <p className="text-[11px] text-zinc-500 font-mono">Versi v0.0.06 · Early Testing</p>
                       </div>
                       <span className="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-2.5 py-1">
@@ -6496,7 +6496,7 @@ export default function Home() {
                   {/* Re-trigger onboarding */}
                   <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
                     <p className="text-xs font-bold text-zinc-300 mb-1">Survei Onboarding</p>
-                    <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">Perbarui informasi institusi/perusahaan dan peranmu di Notara.</p>
+                    <p className="text-[11px] text-zinc-500 mb-3 leading-relaxed">Perbarui informasi institusi/perusahaan dan peranmu di Nalira.</p>
                     <button
                       onClick={() => {
                         setShowSettingsModal(false);
@@ -6546,7 +6546,7 @@ export default function Home() {
                             <Crown className="h-5 w-5 animate-pulse" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-extrabold text-emerald-400 tracking-wide">Notara Pro Aktif</h4>
+                            <h4 className="text-sm font-extrabold text-emerald-400 tracking-wide">Nalira Pro Aktif</h4>
                             <span className="text-[9px] text-zinc-400 font-bold block mt-0.5">TERIMA KASIH TELAH MENDUKUNG KAMI</span>
                           </div>
                         </div>
@@ -6592,7 +6592,7 @@ export default function Home() {
                             <Crown className="h-5 w-5 animate-[spin_4s_linear_infinite]" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-extrabold text-amber-400 tracking-wide">Notara Max Aktif 👑</h4>
+                            <h4 className="text-sm font-extrabold text-amber-400 tracking-wide">Nalira Max Aktif 👑</h4>
                             <span className="text-[9px] text-zinc-400 font-bold block mt-0.5">PAKET TERTINGGI DENGAN AKSES MAKSIMAL</span>
                           </div>
                         </div>
@@ -6651,7 +6651,7 @@ export default function Home() {
                           <div className="flex justify-between">
                             <span className="text-zinc-400">Paket Dipilih</span>
                             <span className="font-bold text-zinc-200">
-                              Notara {subscriptionData.amount === 99000 ? 'Max 👑' : 'Pro 🚀'}
+                              Nalira {subscriptionData.amount === 99000 ? 'Max 👑' : 'Pro 🚀'}
                             </span>
                           </div>
                           <div className="flex justify-between">
@@ -6733,7 +6733,7 @@ export default function Home() {
                     /* EMPTY STATE: 3-TIER COMPARISON */
                     <div className="space-y-5">
                       <div className="text-center md:text-left space-y-1">
-                        <h4 className="text-sm font-extrabold text-white tracking-wide">Pilih Paket Langganan Notara</h4>
+                        <h4 className="text-sm font-extrabold text-white tracking-wide">Pilih Paket Langganan Nalira</h4>
                         <p className="text-xs text-zinc-400">Pilih tier terbaik yang sesuai dengan kebutuhan belajar atau bisnis Anda.</p>
                       </div>
 
@@ -6912,7 +6912,7 @@ export default function Home() {
                 Autentikasi Dua Faktor (2FA)
               </h2>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed font-medium">
-                Akun Anda dilindungi keamanan tingkat tinggi. Silakan masukkan kode 6-digit dari aplikasi authenticator Anda untuk melanjutkan ke Notara.
+                Akun Anda dilindungi keamanan tingkat tinggi. Silakan masukkan kode 6-digit dari aplikasi authenticator Anda untuk melanjutkan ke Nalira.
               </p>
             </div>
 
@@ -6970,7 +6970,7 @@ export default function Home() {
                   }}
                   className="w-full text-center text-xs text-rose-400 hover:text-rose-300 font-semibold tracking-wide transition-colors duration-200 cursor-pointer outline-none bg-transparent border-none mt-2"
                 >
-                  Keluar dari Notara / Ganti Akun
+                  Keluar dari Nalira / Ganti Akun
                 </button>
               </div>
             </div>

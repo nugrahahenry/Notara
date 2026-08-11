@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Signature key tidak sah.' }, { status: 401 });
     }
 
-    // 2. Pemetaan Status Pembayaran Midtrans ke Status Notara
+    // 2. Pemetaan Status Pembayaran Midtrans ke Status Nalira
     // Referensi Status Midtrans: settlement, capture, pending, deny, cancel, expire
     let status: 'pending' | 'success' | 'failed' | 'expired' = 'pending';
     const txStatus = payload.transaction_status;

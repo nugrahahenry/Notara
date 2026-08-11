@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { NotaraBrand } from '../brand/NotaraBrand';
+import { NaliraBrand } from '../brand/NaliraBrand';
 
 // ─────────────────────────────────────────────────────────────
 // VersionUpdateBanner — Deteksi Deployment Vercel Baru
 //
 // Strategy: Check on window focus (tidak perlu polling timer).
-// Setiap kali user balik ke tab Notara, kita fetch /api/version
+// Setiap kali user balik ke tab Nalira, kita fetch /api/version
 // dan compare buildId. Kalau beda → ada versi baru di Vercel.
 //
 // Di local dev: buildId selalu "dev-development", tidak ada notif.
@@ -192,7 +192,7 @@ export function VersionUpdateBanner({ appVersion }: VersionUpdateBannerProps) {
                   flexShrink: 0,
                   animation: 'vub-logo-pulse 2.5s ease-in-out infinite',
                 }}>
-                  <NotaraBrand variant="icon" size={36} animated motionState="thinking" showGlow />
+                  <NaliraBrand variant="icon" size={36} animated motionState="thinking" showGlow />
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -209,7 +209,7 @@ export function VersionUpdateBanner({ appVersion }: VersionUpdateBannerProps) {
                       color: '#F8FAFC',
                       letterSpacing: '-0.01em',
                     }}>
-                      Notara {newVersion} tersedia!
+                      Nalira {newVersion} tersedia!
                     </span>
                     <span style={{
                       fontSize: '10px',

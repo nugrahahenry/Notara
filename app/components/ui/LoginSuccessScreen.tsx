@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { NotaraBrand } from '../brand/NotaraBrand';
+import { NaliraBrand } from '../brand/NaliraBrand';
 
 interface LoginSuccessScreenProps {
   userName?: string;
@@ -209,9 +209,9 @@ export function LoginSuccessScreen({
           padding: '2rem',
         }}
       >
-        {/* Animated Notara Logo */}
+        {/* Animated Nalira Logo */}
         <div style={{ marginBottom: '2.5rem', transform: 'scale(1.15)' }}>
-          <NotaraBrand
+          <NaliraBrand
             variant="icon"
             size={84}
             animated
@@ -233,7 +233,7 @@ export function LoginSuccessScreen({
                 lineHeight: 1.2,
               }}
             >
-              {isFirstTime ? 'Selamat Datang di Notara! 🎉' : `Selamat Datang Kembali, ${firstName}! 👋`}
+              {isFirstTime ? 'Selamat Datang di Nalira! 🎉' : `Selamat Datang Kembali, ${firstName}! 👋`}
             </h1>
             <p
               style={{
@@ -244,8 +244,8 @@ export function LoginSuccessScreen({
               }}
             >
               {isFirstTime
-                ? 'Notara siap mendampingi perjalanan belajar terbaikmu.'
-                : 'Menghubungkan Anda kembali ke ruang belajar digital Neural Nexus.'}
+                ? 'Nalira siap mendampingi perjalanan belajar terbaikmu.'
+                : 'Menghubungkan Anda kembali ke ruang belajar digital Nalira.'}
             </p>
           </>
         ) : (

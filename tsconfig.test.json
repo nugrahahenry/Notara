@@ -23,6 +23,7 @@
     "lib/auth/redirect.ts",
     "lib/learning/fallback.ts",
     "lib/runtime/health.ts",
+    "lib/brand/identity.ts",
     "app/api/health/route.ts"
   ],
   "exclude": ["node_modules", "build"]

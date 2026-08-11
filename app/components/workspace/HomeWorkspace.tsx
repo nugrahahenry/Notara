@@ -211,7 +211,7 @@ export function HomeWorkspace({
           <div className="notara-home-first-copy">
             <span className="notara-eyebrow">Ruang belajar pertamamu</span>
             <h2 id="first-use-heading">Dari rekaman kuliah menjadi materi yang bisa dipahami.</h2>
-            <p>Rekam atau unggah audio/video. Notara menyiapkan transkrip, rangkuman, dan ruang belajar terstruktur tanpa membuat chatbot mendominasi layar.</p>
+            <p>Rekam atau unggah audio/video. Nalira menyiapkan transkrip, rangkuman, dan ruang belajar terstruktur tanpa membuat chatbot mendominasi layar.</p>
             <div className="notara-home-first-actions">
               <button type="button" onClick={onRecord} className="notara-primary-button"><Mic className="h-4 w-4" /> Mulai rekam</button>
               <button type="button" onClick={onUpload} className="notara-secondary-button"><Upload className="h-4 w-4" /> Upload file</button>
@@ -269,7 +269,7 @@ export function HomeWorkspace({
                 <div>
                   <span className="notara-eyebrow">Arahan belajar sementara</span>
                   <h2 id="learning-next-heading">Belajar apa dulu?</h2>
-                  <p>Urutan ini memakai materi terbaru dan mata kuliah yang sudah ada. Notara belum mengklaim analisis prasyarat atau progres otomatis.</p>
+                  <p>Urutan ini memakai materi terbaru dan mata kuliah yang sudah ada. Nalira belum mengklaim analisis prasyarat atau progres otomatis.</p>
                 </div>
                 <span className="notara-home-foundation-badge">Fallback transparan</span>
               </div>
@@ -310,7 +310,7 @@ export function HomeWorkspace({
                 <button type="button" onClick={() => orderedSequence[0] && onOpenSummary(orderedSequence[0])} className="notara-primary-button">
                   Ikuti urutan belajar <ArrowRight className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={onOpenNotara} className="notara-secondary-button"><MessageSquareText className="h-4 w-4" /> Tanya Notara</button>
+                <button type="button" onClick={onOpenNotara} className="notara-secondary-button"><MessageSquareText className="h-4 w-4" /> Tanya Nalira</button>
                 <button type="button" onClick={() => setManualMode((value) => !value)} className="notara-home-text-button" aria-pressed={manualMode}>
                   <ListOrdered className="h-4 w-4" /> {manualMode ? 'Selesai mengatur' : 'Atur sendiri'}
                 </button>

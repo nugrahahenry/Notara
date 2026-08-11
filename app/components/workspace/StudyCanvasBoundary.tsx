@@ -70,7 +70,7 @@ const labCopy: Record<LabToolId, { status: string; title: string; copy: string; 
   concept: {
     status: 'Foundation',
     title: 'Konsep penting',
-    copy: 'Notara belum mengekstrak konsep sebagai data terstruktur. Untuk saat ini, konsep tetap dibaca dari rangkuman sumber.',
+    copy: 'Nalira belum mengekstrak konsep sebagai data terstruktur. Untuk saat ini, konsep tetap dibaca dari rangkuman sumber.',
     evidence: 'Belum ada source link atau confidence per konsep.',
   },
   formula: {
@@ -83,7 +83,7 @@ const labCopy: Record<LabToolId, { status: string; title: string; copy: string; 
     status: 'Belum terhubung',
     title: 'Visualisasi materi',
     copy: 'Integrasi deep-link ke Neurova belum memiliki kontrak produksi, sehingga Study Canvas belum membuat visual palsu.',
-    evidence: 'Notara akan menyerahkan konsep terpilih setelah kontrak konteks dikunci.',
+    evidence: 'Nalira akan menyerahkan konsep terpilih setelah kontrak konteks dikunci.',
   },
   quiz: {
     status: 'Belum tersedia',

@@ -10,7 +10,7 @@ import React, { useState, useEffect, useCallback, createContext, useContext, use
    - Auto-dismiss with progress bar
    - Stack multiple toasts
    - Success/Error/Info/Warning variants
-   - Notara-branded styling with glassmorphism
+   - Nalira-branded styling with glassmorphism
    - Accessible: role="alert", aria-live
    ════════════════════════════════════════════════════════════ */
 

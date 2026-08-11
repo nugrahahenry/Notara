@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
-import { ThemeProvider } from "./components/theme/ThemeProvider";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import Script from 'next/script';
+import { PRODUCT_IDENTITY, resolvePublicSiteUrl } from '../lib/brand/identity';
+import { ThemeProvider } from './components/theme/ThemeProvider';
+import './globals.css';
 
 const themeInitializationScript = `
   (function () {
@@ -24,46 +25,47 @@ const themeInitializationScript = `
 `;
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
+const publicSiteUrl = resolvePublicSiteUrl();
+
 export const metadata: Metadata = {
-  title: "Notara — AI-Powered Lecture & Meeting Summarizer",
-  description: "Ubah rekaman kuliah dan rapat panjang menjadi rangkuman terstruktur, daftar istilah kunci, dan prediksi soal ujian dalam hitungan detik.",
-  keywords: ["AI summarizer", "transkripsi kuliah", "AI notes", "productivity student", "meeting recorder", "notulen rapat AI"],
-  authors: [{ name: "Henry & Notara Team" }],
+  metadataBase: new URL(publicSiteUrl),
+  title: `${PRODUCT_IDENTITY.name} — Rekaman Jadi Materi Belajar`,
+  description: PRODUCT_IDENTITY.description,
+  keywords: ['AI summarizer', 'transkripsi kuliah', 'AI notes', 'materi belajar', 'meeting recorder', 'notulen rapat AI'],
+  authors: [{ name: 'Henry' }],
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
   },
   openGraph: {
-    title: "Notara — Reduksi Audio Kuliah Jadi Rangkuman AI",
-    description: "Rekam langsung atau unggah berkas audio besar. Notara memotong audio secara asinkron dan merangkum konsep kunci secara cerdas.",
-    url: "https://notara.vercel.app",
-    siteName: "Notara",
+    title: `${PRODUCT_IDENTITY.name} — Rekaman Jadi Materi Belajar`,
+    description: PRODUCT_IDENTITY.description,
+    url: publicSiteUrl,
+    siteName: PRODUCT_IDENTITY.name,
     images: [
       {
-        url: "/og-image.png",
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: "Notara AI Dashboard",
+        alt: `${PRODUCT_IDENTITY.name} — ruang belajar dari rekaman`,
       },
     ],
-    locale: "id_ID",
-    type: "website",
+    locale: 'id_ID',
+    type: 'website',
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Notara — Reduksi Audio Kuliah Jadi Rangkuman AI",
-    description: "Ubah rekaman kuliah panjang menjadi rangkuman terstruktur dengan Llama 3.3 dan Whisper.",
-    images: ["/og-image.png"],
+    card: 'summary_large_image',
+    title: `${PRODUCT_IDENTITY.name} — Rekaman Jadi Materi Belajar`,
+    description: PRODUCT_IDENTITY.description,
+    images: ['/og-image.png'],
   },
 };
 

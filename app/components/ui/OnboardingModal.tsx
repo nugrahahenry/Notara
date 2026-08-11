@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { NotaraBrand } from '../brand/NotaraBrand';
+import { NaliraBrand } from '../brand/NaliraBrand';
 
 // ─────────────────────────────────────────────────────────────
-// OnboardingModal — Survei Onboarding Interaktif Notara
+// OnboardingModal — Survei Onboarding Interaktif Nalira
 // Multi-step wizard dengan desain glassmorphism premium
 // Step 1: Peran → Step 2: Detail Institusi → Step 3: Sumber Info → Step 4: AI Sync
 // ─────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ const SOURCES = [
 
 const AI_SYNCING_STEPS = [
   '🧠 Memetakan pola belajar Anda...',
-  '🔗 Menghubungkan Neural Nexus...',
+  '🔗 Menghubungkan Nalira...',
   '✨ Mengkalibrasi asisten AI...',
   '🎯 Personalisasi siap!',
 ];
@@ -237,7 +237,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
 
         {/* ─── Header ─── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem', position: 'relative', zIndex: 10 }}>
-          <NotaraBrand variant="icon" size={36} animated motionState={step === 4 ? 'thinking' : 'idle'} showGlow />
+          <NaliraBrand variant="icon" size={36} animated motionState={step === 4 ? 'thinking' : 'idle'} showGlow />
           <div>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', color: '#A78BFA', textTransform: 'uppercase' }}>Selamat Datang</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#F8FAFC', lineHeight: 1.2 }}>Halo, {firstName}! 👋</div>
@@ -298,8 +298,8 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
         {step === 1 && (
           <div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.4rem' }}>Kamu sebagai apa di Notara?</h2>
-              <p style={{ fontSize: '0.85rem', color: 'rgba(248,250,252,0.5)' }}>Pilih peranmu agar Notara bisa menyesuaikan pengalaman belajarmu.</p>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.4rem' }}>Kamu sebagai apa di Nalira?</h2>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(248,250,252,0.5)' }}>Pilih peranmu agar Nalira bisa menyesuaikan pengalaman belajarmu.</p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               {ROLES.map(role => (
@@ -386,7 +386,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
                   </div>
                 </div>
                 <div style={{ marginLeft: 'auto' }}>
-                  <NotaraBrand variant="icon" size={24} />
+                  <NaliraBrand variant="icon" size={24} />
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -492,8 +492,8 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
         {step === 3 && (
           <div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.4rem' }}>Dari mana kamu tau Notara?</h2>
-              <p style={{ fontSize: '0.85rem', color: 'rgba(248,250,252,0.5)' }}>Bantu kami tahu bagaimana cerita pertemuanmu dengan Notara dimulai.</p>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.4rem' }}>Dari mana kamu tau Nalira?</h2>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(248,250,252,0.5)' }}>Bantu kami tahu bagaimana cerita pertemuanmu dengan Nalira dimulai.</p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '1.25rem' }}>
               {SOURCES.map(source => (
@@ -565,7 +565,7 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
         {step === 4 && (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <div style={{ marginBottom: '2rem' }}>
-              <NotaraBrand
+              <NaliraBrand
                 variant="icon"
                 size={80}
                 animated
@@ -575,10 +575,10 @@ export function OnboardingModal({ userName, onComplete }: OnboardingModalProps) 
               />
             </div>
             <h2 style={{ fontSize: '1.3.rem', fontWeight: 700, color: '#F8FAFC', marginBottom: '0.5rem' }}>
-              Neural Nexus sedang bersiap...
+              Nalira sedang bersiap...
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'rgba(248,250,252,0.45)', marginBottom: '2.5rem' }}>
-              Notara memetakan profil belajar unik Anda
+              Nalira memetakan profil belajar unik Anda
             </p>
 
             {/* Animated steps */}

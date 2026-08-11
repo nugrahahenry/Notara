@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────
-// DashboardTour — Guided Interactive Tour for Notara Dashboard
+// DashboardTour — Guided Interactive Tour for Nalira Dashboard
 // Lightweight, no external library, pure React + vanilla CSS
 // Uses data-tour attributes to find & highlight elements
 // ─────────────────────────────────────────────────────────────
@@ -309,7 +309,7 @@ export function DashboardTour({ steps, onComplete, onSkip }: DashboardTourProps)
   );
 }
 
-// Default tour steps for Notara dashboard
+// Default tour steps for Nalira dashboard
 export const DEFAULT_TOUR_STEPS: TourStep[] = [
   {
     target: 'sidebar-folders',
@@ -321,14 +321,14 @@ export const DEFAULT_TOUR_STEPS: TourStep[] = [
   {
     target: 'upload-area',
     title: 'Unggah & Rekam',
-    description: 'Unggah file audio/video atau rekam langsung dari microphone. Notara akan otomatis membuat transkrip dan rangkuman!',
+    description: 'Unggah file audio/video atau rekam langsung dari microphone. Nalira akan otomatis membuat transkrip dan rangkuman!',
     emoji: '🎙️',
     position: 'top',
   },
   {
     target: 'chat-panel',
-    title: 'Neural Nexus AI',
-    description: 'Tanya jawab langsung dengan AI tentang isi rekaman atau rapat! Neural Nexus memahami konteks setiap rangkuman yang kamu buka.',
+    title: 'Nalira AI',
+    description: 'Tanya jawab langsung dengan AI tentang isi rekaman atau rapat! Nalira memahami konteks setiap rangkuman yang kamu buka.',
     emoji: '🧠',
     position: 'left',
   },

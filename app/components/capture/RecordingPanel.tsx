@@ -2,7 +2,7 @@
 
 import type { RefObject } from 'react';
 import { Check, FileAudio } from 'lucide-react';
-import { NotaraBrand } from '../brand/NotaraBrand';
+import { NaliraBrand } from '../brand/NaliraBrand';
 
 interface RecordingPanelProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -45,7 +45,7 @@ export function RecordingPanel({
 
         {!isRecording && !audioBlob && (
           <div className="relative flex items-center gap-2 text-xs font-bold text-[var(--text-tertiary)]">
-            <NotaraBrand variant="icon" animated motionState="thinking" size={18} />
+            <NaliraBrand variant="icon" animated motionState="thinking" size={18} />
             Siap merekam suara...
           </div>
         )}

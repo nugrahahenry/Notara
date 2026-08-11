@@ -15,7 +15,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import { NotaraBrand } from '../brand/NotaraBrand';
+import { NaliraBrand } from '../brand/NaliraBrand';
 import type { ChatMessage, ChatThread, Folder, Summary } from '@/lib/types';
 
 interface NotaraWorkspaceProps {
@@ -71,9 +71,9 @@ export function NotaraWorkspace({
     <div className="notara-workspace-page mx-auto flex h-full max-w-6xl flex-col gap-5">
       <header className="notara-notara-heading">
         <div className="flex min-w-0 items-center gap-3">
-          <NotaraBrand size={36} />
+          <NaliraBrand size={36} />
           <div>
-            <span className="notara-eyebrow">Notara</span>
+            <span className="notara-eyebrow">Nalira</span>
             <h1>Pemandu belajar lintas materi</h1>
           </div>
         </div>
@@ -96,7 +96,7 @@ export function NotaraWorkspace({
 
       <div className="notara-notara-layout" data-history-open={showHistory || historyPinned}>
         {(showHistory || historyPinned) && (
-          <aside className="notara-history-utility" aria-label="Riwayat Notara">
+          <aside className="notara-history-utility" aria-label="Riwayat Nalira">
             <div className="flex items-center justify-between gap-2">
               <div><span className="notara-eyebrow">Utility drawer</span><h2>Riwayat</h2></div>
               <button type="button" onClick={() => setHistoryPinned((value) => !value)} aria-pressed={historyPinned} title={historyPinned ? 'Lepas pin panel' : 'Pin panel di desktop'}>
@@ -131,7 +131,7 @@ export function NotaraWorkspace({
               </div>
             ) : messages.map((message) => (
               <article key={message.id} data-role={message.role}>
-                <span>{message.role === 'assistant' ? 'Notara' : 'Kamu'}</span>
+                <span>{message.role === 'assistant' ? 'Nalira' : 'Kamu'}</span>
                 <div className="notara-conversation-message-body">
                   {renderMessage(message.content || (isSending ? 'Menyiapkan jawaban…' : ''))}
                 </div>

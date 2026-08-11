@@ -143,12 +143,12 @@ const STATUS_COPY: Record<
   },
   transcribing: {
     label: 'Menyusun transkrip',
-    description: 'Notara sedang mengenali isi rekaman.',
+    description: 'Nalira sedang mengenali isi rekaman.',
     tone: 'active',
   },
   summarizing: {
     label: 'Menyusun rangkuman',
-    description: 'Notara sedang mengubah transkrip menjadi materi belajar.',
+    description: 'Nalira sedang mengubah transkrip menjadi materi belajar.',
     tone: 'active',
   },
   awaiting_save: {
