@@ -7,7 +7,8 @@ const {
   buildRuntimeHealth,
   createRuntimeHealthResponse,
 } = require('../build/lib/runtime/health.js');
-const { GET } = require('../build/app/api/health/route.js');
+const { GET: getHealth } = require('../build/app/api/health/route.js');
+const { GET: getVersion } = require('../build/app/api/version/route.js');
 
 function withFixedClock(callback) {
   const RealDate = global.Date;
@@ -127,7 +128,7 @@ test('runtime health GET prioritizes public build identities and omits unrelated
     process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA = 'public-build-id';
     process.env.RUNTIME_HEALTH_TEST_SECRET = secret;
 
-    const primaryResponse = withFixedClock(() => GET());
+    const primaryResponse = withFixedClock(() => getHealth());
     assert.equal(primaryResponse.status, 200);
     assert.equal(primaryResponse.headers.get('Cache-Control'), 'no-store');
     assert.equal(primaryResponse.headers.get('Pragma'), 'no-cache');
@@ -145,15 +146,48 @@ test('runtime health GET prioritizes public build identities and omits unrelated
 
     process.env.VERCEL_GIT_COMMIT_SHA = '';
     assert.equal(
-      (await withFixedClock(() => GET()).json()).buildId,
+      (await withFixedClock(() => getHealth()).json()).buildId,
       'public-build-id',
     );
 
     delete process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA;
     assert.equal(
-      (await withFixedClock(() => GET()).json()).buildId,
+      (await withFixedClock(() => getHealth()).json()).buildId,
       'local-development',
     );
+  } finally {
+    for (const key of keys) {
+      const previousValue = previousValues.get(key);
+      if (previousValue === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = previousValue;
+      }
+    }
+  }
+});
+
+test('version endpoint uses package metadata instead of a mutable env override', async () => {
+  const keys = [
+    'VERCEL_GIT_COMMIT_SHA',
+    'NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA',
+    'NEXT_PUBLIC_APP_VERSION',
+  ];
+  const previousValues = new Map(keys.map((key) => [key, process.env[key]]));
+
+  try {
+    delete process.env.VERCEL_GIT_COMMIT_SHA;
+    delete process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA;
+    process.env.NEXT_PUBLIC_APP_VERSION = 'legacy-env-version';
+
+    const response = await getVersion();
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store, no-cache, must-revalidate');
+    assert.equal(response.headers.get('Pragma'), 'no-cache');
+    assert.deepEqual(await response.json(), {
+      buildId: `dev-${process.env.NODE_ENV}`,
+      version: packageJson.version,
+    });
   } finally {
     for (const key of keys) {
       const previousValue = previousValues.get(key);

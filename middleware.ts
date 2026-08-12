@@ -68,7 +68,6 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = url.pathname === '/login';
   const isAuthRoute = url.pathname.startsWith('/auth/');
   const isPublicShareRoute = url.pathname.startsWith('/s/');
-  const isDashboardRoute = url.pathname.startsWith('/dashboard');
 
   // Rute publik yang boleh diakses tanpa login: /, /login, /auth/*, /s/*
   const isPublicRoute = isLandingPage || isLoginPage || isAuthRoute || isPublicShareRoute;

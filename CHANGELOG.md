@@ -4,7 +4,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.2.
+Belum ada perubahan setelah kandidat rilis v0.3.4.
+
+## [0.3.4] - 2026-08-12
+### Fixed
+- Endpoint `/api/version` kini memakai versi dari `package.json`, sama seperti `/api/health`, sehingga metadata rilis tidak dapat tertinggal karena environment lama.
+- Warning variabel route middleware yang tidak digunakan dihapus.
+
+### Added
+- Regression test untuk memastikan environment `NEXT_PUBLIC_APP_VERSION` tidak dapat menimpa versi canonical package.
+
+## [0.3.3] - 2026-08-12
+### Fixed
+- Endpoint operasional `/api/health` dan `/api/version` dapat dipantau tanpa login.
+- Dashboard serta API chat dan rangkuman tetap terlindungi oleh autentikasi Supabase.
 
 ## [0.3.2] - 2026-08-12
 ### Added
