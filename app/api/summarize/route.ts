@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL, GROQ_STT_MODEL } from '../../../lib/ai';
+import { getErrorMessage } from '../../../lib/api/boundary';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
 export async function POST(request: NextRequest) {
@@ -214,10 +215,10 @@ ${transcript}
       summary,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Terjadi kesalahan sistem.' },
+      { error: getErrorMessage(error, 'Terjadi kesalahan sistem.') },
       { status: 500 }
     );
   }

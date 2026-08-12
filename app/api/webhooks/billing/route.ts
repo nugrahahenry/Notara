@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     console.log(`[Midtrans Webhook Success] Transaksi ${payload.order_id} berhasil diupdate ke status: ${status}`);
     return NextResponse.json({ success: true, status });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[Midtrans Webhook Error] Terjadi kesalahan saat memproses request webhook:', err);
     return NextResponse.json({ error: 'Terjadi kesalahan sistem internal.' }, { status: 500 });
   }

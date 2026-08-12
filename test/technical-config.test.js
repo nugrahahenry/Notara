@@ -66,3 +66,9 @@ test('ESLint excludes private QA artifacts from the application source', () => {
   const source = fs.readFileSync(eslintConfigPath, 'utf8');
   assert.match(source, /["']\.private\/\*\*["']/);
 });
+
+test('ESLint treats the CommonJS test harness as Node test code', () => {
+  const source = fs.readFileSync(eslintConfigPath, 'utf8');
+  assert.match(source, /files:\s*\[["']test\/\*\*\/\*\.js["']\]/);
+  assert.match(source, /["']@typescript-eslint\/no-require-imports["']:\s*["']off["']/);
+});

@@ -4,7 +4,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.5.
+Belum ada perubahan setelah kandidat rilis v0.3.6.
+
+## [0.3.6] - 2026-08-12
+### Added
+- Helper batas API teruji untuk menormalkan riwayat chat dan mengambil pesan error secara aman dari nilai `unknown`.
+- Regression test untuk input riwayat chat yang rusak, pembatasan role pesan, dan fallback error API.
+
+### Changed
+- Route chat dan rangkuman tidak lagi memakai tipe `any` pada riwayat pesan maupun error yang ditangkap.
+- Test harness CommonJS kini mendapat konfigurasi ESLint Node yang terlokalisasi tanpa melemahkan aturan aplikasi produksi.
+
+### Fixed
+- Riwayat chat yang bukan array atau berisi entri tanpa konten string kini diabaikan dengan aman; role dari klien selain `user` tidak dapat menjadi system prompt.
+- Route billing tidak lagi menyimpan variabel error yang tidak digunakan.
 
 ## [0.3.5] - 2026-08-12
 ### Fixed

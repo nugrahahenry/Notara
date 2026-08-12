@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       if (body?.tier === 'max') {
         tier = 'max';
       }
-    } catch (e) {
+    } catch {
       // default ke pro jika body kosong/tidak valid
     }
 
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       amount: amount,
       status: 'pending',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Checkout error:', err);
     return NextResponse.json({ error: 'Terjadi kesalahan sistem internal.' }, { status: 500 });
   }

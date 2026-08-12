@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL } from '../../../lib/ai';
+import { getErrorMessage, normalizeChatHistory } from '../../../lib/api/boundary';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
 export async function POST(request: NextRequest) {
@@ -50,10 +51,7 @@ ${contextTranscript || 'Tidak ada transkrip materi kuliah yang tersedia untuk se
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...(history || []).map((msg: any) => ({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content,
-      })),
+      ...normalizeChatHistory(history),
       { role: 'user', content: message }
     ];
 
@@ -91,10 +89,10 @@ ${contextTranscript || 'Tidak ada transkrip materi kuliah yang tersedia untuk se
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API Chat route error:', error);
     return NextResponse.json(
-      { error: error.message || 'Terjadi kesalahan sistem.' },
+      { error: getErrorMessage(error, 'Terjadi kesalahan sistem.') },
       { status: 500 }
     );
   }
