@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { Summary } from '@/lib/types';
 import { EmptyStateArtwork } from '../brand/ProductArtwork';
+import { WorkspaceAmbientHeader } from './WorkspaceAmbientHeader';
 
 type SharedFilter = 'all' | 'friends' | 'mine';
 
@@ -25,16 +26,17 @@ export function SharedWorkspace({ summaries, onOpenSummary, onCopyLink, onDisabl
   const publicSummaries = summaries.filter((summary) => summary.is_public && summary.public_slug);
   const showFriends = filter === 'all' || filter === 'friends';
   const showMine = filter === 'all' || filter === 'mine';
+  const ambientState = filter === 'friends' ? 'inbound' : filter === 'mine' ? 'outbound' : 'default';
 
   return (
     <div className="notara-workspace-page mx-auto max-w-6xl space-y-8">
-      <header className="notara-page-heading">
-        <div>
-          <span className="notara-eyebrow">Dibagikan</span>
-          <h1>Dua arah berbagi pengetahuan</h1>
-          <p>Materi dari teman bergerak masuk; link milikmu bergerak keluar. Arah dan tindakan selalu dibedakan.</p>
-        </div>
-      </header>
+      <WorkspaceAmbientHeader
+        variant="shared"
+        state={ambientState}
+        title="Dua arah berbagi pengetahuan"
+        description="Materi dari teman bergerak masuk; link milikmu bergerak keluar. Arah dan tindakannya selalu jelas."
+        meta={<span>{publicSummaries.length} link aktif</span>}
+      />
 
       <div className="notara-filter-tabs" role="tablist" aria-label="Filter materi dibagikan">
         {([

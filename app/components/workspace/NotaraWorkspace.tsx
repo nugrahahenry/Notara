@@ -15,8 +15,8 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import { NaliraBrand } from '../brand/NaliraBrand';
 import type { ChatMessage, ChatThread, Folder, Summary } from '@/lib/types';
+import { WorkspaceAmbientHeader } from './WorkspaceAmbientHeader';
 
 interface NotaraWorkspaceProps {
   folders: Folder[];
@@ -69,19 +69,18 @@ export function NotaraWorkspace({
 
   return (
     <div className="notara-workspace-page mx-auto flex h-full max-w-6xl flex-col gap-5">
-      <header className="notara-notara-heading">
-        <div className="flex min-w-0 items-center gap-3">
-          <NaliraBrand size={36} />
-          <div>
-            <span className="notara-eyebrow">Nalira</span>
-            <h1>Pemandu belajar lintas materi</h1>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={onCreateThread} className="notara-secondary-button"><Plus className="h-4 w-4" /> Obrolan baru</button>
-          <button type="button" onClick={onToggleHistory} className="notara-secondary-button"><History className="h-4 w-4" /> Riwayat</button>
-        </div>
-      </header>
+      <WorkspaceAmbientHeader
+        variant="ask"
+        title="Pemandu belajar lintas materi"
+        description="Satukan konteks dari materi tersimpan, lalu tanyakan hubungan yang ingin kamu pahami."
+        meta={<span>{summaries.length} materi tersedia</span>}
+        action={(
+          <>
+            <button type="button" onClick={onCreateThread} className="notara-secondary-button"><Plus className="h-4 w-4" /> Obrolan baru</button>
+            <button type="button" onClick={onToggleHistory} className="notara-secondary-button"><History className="h-4 w-4" /> Riwayat</button>
+          </>
+        )}
+      />
 
       <section className="notara-scope-foundation" aria-label="Scope percakapan">
         <div>

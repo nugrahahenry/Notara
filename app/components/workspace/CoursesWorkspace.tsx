@@ -2,6 +2,7 @@
 
 import { ArrowRight, BookOpen, Clock3, FolderPlus } from 'lucide-react';
 import { EmptyStateArtwork } from '../brand/ProductArtwork';
+import { WorkspaceAmbientHeader } from './WorkspaceAmbientHeader';
 import type { Folder, Summary } from '@/lib/types';
 
 interface CoursesWorkspaceProps {
@@ -35,16 +36,17 @@ export function CoursesWorkspace({
 
   return (
     <div className="notara-workspace-page mx-auto max-w-6xl space-y-9">
-      <header className="notara-page-heading">
-        <div>
-          <span className="notara-eyebrow">Mata Kuliah</span>
-          <h1>Ruang mata kuliah</h1>
-          <p>Di Nalira, temukan materi terbaru dan lanjutkan belajar dari konteks yang sama.</p>
-        </div>
-        <button type="button" onClick={onCreateCourse} className="notara-secondary-button">
-          <FolderPlus className="h-4 w-4" /> Mata kuliah baru
-        </button>
-      </header>
+      <WorkspaceAmbientHeader
+        variant="courses"
+        title="Ruang mata kuliah"
+        description="Di Nalira, temukan materi terbaru dan lanjutkan belajar dari konteks yang sama."
+        meta={<><span>{folders.length} mata kuliah</span><span>{summaries.length} materi</span></>}
+        action={(
+          <button type="button" onClick={onCreateCourse} className="notara-secondary-button">
+            <FolderPlus className="h-4 w-4" /> Mata kuliah baru
+          </button>
+        )}
+      />
 
       {folders.length === 0 ? (
         <section className="notara-empty-foundation">

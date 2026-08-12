@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.1.
+Belum ada perubahan setelah kandidat rilis v0.3.2.
+
+## [0.3.2] - 2026-08-12
+### Added
+- Compact ambient header terpusat untuk Mata Kuliah, Dibagikan, Capture, dan Tanya Nalira.
+- Visual kontekstual berupa learning landscape, arus pengetahuan, transformasi sinyal-ke-catatan, dan context convergence.
+
+### Changed
+- Header Dibagikan kini mengubah arah gerak sesuai filter; Capture membedakan mode Upload dan Rekam tanpa mengubah pipeline.
+- Header operasional kini satu keluarga dengan Beranda, namun tetap lebih ringkas dan berorientasi tugas.
+- Animasi memakai transform/opacity ringan, responsif pada mobile, dan berhenti saat reduced motion aktif.
 
 ## [0.3.1] - 2026-08-12
 ### Fixed

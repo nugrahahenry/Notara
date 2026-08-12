@@ -33,6 +33,8 @@
     "app/components/workspace/HomeWorkspace.tsx",
     "app/components/workspace/CoursesWorkspace.tsx",
     "app/components/workspace/SharedWorkspace.tsx",
+    "app/components/workspace/NotaraWorkspace.tsx",
+    "app/components/workspace/WorkspaceAmbientHeader.tsx",
     "app/api/health/route.ts"
   ],
   "exclude": ["node_modules", "build"]

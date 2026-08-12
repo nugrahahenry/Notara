@@ -37,6 +37,7 @@ import { HomeWorkspace } from '../components/workspace/HomeWorkspace';
 import { CoursesWorkspace } from '../components/workspace/CoursesWorkspace';
 import { SharedWorkspace } from '../components/workspace/SharedWorkspace';
 import { NotaraWorkspace } from '../components/workspace/NotaraWorkspace';
+import { WorkspaceAmbientHeader } from '../components/workspace/WorkspaceAmbientHeader';
 import { StudyCanvasBoundary } from '../components/workspace/StudyCanvasBoundary';
 import type { WorkspaceView } from '../components/workspace/types';
 import {
@@ -4456,35 +4457,19 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="relative mx-auto max-w-3xl animate-in fade-in px-4 py-4 duration-300 sm:px-6 md:py-8">
-                  <header className="mb-8 border-b border-[var(--border-subtle)] pb-7">
-                    <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--knowledge-accent)]">
-                      Capture
-                    </span>
-                    <div className="mt-3 grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                      <div>
-                        <h1 className="font-serif text-3xl font-semibold tracking-[-0.035em] text-[var(--text-primary)] md:text-4xl">
-                          Tambahkan materi baru
-                        </h1>
-                        <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
-                          Rekam kuliah atau unggah audio/video. Antrean diproses berurutan di tab ini, lalu audio dibuang setelah transkripsi selesai.
-                        </p>
-                      </div>
-                      <dl className="grid grid-cols-3 gap-2 text-center md:min-w-72">
-                        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-3 py-2.5">
-                          <dt className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Antrean</dt>
-                          <dd className="mt-1 text-xs font-extrabold text-[var(--text-primary)]">Maks. 3</dd>
-                        </div>
-                        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-3 py-2.5">
-                          <dt className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Ukuran</dt>
-                          <dd className="mt-1 text-xs font-extrabold text-[var(--text-primary)]">150 MB</dd>
-                        </div>
-                        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-3 py-2.5">
-                          <dt className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Privasi</dt>
-                          <dd className="mt-1 text-xs font-extrabold text-[var(--text-primary)]">Tanpa audio</dd>
-                        </div>
-                      </dl>
-                    </div>
-                  </header>
+                  <WorkspaceAmbientHeader
+                    variant="capture"
+                    state={isRecordingMode ? 'record' : 'upload'}
+                    title="Tambahkan materi baru"
+                    description="Rekam kuliah atau unggah audio/video. Antrean diproses berurutan di tab ini, lalu audio dibuang setelah transkripsi selesai."
+                    meta={(
+                      <>
+                        <span><strong>Maks. 3</strong> antrean</span>
+                        <span><strong>150 MB</strong> per file</span>
+                        <span><strong>Tanpa audio</strong> tersimpan</span>
+                      </>
+                    )}
+                  />
 
                   {/* Upload vs Recording Selector Toggle */}
                   <CaptureSourceTabs

@@ -1326,6 +1326,451 @@ body {
   .notara-home-star { animation: none !important; }
 }
 
+/* Nalira v0.3.2: compact ambient route headers */
+.notara-workspace-ambient {
+  --route-ambient-start: color-mix(in srgb, var(--surface-canvas) 93%, var(--brand-primary) 7%);
+  --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 95%, var(--knowledge-accent) 5%);
+  --route-ambient-accent: var(--brand-primary);
+  --route-ambient-secondary: var(--knowledge-accent);
+  position: relative;
+  display: grid;
+  min-height: 160px;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.58fr);
+  align-items: center;
+  gap: 22px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 76%, var(--route-ambient-accent) 24%);
+  border-radius: 16px;
+  background: linear-gradient(118deg, var(--route-ambient-start), var(--route-ambient-end));
+  padding: 22px 24px;
+  isolation: isolate;
+}
+
+.notara-workspace-ambient::after {
+  position: absolute;
+  right: -56px;
+  bottom: -92px;
+  width: 260px;
+  height: 180px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--route-ambient-secondary) 8%, transparent);
+  content: '';
+  pointer-events: none;
+  transform: rotate(-12deg);
+}
+
+.notara-workspace-ambient[data-ambient-variant="courses"] {
+  --route-ambient-start: color-mix(in srgb, var(--surface-canvas) 91%, var(--knowledge-accent) 9%);
+  --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 94%, var(--action-primary) 6%);
+  --route-ambient-accent: var(--knowledge-accent);
+  --route-ambient-secondary: var(--action-primary);
+}
+
+.notara-workspace-ambient[data-ambient-variant="shared"] {
+  --route-ambient-start: color-mix(in srgb, var(--surface-canvas) 92%, var(--brand-primary) 8%);
+  --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 92%, var(--knowledge-accent) 8%);
+  --route-ambient-accent: var(--brand-primary);
+  --route-ambient-secondary: var(--knowledge-accent);
+}
+
+.notara-workspace-ambient[data-ambient-variant="capture"] {
+  --route-ambient-start: color-mix(in srgb, var(--surface-canvas) 92%, var(--review-accent) 8%);
+  --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 94%, var(--knowledge-accent) 6%);
+  --route-ambient-accent: var(--review-accent);
+  --route-ambient-secondary: var(--knowledge-accent);
+}
+
+.notara-workspace-ambient[data-ambient-variant="ask"] {
+  --route-ambient-start: color-mix(in srgb, var(--surface-canvas) 91%, var(--brand-primary) 9%);
+  --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 94%, var(--brand-secondary) 6%);
+  --route-ambient-accent: var(--brand-primary);
+  --route-ambient-secondary: var(--brand-secondary);
+}
+
+.notara-workspace-ambient__copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.notara-workspace-ambient h1 {
+  max-width: 19ch;
+  margin: 0;
+  color: var(--text-primary);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.8rem, 3vw, 2.35rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+
+.notara-workspace-ambient p {
+  max-width: 62ch;
+  margin: 9px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.58;
+}
+
+.notara-workspace-ambient__footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 15px;
+}
+
+.notara-workspace-ambient__meta,
+.notara-workspace-ambient__action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.notara-workspace-ambient__meta {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notara-workspace-ambient__meta > span {
+  position: relative;
+}
+
+.notara-workspace-ambient__meta > span + span {
+  padding-left: 13px;
+}
+
+.notara-workspace-ambient__meta > span + span::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--route-ambient-secondary);
+  content: '';
+  transform: translateY(-50%);
+}
+
+.notara-workspace-ambient__meta strong {
+  color: var(--text-primary);
+  font-weight: 850;
+}
+
+.notara-workspace-ambient__action {
+  margin-left: auto;
+}
+
+.notara-workspace-ambient__action .notara-secondary-button {
+  border-color: color-mix(in srgb, var(--border-strong) 74%, var(--route-ambient-accent) 26%);
+  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+}
+
+.notara-workspace-ambient__scene {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 116px;
+  color: var(--route-ambient-accent);
+  pointer-events: none;
+}
+
+/* Courses: a signal finds the active point in a learning landscape. */
+.notara-workspace-ambient__course-path {
+  position: absolute;
+  left: 20px;
+  top: 59px;
+  width: 224px;
+  height: 58px;
+  border-top: 2px solid color-mix(in srgb, var(--route-ambient-accent) 46%, transparent);
+  border-radius: 50%;
+  transform: rotate(-8deg);
+}
+
+.notara-workspace-ambient__course-node {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: var(--surface-elevated);
+}
+
+.notara-workspace-ambient__course-node--one { left: 21px; top: 69px; opacity: 0.5; }
+.notara-workspace-ambient__course-node--two { left: 116px; top: 50px; opacity: 0.72; }
+.notara-workspace-ambient__course-node--active {
+  left: 232px;
+  top: 23px;
+  width: 17px;
+  height: 17px;
+  border-color: var(--route-ambient-secondary);
+  box-shadow: 0 5px 18px color-mix(in srgb, var(--route-ambient-secondary) 20%, transparent);
+}
+
+.notara-workspace-ambient__course-signal {
+  position: absolute;
+  left: 24px;
+  top: 69px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--route-ambient-secondary);
+  animation: notara-ambient-course-signal 4.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@keyframes notara-ambient-course-signal {
+  0%, 12% { opacity: 0; transform: translate(0, 0); }
+  28% { opacity: 0.9; }
+  78% { opacity: 0.9; transform: translate(211px, -43px); }
+  88%, 100% { opacity: 0; transform: translate(211px, -43px) scale(1.8); }
+}
+
+/* Shared: packet direction follows the selected sharing filter. */
+.notara-workspace-ambient__share-boundary {
+  position: absolute;
+  left: 50%;
+  top: 9px;
+  width: 1px;
+  height: 98px;
+  background: color-mix(in srgb, var(--border-strong) 72%, transparent);
+}
+
+.notara-workspace-ambient__share-core {
+  position: absolute;
+  left: calc(50% - 12px);
+  top: 45px;
+  width: 25px;
+  height: 25px;
+  border: 1px solid color-mix(in srgb, var(--route-ambient-accent) 62%, var(--border-subtle));
+  border-radius: 8px;
+  background: var(--surface-elevated);
+  transform: rotate(45deg);
+}
+
+.notara-workspace-ambient__share-line {
+  position: absolute;
+  top: 57px;
+  width: 42%;
+  height: 1px;
+  background: color-mix(in srgb, var(--route-ambient-secondary) 44%, transparent);
+}
+
+.notara-workspace-ambient__share-line--in { right: 50%; }
+.notara-workspace-ambient__share-line--out { left: 50%; }
+
+.notara-workspace-ambient__share-packet {
+  position: absolute;
+  top: 53px;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--route-ambient-secondary);
+}
+
+.notara-workspace-ambient__share-packet--in {
+  right: 20px;
+  animation: notara-ambient-share-in 3.6s linear infinite;
+}
+
+.notara-workspace-ambient__share-packet--out {
+  left: calc(50% + 7px);
+  background: var(--route-ambient-accent);
+  animation: notara-ambient-share-out 3.6s 1.1s linear infinite;
+}
+
+.notara-workspace-ambient[data-ambient-variant="shared"][data-ambient-state="inbound"] .notara-workspace-ambient__share-packet--out,
+.notara-workspace-ambient[data-ambient-variant="shared"][data-ambient-state="outbound"] .notara-workspace-ambient__share-packet--in {
+  opacity: 0.14;
+  animation: none;
+}
+
+@keyframes notara-ambient-share-in {
+  0% { opacity: 0; transform: translateX(0); }
+  18% { opacity: 0.9; }
+  78% { opacity: 0.9; transform: translateX(-103px); }
+  100% { opacity: 0; transform: translateX(-103px) scale(0.65); }
+}
+
+@keyframes notara-ambient-share-out {
+  0% { opacity: 0; transform: translateX(0); }
+  18% { opacity: 0.9; }
+  78% { opacity: 0.9; transform: translateX(103px); }
+  100% { opacity: 0; transform: translateX(103px) scale(0.65); }
+}
+
+/* Capture: the waveform resolves into stable note lines. */
+.notara-workspace-ambient__capture-wave {
+  position: absolute;
+  left: 10px;
+  top: 32px;
+  display: flex;
+  height: 52px;
+  align-items: center;
+  gap: 5px;
+}
+
+.notara-workspace-ambient__capture-wave i {
+  width: 4px;
+  height: 18px;
+  border-radius: 99px;
+  background: var(--route-ambient-accent);
+  opacity: 0.55;
+  animation: notara-ambient-capture-wave 1.5s ease-in-out infinite alternate;
+}
+
+.notara-workspace-ambient__capture-wave i:nth-child(2),
+.notara-workspace-ambient__capture-wave i:nth-child(6) { height: 32px; animation-delay: 120ms; }
+.notara-workspace-ambient__capture-wave i:nth-child(3),
+.notara-workspace-ambient__capture-wave i:nth-child(5) { height: 46px; animation-delay: 240ms; }
+.notara-workspace-ambient__capture-wave i:nth-child(4) { height: 28px; animation-delay: 360ms; }
+
+.notara-workspace-ambient__capture-fold {
+  position: absolute;
+  left: 84px;
+  top: 24px;
+  width: 76px;
+  height: 68px;
+  border-right: 1px solid color-mix(in srgb, var(--route-ambient-secondary) 54%, transparent);
+  transform: skewX(-24deg);
+}
+
+.notara-workspace-ambient__capture-notes {
+  position: absolute;
+  right: 18px;
+  top: 27px;
+  display: grid;
+  width: 106px;
+  gap: 12px;
+}
+
+.notara-workspace-ambient__capture-notes i {
+  height: 3px;
+  border-radius: 99px;
+  background: var(--route-ambient-secondary);
+  opacity: 0.56;
+  transform-origin: left;
+  animation: notara-ambient-capture-note 4.4s ease-in-out infinite;
+}
+
+.notara-workspace-ambient__capture-notes i:nth-child(2) { width: 78%; animation-delay: 180ms; }
+.notara-workspace-ambient__capture-notes i:nth-child(3) { width: 91%; animation-delay: 360ms; }
+.notara-workspace-ambient[data-ambient-state="record"] .notara-workspace-ambient__capture-wave i { opacity: 0.9; }
+.notara-workspace-ambient[data-ambient-state="upload"] .notara-workspace-ambient__capture-notes i { opacity: 0.8; }
+
+@keyframes notara-ambient-capture-wave {
+  to { opacity: 0.95; transform: scaleY(0.52); }
+}
+
+@keyframes notara-ambient-capture-note {
+  0%, 22% { opacity: 0.18; transform: scaleX(0.15); }
+  52%, 86% { opacity: 0.72; transform: scaleX(1); }
+  100% { opacity: 0.18; transform: scaleX(1); }
+}
+
+/* Ask: separate material contexts converge into one answer point. */
+.notara-workspace-ambient__ask-source,
+.notara-workspace-ambient__ask-answer {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--route-ambient-accent);
+}
+
+.notara-workspace-ambient__ask-source {
+  left: 18px;
+  width: 9px;
+  height: 9px;
+  opacity: 0.68;
+  animation: notara-ambient-ask-converge 4.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.notara-workspace-ambient__ask-source--one { --ask-shift: 36px; top: 16px; }
+.notara-workspace-ambient__ask-source--two { --ask-shift: 0px; top: 53px; animation-delay: 240ms; }
+.notara-workspace-ambient__ask-source--three { --ask-shift: -36px; top: 90px; animation-delay: 480ms; }
+
+.notara-workspace-ambient__ask-line {
+  position: absolute;
+  left: 27px;
+  width: 170px;
+  height: 1px;
+  background: color-mix(in srgb, var(--route-ambient-secondary) 42%, transparent);
+  transform-origin: left;
+}
+
+.notara-workspace-ambient__ask-line--one { top: 20px; transform: rotate(12deg); }
+.notara-workspace-ambient__ask-line--two { top: 57px; }
+.notara-workspace-ambient__ask-line--three { top: 94px; transform: rotate(-12deg); }
+
+.notara-workspace-ambient__ask-answer {
+  right: 24px;
+  top: 43px;
+  width: 29px;
+  height: 29px;
+  border: 6px solid color-mix(in srgb, var(--route-ambient-accent) 18%, var(--surface-elevated));
+  box-shadow: 0 7px 22px color-mix(in srgb, var(--route-ambient-accent) 20%, transparent);
+}
+
+@keyframes notara-ambient-ask-converge {
+  0%, 15% { opacity: 0.16; transform: translate(0, 0); }
+  62%, 78% { opacity: 0.88; transform: translate(166px, var(--ask-shift)); }
+  100% { opacity: 0; transform: translate(166px, var(--ask-shift)) scale(0.45); }
+}
+
+@media (max-width: 760px) {
+  .notara-workspace-ambient {
+    min-height: 184px;
+    grid-template-columns: 1fr;
+    align-items: start;
+    padding: 20px;
+  }
+
+  .notara-workspace-ambient h1 {
+    max-width: 15ch;
+    font-size: 2rem;
+  }
+
+  .notara-workspace-ambient p {
+    max-width: 32ch;
+    font-size: 13px;
+  }
+
+  .notara-workspace-ambient__copy {
+    max-width: calc(100% - 52px);
+  }
+
+  .notara-workspace-ambient__footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .notara-workspace-ambient__action {
+    margin-left: 0;
+  }
+
+  .notara-workspace-ambient__scene {
+    position: absolute;
+    right: -42px;
+    bottom: -18px;
+    width: 220px;
+    opacity: 0.38;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notara-workspace-ambient__scene,
+  .notara-workspace-ambient__scene * {
+    animation: none !important;
+  }
+
+  .notara-workspace-ambient__course-signal,
+  .notara-workspace-ambient__share-packet,
+  .notara-workspace-ambient__ask-source {
+    opacity: 0.62;
+  }
+}
+
 .notara-eyebrow {
   display: inline-flex;
   align-items: center;
