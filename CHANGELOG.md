@@ -4,7 +4,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.2.0.
+Belum ada perubahan setelah kandidat rilis v0.3.1.
+
+## [0.3.1] - 2026-08-12
+### Fixed
+- Metadata versi package, badge aplikasi, dan status akun kini memakai versi rilis yang sama.
+- Drawer mobile membuat workspace di belakangnya inert untuk keyboard dan pembaca layar selama navigasi terbuka.
+- Target sentuh pencarian dan kontrol sidebar mobile kini minimal 44 piksel, termasuk tindakan mata kuliah dan kelompok belajar.
+- Ikon folder default yang rusak akibat encoding dipulihkan.
+
+## [0.3.0] - 2026-08-12
+### Added
+- Komponen visual terpusat untuk brand mark, wordmark, lockup, recording, processing, empty state, dan ambient artwork.
+
+### Changed
+- App Shell, Home, Mata Kuliah, Dibagikan, Capture, dan Processing dipoles sebagai fondasi produk Nalira yang responsif dan aksesibel.
+- Hook komponen dibuat brand-neutral agar arah produk terintegrasi dapat masuk tanpa refactor besar setelah prototype v4.2 disetujui.
 
 ## [0.2.0] - 2026-08-11
 ### Added

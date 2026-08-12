@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, DragEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import packageJson from '../../package.json';
 import { 
   UploadCloud, FileAudio, FileText, Sparkles, 
   Check, Loader2, Clipboard, AlertCircle, Trash2, ArrowLeft, BookOpen,
@@ -3635,7 +3636,7 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto px-3 space-y-6 pb-6 scrollbar-thin animate-in fade-in duration-300">
             {/* Library Section */}
             <div>
-              <h3 className="px-3 text-[9px] font-bold text-zinc-500 tracking-widest uppercase mb-2">Perpustakaan</h3>
+              <p className="px-3 text-[9px] font-bold text-zinc-500 tracking-widest uppercase mb-2">Perpustakaan</p>
               <div className="space-y-0.5">
                 <button
                   onClick={() => {
@@ -3643,7 +3644,7 @@ export default function Home() {
                     setSelectedSummary(null);
                     setWorkspaceView('courses');
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  className={`min-h-11 w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'all' 
                       ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)] font-bold'
                       : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
@@ -3664,7 +3665,7 @@ export default function Home() {
                     setSelectedSummary(null);
                     setWorkspaceView('courses');
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  className={`min-h-11 w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'recent' 
                       ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)] font-bold'
                       : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
@@ -3689,7 +3690,7 @@ export default function Home() {
                     setSelectedSummary(null);
                     setWorkspaceView('courses');
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                  className={`min-h-11 w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                     activeFolderId === 'uncategorized' 
                       ? 'bg-[var(--nav-selected)] text-[var(--nav-selected-text)] font-bold'
                       : 'text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]'
@@ -3709,7 +3710,7 @@ export default function Home() {
             {/* Folders Section */}
             <div data-tour="sidebar-folders">
               <div className="flex items-center justify-between px-3 mb-2">
-                <h3 className="text-[9px] font-bold text-zinc-500 tracking-widest uppercase">Mata Kuliah</h3>
+                <p className="text-[9px] font-bold text-zinc-500 tracking-widest uppercase">Mata Kuliah</p>
                 <button 
                   onClick={() => {
                     setEditingFolder(null);
@@ -3718,8 +3719,9 @@ export default function Home() {
                     setFolderIcon('📁');
                     setShowFolderModal(true);
                   }}
-                  className="text-zinc-500 hover:text-violet-400 p-0.5 rounded hover:bg-white/5 transition-all duration-200"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/5 hover:text-violet-400"
                   title="Tambah Folder Baru"
+                  aria-label="Tambah mata kuliah baru"
                 >
                   <FolderPlus className="h-3.5 w-3.5" />
                 </button>
@@ -3754,7 +3756,7 @@ export default function Home() {
                               setSelectedSummary(null);
                               setWorkspaceView('courses');
                             }}
-                            className="flex-1 flex items-center gap-2.5 px-3 py-2 text-xs text-left truncate"
+                            className="flex min-h-11 flex-1 items-center gap-2.5 truncate px-3 py-2 text-left text-xs"
                           >
                             <span className="text-sm select-none">{folder.icon}</span>
                             <span className="truncate">{folder.name}</span>
@@ -3776,7 +3778,8 @@ export default function Home() {
                                 setFolderIcon(folder.icon);
                                 setShowFolderModal(true);
                               }}
-                              className="hidden group-hover/folder:block text-zinc-500 hover:text-white p-0.5 rounded hover:bg-white/10"
+                              aria-label={`Edit mata kuliah ${folder.name}`}
+                              className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/10 hover:text-white md:hidden md:group-hover/folder:flex"
                             >
                               <Edit3 className="h-3 w-3" />
                             </button>
@@ -3798,8 +3801,9 @@ export default function Home() {
                 <span className="text-[9px] font-bold text-zinc-500 tracking-widest uppercase">Kelompok Belajar</span>
                 <button
                   onClick={() => setShowStudyGroupModal(true)}
-                  className="text-zinc-500 hover:text-violet-400 p-0.5 rounded hover:bg-white/5 transition-all duration-200"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/5 hover:text-violet-400"
                   title="Buat atau Bergabung Kelompok"
+                  aria-label="Buat atau bergabung kelompok belajar"
                 >
                   <Users className="h-3.5 w-3.5" />
                 </button>
@@ -3809,7 +3813,7 @@ export default function Home() {
                 {studyGroups.length === 0 ? (
                   <button
                     onClick={() => setShowStudyGroupModal(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.02] transition-all duration-200 text-xs"
+                    className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-zinc-600 transition-colors hover:bg-white/[0.02] hover:text-zinc-400"
                   >
                     <UserPlus className="h-3 w-3 flex-shrink-0" />
                     <span>Buat / Bergabung Kelompok</span>
@@ -3826,7 +3830,7 @@ export default function Home() {
                       >
                         <button
                           onClick={() => handleLoadGroupMembers(group.id)}
-                          className="flex-1 flex items-center gap-2.5 px-3 py-2 text-xs text-left truncate"
+                          className="flex min-h-11 flex-1 items-center gap-2.5 truncate px-3 py-2 text-left text-xs"
                         >
                           <Hash className="h-3 w-3 flex-shrink-0 text-violet-500" />
                           <span className="truncate">{group.name}</span>
@@ -3836,8 +3840,9 @@ export default function Home() {
                         </button>
                         <button
                           onClick={() => handleLeaveGroup(group.id, group.name)}
-                          className="hidden group-hover/sg:block text-zinc-600 hover:text-red-400 p-0.5 rounded hover:bg-white/10 mr-2 flex-shrink-0"
+                          className="mr-2 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-zinc-600 hover:bg-white/10 hover:text-red-400 md:hidden md:group-hover/sg:flex"
                           title="Keluar dari kelompok"
+                          aria-label={`Keluar dari kelompok ${group.name}`}
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -3864,7 +3869,7 @@ export default function Home() {
                               navigator.clipboard.writeText(group.invite_code);
                               showToast(`Kode undangan disalin: ${group.invite_code}`, 'success');
                             }}
-                            className="mt-2 flex items-center gap-1.5 text-[10px] text-violet-500 hover:text-violet-300 transition-colors w-full text-left px-1"
+                            className="mt-2 flex min-h-11 w-full items-center gap-1.5 px-1 text-left text-[10px] text-violet-500 transition-colors hover:text-violet-300"
                           >
                             <Link2 className="h-2.5 w-2.5 flex-shrink-0" />
                             <span>Kode: <span className="font-mono font-bold">{group.invite_code}</span></span>
@@ -3881,12 +3886,12 @@ export default function Home() {
             {/* Summaries History List */}
 
             <div>
-              <h3 className="px-3 text-[9px] font-bold text-zinc-500 tracking-widest uppercase mb-2">
+              <p className="px-3 text-[9px] font-bold text-zinc-500 tracking-widest uppercase mb-2">
                 {activeFolderId === 'all' && "Semua Rangkuman"}
                 {activeFolderId === 'recent' && "Baru Ditambahkan"}
                 {activeFolderId === 'uncategorized' && "Belum Dikategorikan"}
                 {activeFolderId !== 'all' && activeFolderId !== 'recent' && activeFolderId !== 'uncategorized' && `Rangkuman ${activeFolder?.name}`}
-              </h3>
+              </p>
               <div className="space-y-1 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
                 {isDataLoading ? (
                   Array.from({ length: 4 }).map((_, idx) => (
@@ -4174,7 +4179,7 @@ export default function Home() {
             <div className="px-4 pt-3 pb-1 flex items-center gap-2">
               <span className="text-[10px] font-bold text-zinc-600 tracking-widest uppercase">Nalira</span>
               <span className="text-[10px] font-mono font-bold text-violet-500/60 bg-violet-500/10 border border-violet-500/15 rounded-full px-2 py-0.5">
-                v0.0.06
+                v{packageJson.version}
               </span>
               <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" title="Versi terkini" />
             </div>
@@ -4202,7 +4207,7 @@ export default function Home() {
       </AppShellSidebar>
 
       {/* RIGHT COLUMN AREA */}
-      <AppShellWorkspace sidebarExpanded={sidebarExpanded}>
+      <AppShellWorkspace sidebarExpanded={sidebarExpanded} mobileNavigationOpen={sidebarOpen}>
         
         {/* HEADER BAR */}
         <AppShellTopbar>
@@ -4226,7 +4231,7 @@ export default function Home() {
                 setSearchQuery('');
                 setSelectedSearchResultIdx(0);
               }}
-              className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] sm:w-64"
+              className="flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] sm:w-64 sm:justify-start"
               aria-label="Cari materi dan rangkuman"
             >
               <Search className="h-4 w-4 shrink-0" />
@@ -4682,7 +4687,7 @@ export default function Home() {
                   setEditingFolder(null);
                   setFolderName('');
                   setFolderColor('#8B5CF6');
-                  setFolderIcon('ðŸ“');
+                  setFolderIcon('📁');
                   setShowFolderModal(true);
                 }}
                 onTogglePublic={handleTogglePublic}
@@ -6467,7 +6472,7 @@ export default function Home() {
                       </div>
                       <div>
                         <p className="text-xs font-extrabold text-white">Nalira</p>
-                        <p className="text-[11px] text-zinc-500 font-mono">Versi v0.0.06 · Early Testing</p>
+                        <p className="text-[11px] text-zinc-500 font-mono">Versi v{packageJson.version} · Early Testing</p>
                       </div>
                       <span className="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-2.5 py-1">
                         ✓ Terkini
@@ -6986,7 +6991,7 @@ export default function Home() {
 
       {/* ─── VERSION UPDATE BANNER ─── */}
       {/* Detects new Vercel deployments on window focus — shows update prompt */}
-      <VersionUpdateBanner appVersion="v0.0.06" />
+      <VersionUpdateBanner appVersion={`v${packageJson.version}`} />
 
     </AppShellRoot>
   );

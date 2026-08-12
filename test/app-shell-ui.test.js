@@ -14,6 +14,7 @@ let sharedModule;
 let recordingModule;
 let processingModule;
 let sourceTabsModule;
+let appShellModule;
 let moduleLoadError;
 
 const originalResolveFilename = Module._resolveFilename;
@@ -33,6 +34,7 @@ try {
   recordingModule = require('../build/app/components/capture/RecordingPanel.js');
   processingModule = require('../build/app/components/capture/ProcessingView.js');
   sourceTabsModule = require('../build/app/components/capture/CaptureSourceTabs.js');
+  appShellModule = require('../build/app/components/shell/AppShell.js');
 } catch (error) {
   moduleLoadError = error;
 } finally {
@@ -121,6 +123,20 @@ test('operational workspaces use customer language instead of implementation jar
   assert.doesNotMatch(visibleCopy, /fallback|contract|foundation visual|adapter existing/i);
   assert.doesNotMatch(visibleCopy, /Learning landscape/i);
   assert.match(visibleCopy, /Nalira/);
+});
+
+test('mobile navigation makes the background workspace unavailable to assistive technology', () => {
+  assert.ifError(moduleLoadError);
+
+  const workspace = renderToStaticMarkup(
+    React.createElement(appShellModule.AppShellWorkspace, {
+      sidebarExpanded: false,
+      mobileNavigationOpen: true,
+    }, React.createElement('main', null, 'Materi')),
+  );
+
+  assert.match(workspace, /aria-hidden="true"/);
+  assert.match(workspace, /inert=""/);
 });
 
 test('capture surfaces consume centralized visuals and accessible source tabs', () => {

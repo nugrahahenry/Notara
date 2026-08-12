@@ -119,14 +119,17 @@ export function AppShellSidebar({
 
 interface AppShellWorkspaceProps {
   sidebarExpanded: boolean;
+  mobileNavigationOpen: boolean;
   children: ReactNode;
 }
 
-export function AppShellWorkspace({ sidebarExpanded, children }: AppShellWorkspaceProps) {
+export function AppShellWorkspace({ sidebarExpanded, mobileNavigationOpen, children }: AppShellWorkspaceProps) {
   return (
     <div
       className="notara-shell-workspace"
       data-sidebar-expanded={sidebarExpanded}
+      aria-hidden={mobileNavigationOpen || undefined}
+      inert={mobileNavigationOpen || undefined}
     >
       {children}
     </div>

@@ -29,6 +29,7 @@
     "app/components/capture/RecordingPanel.tsx",
     "app/components/capture/ProcessingView.tsx",
     "app/components/capture/CaptureSourceTabs.tsx",
+    "app/components/shell/AppShell.tsx",
     "app/components/workspace/HomeWorkspace.tsx",
     "app/components/workspace/CoursesWorkspace.tsx",
     "app/components/workspace/SharedWorkspace.tsx",
