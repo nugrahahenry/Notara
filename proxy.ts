@@ -7,7 +7,7 @@ import {
   sanitizeAuthDestination,
 } from '@/lib/auth/redirect';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Recovery untuk konfigurasi Supabase yang masih memulangkan PKCE code ke
   // Site URL (/). Code tetap ditukar hanya oleh route callback resmi.
   const recoveryUrl = buildOAuthRecoveryUrl(request.nextUrl);

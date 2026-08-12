@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.4.
+Belum ada perubahan setelah kandidat rilis v0.3.5.
+
+## [0.3.5] - 2026-08-12
+### Fixed
+- Next.js kini memakai konvensi `proxy.ts` untuk boundary autentikasi tanpa mengubah perilaku callback, session refresh, atau proteksi route.
+- Turbopack dikunci ke root project Nalira sehingga tidak lagi salah memilih lockfile workspace induk.
+- Development tidak lagi mematikan verifikasi sertifikat TLS secara global.
+- ESLint tidak lagi memindai artefak QA privat dan profil Chrome yang memang diabaikan Git.
+
+### Added
+- Regression test untuk konvensi Proxy Next.js 16, root Turbopack, keamanan TLS, dan batas source ESLint.
 
 ## [0.3.4] - 2026-08-12
 ### Fixed

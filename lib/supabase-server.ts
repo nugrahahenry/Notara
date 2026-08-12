@@ -18,7 +18,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Ini bisa diabaikan jika middleware menangani pembaruan session.
+            // Ini bisa diabaikan jika proxy menangani pembaruan session.
           }
         },
       },

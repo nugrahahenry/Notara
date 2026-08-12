@@ -239,7 +239,7 @@ function LoginForm() {
           localStorage.setItem('login_success', '1');
           sessionStorage.setItem('login_success', '1');
           // Navigasi dokumen penuh (bukan soft-nav): menjamin cookie sesi yang baru
-          // diset ikut terkirim di permintaan pertama, sehingga middleware langsung
+          // diset ikut terkirim di permintaan pertama, sehingga proxy langsung
           // melihat user sebagai sudah login dan tidak memantulkan ke halaman publik.
           window.location.replace(nextParam);
         }
@@ -256,7 +256,7 @@ function LoginForm() {
           localStorage.setItem('login_success', '1');
           sessionStorage.setItem('login_success', '1');
           // Navigasi dokumen penuh (bukan soft-nav): menjamin cookie sesi yang baru
-          // diset ikut terkirim di permintaan pertama, sehingga middleware langsung
+          // diset ikut terkirim di permintaan pertama, sehingga proxy langsung
           // melihat user sebagai sudah login dan tidak memantulkan ke halaman publik.
           window.location.replace(nextParam);
         }
