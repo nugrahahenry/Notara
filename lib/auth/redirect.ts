@@ -1,6 +1,11 @@
 export const DEFAULT_AUTH_DESTINATION = '/dashboard';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+const PUBLIC_OPERATIONAL_ROUTES = new Set(['/api/health', '/api/version']);
+
+export function isPublicOperationalRoute(pathname: string): boolean {
+  return PUBLIC_OPERATIONAL_ROUTES.has(pathname);
+}
 
 export function sanitizeAuthDestination(value: string | null | undefined): string {
   if (!value) return DEFAULT_AUTH_DESTINATION;

@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const {
   buildOAuthRecoveryUrl,
   getRequestBaseUrl,
+  isPublicOperationalRoute,
   resolveAuthOrigin,
   sanitizeAuthDestination,
 } = require('../build/lib/auth/redirect.js');
@@ -55,4 +56,12 @@ test('ordinary landing requests never trigger OAuth recovery', () => {
     buildOAuthRecoveryUrl(new URL('https://notara.example.com/login?code=pkce-code')),
     null,
   );
+});
+
+test('only operational health and version endpoints bypass authentication', () => {
+  assert.equal(isPublicOperationalRoute('/api/health'), true);
+  assert.equal(isPublicOperationalRoute('/api/version'), true);
+  assert.equal(isPublicOperationalRoute('/api/chat'), false);
+  assert.equal(isPublicOperationalRoute('/api/summarize'), false);
+  assert.equal(isPublicOperationalRoute('/dashboard'), false);
 });

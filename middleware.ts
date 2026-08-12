@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   buildOAuthRecoveryUrl,
   getRequestBaseUrl,
+  isPublicOperationalRoute,
   sanitizeAuthDestination,
 } from '@/lib/auth/redirect';
 
@@ -16,6 +17,10 @@ export async function middleware(request: NextRequest) {
       getRequestBaseUrl(request),
     );
     return NextResponse.redirect(publicRecoveryUrl);
+  }
+
+  if (isPublicOperationalRoute(request.nextUrl.pathname)) {
+    return NextResponse.next();
   }
 
   // Jalur uji lokal: sengaja hanya berlaku saat `next dev`. Ini memungkinkan
