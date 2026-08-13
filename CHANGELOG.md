@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.15.
+Belum ada perubahan setelah kandidat rilis v0.3.16.
+
+## [0.3.16] - 2026-08-13
+### Changed
+- State kelompok belajar, anggota kelompok, dan langganan dashboard sekarang memakai kontrak StudyGroup, GroupMember, dan Subscription yang sudah dimiliki layer data.
+- Kelanjutan pembayaran menyimpan snapshot token yang tervalidasi sebelum memanggil Midtrans Snap.
+
+### Quality
+- Seluruh error lint no-explicit-any repository telah dihapus tanpa menambahkan pengecualian aturan.
+- Query Supabase, RLS, schema, alur Study Group, dan kontrak pembayaran tidak berubah.
 
 ## [0.3.15] - 2026-08-13
 ### Changed

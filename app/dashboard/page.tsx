@@ -66,9 +66,10 @@ import {
   deleteChatThread,
   getUserProfile,
   saveOnboardingData,
-  getUserSubscription
+  getUserSubscription,
+  type Subscription
 } from '@/lib/db';
-import type { Folder as FolderType, Summary as SummaryType, ChatMessage, ChatThread } from '@/lib/types';
+import type { Folder as FolderType, Summary as SummaryType, ChatMessage, ChatThread, StudyGroup, GroupMember } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import { bufferToWav, getAudioDuration, sliceAudioBuffer } from '@/lib/capture/audio';
@@ -329,7 +330,7 @@ export default function Home() {
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   // Study Group States (Sprint 16)
-  const [studyGroups, setStudyGroups] = useState<any[]>([]);
+  const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([]);
   const [showStudyGroupModal, setShowStudyGroupModal] = useState<boolean>(false);
   const [studyGroupTab, setStudyGroupTab] = useState<'create' | 'join'>('create');
   const [newGroupName, setNewGroupName] = useState<string>('');
@@ -337,7 +338,7 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState<string>('');
   const [studyGroupLoading, setStudyGroupLoading] = useState<boolean>(false);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
 
   // Share Card States (Sprint 17 — Phase 4.5C)
   const [showShareCardModal, setShowShareCardModal] = useState<boolean>(false);
@@ -356,7 +357,7 @@ export default function Home() {
   // Subscription & Billing States (Phase 5)
   const [profileTier, setProfileTier] = useState<'free' | 'pro' | 'max'>('free');
   const captureLimits = getCaptureLimits(profileTier);
-  const [subscriptionData, setSubscriptionData] = useState<any>(null);
+  const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
   const [billingLoading, setBillingLoading] = useState<boolean>(false);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
@@ -6681,9 +6682,10 @@ export default function Home() {
                         <button
                           onClick={() => {
                             const tier = subscriptionData.amount === 99000 ? 'max' : 'pro';
+                            const snapToken = subscriptionData.snap_token;
                             const snap = typeof window !== 'undefined' ? (window as BrowserWindow).snap : undefined;
-                            if (snap) {
-                              snap.pay(subscriptionData.snap_token, {
+                            if (snap && snapToken) {
+                              snap.pay(snapToken, {
                                 onSuccess: async () => {
                                   showToast(`Pembayaran berhasil! Akun ${tier === 'max' ? 'Max' : 'Pro'} Anda aktif. 🎉`, 'success');
                                   await loadBillingData();
