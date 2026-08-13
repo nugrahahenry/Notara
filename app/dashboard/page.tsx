@@ -100,6 +100,7 @@ import {
   type CaptureTaskProgress,
   type CaptureTaskStatus,
 } from '@/lib/capture/task';
+import type { BrowserWindow, SpeechRecognitionLike } from '@/lib/browser';
 
 // Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
 // membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
@@ -324,7 +325,7 @@ export default function Home() {
   // Voice Input (Mic) States (Sprint 15)
   const [isListening, setIsListening] = useState<boolean>(false);
   const [voiceNotSupported, setVoiceNotSupported] = useState<boolean>(false);
-  const speechRecognitionRef = useRef<any>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   // Study Group States (Sprint 16)
   const [studyGroups, setStudyGroups] = useState<any[]>([]);
@@ -428,7 +429,8 @@ export default function Home() {
   // Sound Synthesizer chimes
   const playSoundEffect = (type: 'success' | 'delete' | 'info') => {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const browserWindow = window as BrowserWindow;
+      const AudioContextClass = browserWindow.AudioContext || browserWindow.webkitAudioContext;
       if (!AudioContextClass) return;
       const ctx = new AudioContextClass();
       
@@ -809,8 +811,9 @@ export default function Home() {
         }
       } else {
         // Mode Asli Sandbox/Production
-        if (typeof window !== 'undefined' && (window as any).snap) {
-          (window as any).snap.pay(token, {
+        const snap = typeof window !== 'undefined' ? (window as BrowserWindow).snap : undefined;
+        if (snap) {
+          snap.pay(token, {
             onSuccess: async () => {
               showToast(`Pembayaran berhasil! Akun ${tier === 'max' ? 'Max' : 'Pro'} Anda aktif. 🎉`, 'success');
               await loadBillingData();
@@ -1755,7 +1758,8 @@ export default function Home() {
 
   const setupVisualizer = (stream: MediaStream) => {
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const browserWindow = window as BrowserWindow;
+      const AudioContextClass = browserWindow.AudioContext || browserWindow.webkitAudioContext;
       if (!AudioContextClass) return;
       
       const audioCtx = new AudioContextClass();
@@ -2108,9 +2112,8 @@ export default function Home() {
     });
 
     try {
-      const AudioContextClass = window.AudioContext || (
-        window as Window & { webkitAudioContext?: typeof AudioContext }
-      ).webkitAudioContext;
+      const browserWindow = window as BrowserWindow;
+      const AudioContextClass = browserWindow.AudioContext || browserWindow.webkitAudioContext;
       if (!AudioContextClass) {
         throw new CapturePipelineError({
           code: 'browser-audio-unsupported',
@@ -2119,7 +2122,8 @@ export default function Home() {
         });
       }
       
-      audioCtx = new AudioContextClass();
+      const decodingContext = new AudioContextClass();
+      audioCtx = decodingContext;
       const arrayBuffer = await largeFile.arrayBuffer();
       
       addThinkingLog(`🔊 Mengekstrak jalur audio dari berkas ${fileLabel}...`);
@@ -2127,7 +2131,7 @@ export default function Home() {
 
       let audioBuffer: AudioBuffer;
       try {
-        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        audioBuffer = await decodingContext.decodeAudioData(arrayBuffer);
       } catch {
         throw new CapturePipelineError({
           code: 'unsupported-codec',
@@ -3024,7 +3028,8 @@ export default function Home() {
   // ────────────────────────────────────────────────
   const handleToggleMic = () => {
     // Cek dukungan browser
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const browserWindow = window as BrowserWindow;
+    const SpeechRecognition = browserWindow.SpeechRecognition || browserWindow.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setVoiceNotSupported(true);
       showToast('Browser Anda tidak mendukung fitur input suara. Coba gunakan Chrome.', 'delete');
@@ -3052,9 +3057,9 @@ export default function Home() {
       setIsListening(true);
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
-        .map((result: any) => result[0].transcript)
+        .map((result) => result[0].transcript)
         .join('');
       setChatInput(transcript);
       // Auto-resize textarea
@@ -3068,7 +3073,7 @@ export default function Home() {
       setIsListening(false);
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event) => {
       setIsListening(false);
       if (event.error !== 'aborted') {
         showToast('Gagal merekam suara. Pastikan mikrofon diizinkan.', 'delete');
@@ -6675,8 +6680,9 @@ export default function Home() {
                         <button
                           onClick={() => {
                             const tier = subscriptionData.amount === 99000 ? 'max' : 'pro';
-                            if (typeof window !== 'undefined' && (window as any).snap) {
-                              (window as any).snap.pay(subscriptionData.snap_token, {
+                            const snap = typeof window !== 'undefined' ? (window as BrowserWindow).snap : undefined;
+                            if (snap) {
+                              snap.pay(subscriptionData.snap_token, {
                                 onSuccess: async () => {
                                   showToast(`Pembayaran berhasil! Akun ${tier === 'max' ? 'Max' : 'Pro'} Anda aktif. 🎉`, 'success');
                                   await loadBillingData();

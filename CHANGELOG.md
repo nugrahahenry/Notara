@@ -4,7 +4,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.13.
+Belum ada perubahan setelah kandidat rilis v0.3.14.
+
+## [0.3.14] - 2026-08-13
+### Added
+- Boundary tipe browser terpusat untuk Web Speech API, fallback Web Audio Safari, dan Midtrans Snap.
+
+### Changed
+- Voice input, visualizer audio, dekode audio besar, dan dua pemanggilan Snap sekarang memakai kontrak TypeScript eksplisit tanpa cast `any` lokal.
+
+### Quality
+- Baseline lint dashboard turun dari 37 menjadi 25 error `no-explicit-any`; lima warning existing tidak berubah dan tidak ada pengecualian aturan baru.
+- Callback pembayaran, hasil transkripsi suara, urutan dekode audio, UI, Capture, database, RLS, dan konfigurasi provider tidak berubah.
 
 ## [0.3.13] - 2026-08-13
 ### Removed
