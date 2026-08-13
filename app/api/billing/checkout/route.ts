@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createMidtransTransaction } from '@/lib/midtrans';
+import { getBillingPlan, type BillableTier } from '@/lib/billing/plans';
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     // Parse body untuk mengambil param 'tier' (pro atau max)
-    let tier = 'pro';
+    let tier: BillableTier = 'pro';
     try {
       const body = await request.json();
       if (body?.tier === 'max') {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
       // default ke pro jika body kosong/tidak valid
     }
 
-    const amount = tier === 'max' ? 99000 : 49000;
+    const amount = getBillingPlan(tier).amount;
 
     // 2. IDEMPOTENCY: Cek transaksi aktif di database
     const { data: existingSub, error: dbError } = await supabase

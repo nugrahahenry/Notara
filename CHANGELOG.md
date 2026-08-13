@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.4.0.
+Belum ada perubahan setelah kandidat rilis v0.4.1.
+
+## [0.4.1] - 2026-08-14
+### Changed
+- Harga peluncuran diseragamkan menjadi Pro Rp49.000/bulan dan Max Rp99.000/bulan pada landing page, dashboard, callback lokal, serta nominal checkout Midtrans.
+- Katalog paket billing terpusat sekarang menjadi satu-satunya sumber nominal, label harga, dan identitas tier untuk mencegah perbedaan harga antarmuka dan tagihan.
+- README menjelaskan nama environment variable, pemisahan key Sandbox/Production, visibilitas Server Key, serta URL notifikasi dan redirect Midtrans.
+
+### Quality
+- Test baru melindungi nominal charge, harga tampilan, format `gross_amount`, serta pemetaan tier dari nominal langganan.
 
 ## [0.4.0] - 2026-08-14
 ### Added

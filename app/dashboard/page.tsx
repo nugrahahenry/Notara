@@ -4,6 +4,11 @@ import { useState, useEffect, useRef, useCallback, DragEvent, ChangeEvent } from
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import packageJson from '../../package.json';
+import {
+  BILLING_PLANS,
+  formatMidtransGrossAmount,
+  getBillingPlanByAmount,
+} from '@/lib/billing/plans';
 import { 
   FileText, Sparkles,
   Check, Loader2, AlertCircle, Trash2, BookOpen,
@@ -792,7 +797,7 @@ export default function Home() {
         // Mode Mock: Simulasikan pembayaran sukses offline
         console.log(`[Billing UI] Simulasikan pembayaran dummy untuk ${tier}...`);
         const orderId = data.order_id;
-        const grossAmount = tier === 'max' ? '99000.00' : '49000.00';
+        const grossAmount = formatMidtransGrossAmount(tier);
         const webhookResponse = await fetch('/api/webhooks/billing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5711,7 +5716,7 @@ export default function Home() {
               <div className="p-4 rounded-2xl bg-white/[0.015] border border-white/[0.04] flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-zinc-500 font-bold block">PAKET PRO</span>
-                  <span className="text-sm font-black text-white mt-0.5">Rp 49.000 <span className="text-xs font-medium text-zinc-500">/ bulan</span></span>
+                  <span className="text-sm font-black text-white mt-0.5">{BILLING_PLANS.pro.displayPrice} <span className="text-xs font-medium text-zinc-500">{BILLING_PLANS.pro.periodLabel}</span></span>
                 </div>
                 <span className="text-[10px] px-2.5 py-1 rounded bg-violet-500/10 border border-violet-500/20 text-violet-400 font-bold">
                   Sangat Hemat
@@ -6587,7 +6592,7 @@ export default function Home() {
                           <div className="flex justify-between">
                             <span className="text-zinc-400">Paket Dipilih</span>
                             <span className="font-bold text-zinc-200">
-                              Nalira {subscriptionData.amount === 99000 ? 'Max 👑' : 'Pro 🚀'}
+                              Nalira {getBillingPlanByAmount(subscriptionData.amount)?.name ?? 'Pro'}
                             </span>
                           </div>
                           <div className="flex justify-between">
@@ -6636,7 +6641,7 @@ export default function Home() {
 
                         <button
                           onClick={() => {
-                            const tier = subscriptionData.amount === 99000 ? 'max' : 'pro';
+                            const tier = getBillingPlanByAmount(subscriptionData.amount)?.tier ?? 'pro';
                             const snapToken = subscriptionData.snap_token;
                             const snap = typeof window !== 'undefined' ? (window as BrowserWindow).snap : undefined;
                             if (snap && snapToken) {
@@ -6718,8 +6723,8 @@ export default function Home() {
                                 <Sparkles className="h-3 w-3" /> Pro
                               </h5>
                               <div className="mt-1 flex items-baseline text-white">
-                                <span className="text-xl font-black">Rp 49.000</span>
-                                <span className="ml-1 text-[10px] font-medium text-zinc-500">/ bulan</span>
+                                <span className="text-xl font-black">{BILLING_PLANS.pro.displayPrice}</span>
+                                <span className="ml-1 text-[10px] font-medium text-zinc-500">{BILLING_PLANS.pro.periodLabel}</span>
                               </div>
                             </div>
                             <ul className="space-y-2 text-[11px] text-zinc-300">
@@ -6769,8 +6774,8 @@ export default function Home() {
                                 <Crown className="h-3 w-3" /> Max
                               </h5>
                               <div className="mt-1 flex items-baseline text-white">
-                                <span className="text-xl font-black">Rp 99.000</span>
-                                <span className="ml-1 text-[10px] font-medium text-zinc-500">/ bulan</span>
+                                <span className="text-xl font-black">{BILLING_PLANS.max.displayPrice}</span>
+                                <span className="ml-1 text-[10px] font-medium text-zinc-500">{BILLING_PLANS.max.periodLabel}</span>
                               </div>
                             </div>
                             <ul className="space-y-2 text-[11px] text-zinc-300">

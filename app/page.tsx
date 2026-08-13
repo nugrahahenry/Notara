@@ -11,6 +11,7 @@ import {
 import { NaliraBrand } from './components/brand/NaliraBrand';
 import { StarryBackground } from './components/ui/StarryBackground';
 import { supabase } from '@/lib/supabase';
+import { BILLING_PLANS } from '@/lib/billing/plans';
 
 // ==========================================
 // LANDING PAGE — Nalira
@@ -100,7 +101,7 @@ export default function LandingPage() {
     },
     {
       name: 'Pro',
-      price: 'Rp 29.900',
+      price: BILLING_PLANS.pro.displayPrice,
       period: '/bulan',
       description: 'Untuk pelajar & pekerja serius',
       icon: <Zap className="w-6 h-6" />,
@@ -121,7 +122,7 @@ export default function LandingPage() {
     },
     {
       name: 'Max',
-      price: 'Rp 79.900',
+      price: BILLING_PLANS.max.displayPrice,
       period: '/bulan',
       description: 'Akses tanpa batas, prioritas AI',
       icon: <Crown className="w-6 h-6" />,

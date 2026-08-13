@@ -26,6 +26,7 @@
     "lib/api/ai-access-policy.ts",
     "lib/auth/errors.ts",
     "lib/midtrans.ts",
+    "lib/billing/plans.ts",
     "lib/billing/webhook.ts",
     "lib/learning/fallback.ts",
     "lib/runtime/health.ts",

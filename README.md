@@ -74,6 +74,16 @@ NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION=
 
 `SUPABASE_SERVICE_ROLE_KEY` adalah secret **server-only** untuk webhook billing. Jangan pernah memberi prefix `NEXT_PUBLIC_`, menaruh nilainya di source, atau mengeksposnya ke browser. Untuk uji UI lokal ketika Supabase nonaktif, tersedia bypass yang dibatasi ketat ke mode development: `NOTARA_DEV_BYPASS_AUTH=true` dan `NEXT_PUBLIC_NOTARA_DEV_BYPASS_AUTH=true`. Jangan gunakan atau menambahkan bypass ini di deployment production.
 
+Konfigurasi Midtrans untuk Vercel memakai tiga variabel berikut:
+
+| Nama variabel | Sandbox | Production | Visibilitas |
+|---|---|---|---|
+| `MIDTRANS_SERVER_KEY` | Sandbox Server Key | Production Server Key | Secret server-only; jangan pernah memakai prefix `NEXT_PUBLIC_` |
+| `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY` | Sandbox Client Key | Production Client Key | Public client configuration untuk Snap.js |
+| `NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION` | `false` | `true` | Pemilih endpoint dan script Midtrans |
+
+Client Key dan Server Key Sandbox berbeda dari key Production. Selama pengujian, gunakan pasangan key dari environment Sandbox dan pertahankan `NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION=false`. Setelah akun Production disetujui, ganti kedua key sebagai satu pasangan dan ubah flag menjadi `true` pada deployment yang sama. Webhook billing juga memerlukan `SUPABASE_SERVICE_ROLE_KEY` agar dapat memperbarui status langganan secara server-only.
+
 ```bash
 npm run dev
 npm test
@@ -87,6 +97,7 @@ npm run build
 - Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, saat ini `https://notara-hengs.vercel.app`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://notara-hengs.vercel.app/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
 - Jangan menjalankan `supabase/schema.sql` secara utuh pada project live; ia historis dan memiliki urutan/policy yang tidak aman untuk dipakai sebagai migrasi canonical.
 - Deploy di Vercel setelah environment variable tersedia pada target environment. Perubahan migrasi, RLS, atau billing harus diverifikasi dulu di lingkungan yang aman.
+- Di Midtrans Dashboard, arahkan Payment Notification URL ke `<NEXT_PUBLIC_SITE_URL>/api/webhooks/billing`. URL harus memakai HTTPS publik, tidak boleh localhost, dan tidak boleh membutuhkan login atau custom authorization header. Untuk Snap, atur Finish Redirect URL ke `<NEXT_PUBLIC_SITE_URL>/dashboard`.
 
 ## Keterbatasan yang diketahui
 
