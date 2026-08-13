@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.14.
+Belum ada perubahan setelah kandidat rilis v0.3.15.
+
+## [0.3.15] - 2026-08-13
+### Changed
+- Batas error dashboard untuk profil, billing, MFA, chat, rekaman, mata kuliah, rangkuman, dan kelompok belajar sekarang menerima nilai unknown dan memakai helper pesan aman terpusat.
+
+### Quality
+- Baseline lint dashboard turun dari 25 menjadi tiga error no-explicit-any; sisa temuan hanya tipe data Study Group dan langganan yang dipisahkan ke checkpoint berikutnya.
+- Pesan dari objek asing tidak lagi diteruskan langsung ke UI; pesan Error asli dan fallback operasional tetap dipertahankan tanpa perubahan alur Supabase, Capture, billing, atau chat.
 
 ## [0.3.14] - 2026-08-13
 ### Added

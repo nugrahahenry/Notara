@@ -101,6 +101,7 @@ import {
   type CaptureTaskStatus,
 } from '@/lib/capture/task';
 import type { BrowserWindow, SpeechRecognitionLike } from '@/lib/browser';
+import { getErrorMessage } from '@/lib/api/boundary';
 
 // Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
 // membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
@@ -741,9 +742,9 @@ export default function Home() {
           full_name: editingName
         }
       } : null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Update profile error:', err);
-      showToast(err.message || 'Gagal memperbarui profil.', 'delete');
+      showToast(getErrorMessage(err, 'Gagal memperbarui profil.'), 'delete');
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -760,7 +761,7 @@ export default function Home() {
       }
       const sub = await getUserSubscription(user.id);
       setSubscriptionData(sub);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading billing data:', err);
       setBillingError('Gagal memuat status langganan.');
     } finally {
@@ -834,9 +835,9 @@ export default function Home() {
           throw new Error('Snap SDK pembayaran belum termuat. Silakan muat ulang.');
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`Upgrade ${tier} error:`, err);
-      setBillingError(err.message || 'Gagal memulai transaksi pembayaran.');
+      setBillingError(getErrorMessage(err, 'Gagal memulai transaksi pembayaran.'));
     } finally {
       setIsProcessingPayment(false);
     }
@@ -933,9 +934,9 @@ export default function Home() {
       setMfaFactorId(data.id);
       setMfaQrCode(data.totp.qr_code);
       setMfaSecret(data.totp.secret);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('MFA Enroll Error:', err);
-      setMfaError(err.message || 'Gagal memulai pendaftaran 2FA.');
+      setMfaError(getErrorMessage(err, 'Gagal memulai pendaftaran 2FA.'));
     } finally {
       setMfaLoading(false);
     }
@@ -969,9 +970,9 @@ export default function Home() {
       if (user) {
         await checkMfaStatus();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('MFA Verify Error:', err);
-      setMfaError(err.message || 'Kode salah atau kedaluwarsa. Silakan coba lagi.');
+      setMfaError(getErrorMessage(err, 'Kode salah atau kedaluwarsa. Silakan coba lagi.'));
     } finally {
       setMfaLoading(false);
     }
@@ -1006,9 +1007,9 @@ export default function Home() {
           if (user) {
             await checkMfaStatus();
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error('MFA Unenroll Error:', err);
-          setMfaError(err.message || 'Gagal menonaktifkan 2FA.');
+          setMfaError(getErrorMessage(err, 'Gagal menonaktifkan 2FA.'));
         } finally {
           setMfaLoading(false);
         }
@@ -1050,9 +1051,9 @@ export default function Home() {
       showToast('Verifikasi 2FA berhasil! Selamat datang kembali.', 'success');
       setMfaVerificationCode('');
       setShowMfaChallengeBlock(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('MFA Challenge Verify Error:', err);
-      setMfaError(err.message || 'Kode salah atau kedaluwarsa. Silakan coba lagi.');
+      setMfaError(getErrorMessage(err, 'Kode salah atau kedaluwarsa. Silakan coba lagi.'));
     } finally {
       setMfaLoading(false);
     }
@@ -1121,7 +1122,7 @@ export default function Home() {
             router.replace('/login');
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error checking user/data:', err);
         setError('Gagal memuat data dari database. Pastikan koneksi internet stabil.');
       } finally {
@@ -1362,8 +1363,8 @@ export default function Home() {
           } else {
             throw new Error('Gagal menghapus obrolan.');
           }
-        } catch (err: any) {
-          setError(err.message);
+        } catch (err: unknown) {
+          setError(getErrorMessage(err, 'Gagal menghapus obrolan.'));
         }
       }
     );
@@ -1395,7 +1396,7 @@ export default function Home() {
         } else {
           throw new Error('Gagal membuat thread chat baru.');
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to auto-create thread:', err);
         setError('Gagal memulai obrolan baru.');
         setIsSendingChat(false);
@@ -1540,11 +1541,11 @@ export default function Home() {
         }
       }
 
-    } catch (chatErr: any) {
+    } catch (chatErr: unknown) {
       console.error(chatErr);
       setChatMessages(prev => prev.map(m => 
         m.id === tempAssistantId 
-          ? { ...m, content: '❌ Terjadi kesalahan: ' + (chatErr.message || 'Gagal merespon.') }
+          ? { ...m, content: '❌ Terjadi kesalahan: ' + (getErrorMessage(chatErr, 'Gagal merespon.')) }
           : m
       ));
     } finally {
@@ -1580,8 +1581,8 @@ export default function Home() {
           } else {
             throw new Error('Gagal menghapus riwayat chat.');
           }
-        } catch (err: any) {
-          setError(err.message);
+        } catch (err: unknown) {
+          setError(getErrorMessage(err, 'Gagal menghapus riwayat chat.'));
         }
       }
     );
@@ -1750,7 +1751,7 @@ export default function Home() {
       
       setupVisualizer(stream);
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error starting recording:', err);
       setError('Gagal mengakses mikrofon. Pastikan Anda memberikan izin akses mikrofon.');
     }
@@ -2897,8 +2898,8 @@ export default function Home() {
       } else {
         throw new Error('Gagal membuat mata kuliah baru.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal membuat mata kuliah baru.'));
     }
   };
 
@@ -2936,8 +2937,8 @@ export default function Home() {
       setShowFolderModal(false);
       setEditingFolder(null);
       setFolderName('');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal memperbarui mata kuliah.'));
     }
   };
 
@@ -2966,8 +2967,8 @@ export default function Home() {
           } else {
             throw new Error('Gagal menghapus folder dari Supabase.');
           }
-        } catch (err: any) {
-          setError(err.message);
+        } catch (err: unknown) {
+          setError(getErrorMessage(err, 'Gagal menghapus mata kuliah.'));
         }
       }
     );
@@ -2994,8 +2995,8 @@ export default function Home() {
           } else {
             throw new Error('Gagal menghapus rangkuman.');
           }
-        } catch (err: any) {
-          setError(err.message);
+        } catch (err: unknown) {
+          setError(getErrorMessage(err, 'Gagal menghapus rangkuman.'));
         }
       }
     );
@@ -3018,8 +3019,8 @@ export default function Home() {
       } else {
         throw new Error('Gagal mengubah status berbagi.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal mengubah status berbagi.'));
     }
   };
 
@@ -3100,8 +3101,8 @@ export default function Home() {
       } else {
         throw new Error('Gagal membuat kelompok belajar.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal membuat kelompok belajar.'));
     } finally {
       setStudyGroupLoading(false);
     }
@@ -3123,8 +3124,8 @@ export default function Home() {
       } else {
         throw new Error('Kode undangan tidak valid atau kelompok tidak ditemukan.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Kode undangan tidak valid atau kelompok tidak ditemukan.'));
     } finally {
       setStudyGroupLoading(false);
     }
@@ -3196,8 +3197,8 @@ export default function Home() {
       } else {
         throw new Error('Gagal mengubah judul di database.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal mengubah judul.'));
       return false;
     }
   };
@@ -3226,8 +3227,8 @@ export default function Home() {
       } else {
         throw new Error('Gagal memindahkan folder di database.');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal memindahkan mata kuliah.'));
     }
   };
 
