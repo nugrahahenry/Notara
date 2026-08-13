@@ -97,6 +97,7 @@ import {
 import {
   createSelectedCaptureTask,
   getNextQueuedCaptureTask,
+  isCaptureQueueBusy,
   patchCaptureTask,
   removeCaptureTask,
   shouldWarnBeforeLeaving,
@@ -106,6 +107,7 @@ import {
   type CaptureTaskProgress,
   type CaptureTaskStatus,
 } from '@/lib/capture/task';
+import { shouldLoadChatThreadHistory } from '@/lib/chat/thread-state';
 import type { BrowserWindow, SpeechRecognitionLike } from '@/lib/browser';
 import { getErrorMessage } from '@/lib/api/boundary';
 import { getPostAuthExperience } from '@/lib/auth/post-auth-experience';
@@ -188,6 +190,7 @@ export default function Home() {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [chatThreads, setChatThreads] = useState<ChatThread[]>([]);
   const [showChatHistory, setShowChatHistory] = useState<boolean>(false);
+  const locallyInitializedChatThreadIdRef = useRef<string | null>(null);
   
   // Sidebar Expansion States
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false); // Mobile sidebar open
@@ -308,7 +311,6 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captureDragDepthRef = useRef<number>(0);
-  const [processingQueueActive, setProcessingQueueActive] = useState<boolean>(false);
   const [, setCurrentQueueIndex] = useState<number>(0);
   const [inlineEditingSummaryId, setInlineEditingSummaryId] = useState<string | null>(null);
   const [inlineEditingTitleText, setInlineEditingTitleText] = useState<string>('');
@@ -1220,6 +1222,7 @@ export default function Home() {
 
     const summaryId = selectedSummary ? selectedSummary.id : null;
     const userId = user.id;
+    locallyInitializedChatThreadIdRef.current = null;
 
     if (DEV_BYPASS_AUTH) {
       setChatThreads([]);
@@ -1288,22 +1291,36 @@ export default function Home() {
       ]);
       return;
     }
+
+    if (!shouldLoadChatThreadHistory(
+      activeThreadId,
+      locallyInitializedChatThreadIdRef.current,
+    )) {
+      return;
+    }
     
     const threadId = activeThreadId;
+    let cancelled = false;
     async function loadMessages() {
       try {
         const history = await getChatMessages(threadId);
-        setChatMessages(history);
+        if (!cancelled) {
+          setChatMessages(history);
+        }
       } catch (err) {
         console.error('Failed to load chat messages:', err);
       }
     }
     
     loadMessages();
+    return () => {
+      cancelled = true;
+    };
   }, [activeThreadId, selectedSummary]);
 
   // Create a new blank thread for the current scope
   const handleCreateNewThread = () => {
+    locallyInitializedChatThreadIdRef.current = null;
     setActiveThreadId(null);
     setShowChatHistory(false);
     const summaryId = selectedSummary ? selectedSummary.id : null;
@@ -1334,6 +1351,9 @@ export default function Home() {
           const success = await deleteChatThread(threadId);
           if (success) {
             setChatThreads(prev => prev.filter(t => t.id !== threadId));
+            if (locallyInitializedChatThreadIdRef.current === threadId) {
+              locallyInitializedChatThreadIdRef.current = null;
+            }
             if (activeThreadId === threadId) {
               setActiveThreadId(null);
             }
@@ -1369,6 +1389,7 @@ export default function Home() {
         const newThread = await createChatThread(summaryId, user.id, title);
         if (newThread) {
           currentThreadId = newThread.id;
+          locallyInitializedChatThreadIdRef.current = newThread.id;
           setChatThreads(prev => [newThread, ...prev]);
           setActiveThreadId(newThread.id);
         } else {
@@ -1939,7 +1960,6 @@ export default function Home() {
       stageLabel: undefined,
       stageDescription: undefined,
     }));
-    setProcessingQueueActive(false);
     setError(null);
   };
 
@@ -1958,7 +1978,6 @@ export default function Home() {
     if (next) {
       setSelectedSummary(null);
       setCurrentQueueIndex(next.index);
-      setProcessingQueueActive(true);
       await startProcessing(
         next.task.reference,
         next.task.name,
@@ -1968,7 +1987,6 @@ export default function Home() {
       return;
     }
 
-    setProcessingQueueActive(false);
     setCurrentQueueIndex(0);
   }
 
@@ -2235,7 +2253,6 @@ export default function Home() {
     taskId: string,
   ) {
     setCaptureTasks((current) => startCaptureTaskAttempt(current, taskId));
-    setProcessingQueueActive(true);
     setError(null);
 
     // Check monthly limit for Free tier
@@ -2823,6 +2840,9 @@ export default function Home() {
 
   const clearFile = () => {
     setCaptureTasks([]);
+    setPendingSummary(null);
+    setShowSaveFolderModal(false);
+    setCurrentQueueIndex(0);
     setError(null);
     setCaptureInputNotice(null);
     setCaptureDragState('idle');
@@ -2850,10 +2870,11 @@ export default function Home() {
   const recordingCaptureTasks = captureTasksForDisplay.filter(
     (task) => task.source === 'recording',
   );
+  const captureQueueBusy = isCaptureQueueBusy(captureTasksForDisplay);
+  const captureActionsDisabled = loading || captureQueueBusy;
   const canSubmitCapture = isRecordingMode
-    ? Boolean(audioBlob) && recordingCaptureTasks.length === 0
-    : !loading &&
-      !processingQueueActive &&
+    ? !captureActionsDisabled && Boolean(audioBlob) && recordingCaptureTasks.length === 0
+    : !captureActionsDisabled &&
       uploadCaptureTasks.some(
         (task) => task.status === 'selected' || task.status === 'queued',
       );
@@ -4379,6 +4400,7 @@ export default function Home() {
                 onCreateThread={handleCreateNewThread}
                 onToggleHistory={() => setShowChatHistory(value => !value)}
                 onSelectThread={(threadId) => {
+                  locallyInitializedChatThreadIdRef.current = null;
                   setActiveThreadId(threadId);
                   setShowChatHistory(false);
                 }}
@@ -4445,7 +4467,7 @@ export default function Home() {
                     onRemoveFile={handleRemoveCaptureFile}
                     onClearFiles={clearFile}
                     onRetryTask={handleRetryCaptureTask}
-                    actionsDisabled={loading || processingQueueActive}
+                    actionsDisabled={captureActionsDisabled}
                   />
                 ) : (
                   /* VOICE RECORD PANEL INTERFACE */
@@ -4466,7 +4488,7 @@ export default function Home() {
                         setAudioBlob(null);
                         setAudioUrl(null);
                         setRecordingDuration(0);
-                        setCaptureTasks([]);
+                        clearFile();
                       }}
                     />
                     {recordingCaptureTasks.length > 0 && (
@@ -4476,7 +4498,7 @@ export default function Home() {
                           onReplace={handleReplaceCaptureFile}
                           onRemove={handleRemoveCaptureFile}
                           onRetry={handleRetryCaptureTask}
-                          actionsDisabled={loading || processingQueueActive}
+                          actionsDisabled={captureActionsDisabled}
                         />
                       </div>
                     )}

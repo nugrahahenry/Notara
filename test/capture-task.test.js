@@ -9,6 +9,7 @@ const {
   getCaptureQueueSummary,
   getCaptureTaskPresentation,
   getNextQueuedCaptureTask,
+  isCaptureQueueBusy,
   patchCaptureTask,
   removeCaptureTask,
   shouldWarnBeforeLeaving,
@@ -222,6 +223,24 @@ test('capture leave warning is limited to work that is actively browser-bound', 
   );
   assert.equal(
     shouldWarnBeforeLeaving([fakeTaskAdapter({ status: 'awaiting_save' })]),
+    true,
+  );
+});
+
+test('capture queue busy state follows task status instead of stale page flags', () => {
+  assert.equal(
+    isCaptureQueueBusy([
+      fakeTaskAdapter({ status: 'selected' }),
+      fakeTaskAdapter({ id: 'queued', status: 'queued' }),
+    ]),
+    false,
+  );
+  assert.equal(
+    isCaptureQueueBusy([fakeTaskAdapter({ status: 'transcribing' })]),
+    true,
+  );
+  assert.equal(
+    isCaptureQueueBusy([fakeTaskAdapter({ status: 'awaiting_save' })]),
     true,
   );
 });

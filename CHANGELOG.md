@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.5.0.
+Belum ada perubahan setelah kandidat rilis v0.5.1.
+
+## [0.5.1] - 2026-08-14
+### Fixed
+- Thread chat yang baru dibuat mempertahankan pesan optimistis dan jawaban streaming; pemuatan riwayat kosong tidak lagi menimpa percakapan yang sedang berlangsung.
+- Tombol proses Capture mengikuti status tugas yang benar-benar aktif, sehingga file berstatus `Siap diproses` tidak lagi terkunci oleh flag halaman yang tertinggal.
+- Mengosongkan sesi Capture turut membersihkan hasil tertunda, dialog penyimpanan, dan posisi antrean agar upload berikutnya dimulai dari state bersih.
+
+### Quality
+- Test regresi baru melindungi pemisahan riwayat thread lokal/persisten dan derivasi status sibuk antrean Capture.
+- Dua ZIP brainstorming aset privat di root diabaikan secara spesifik tanpa dibuka atau diekstrak.
 
 ## [0.5.0] - 2026-08-14
 ### Added

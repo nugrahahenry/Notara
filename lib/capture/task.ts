@@ -229,6 +229,12 @@ export function isCaptureTaskActive(status: CaptureTaskStatus): boolean {
   return ACTIVE_STATUSES.has(status);
 }
 
+export function isCaptureQueueBusy(tasks: CaptureTask[]): boolean {
+  return tasks.some(
+    (task) => isCaptureTaskActive(task.status) || task.status === 'awaiting_save',
+  );
+}
+
 function clampProgress(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, Math.round(value)));

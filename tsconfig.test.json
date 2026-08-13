@@ -20,6 +20,7 @@
     "lib/capture/policy.ts",
     "lib/capture/pipeline.ts",
     "lib/capture/task.ts",
+    "lib/chat/thread-state.ts",
     "lib/auth/redirect.ts",
     "lib/auth/post-auth-experience.ts",
     "lib/api/boundary.ts",
