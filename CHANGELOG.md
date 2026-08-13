@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.11.
+Belum ada perubahan setelah kandidat rilis v0.3.12.
+
+## [0.3.12] - 2026-08-13
+### Removed
+- Import ikon, helper database, tipe, catch binding, dan parameter callback pembayaran di dashboard yang tidak pernah dibaca.
+
+### Quality
+- Baseline lint dashboard turun dari 44 error/36 warning menjadi 38 error/12 warning tanpa pengecualian aturan baru.
+- Perubahan dibatasi pada deklarasi yang tidak memiliki referensi runtime; tampilan, alur Capture, autentikasi, database, billing, API, dan provider AI tidak berubah.
 
 ## [0.3.11] - 2026-08-13
 ### Changed

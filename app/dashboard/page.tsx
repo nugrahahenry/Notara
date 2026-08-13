@@ -4,12 +4,12 @@ import { useState, useEffect, useRef, DragEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import packageJson from '../../package.json';
 import { 
-  UploadCloud, FileAudio, FileText, Sparkles, 
-  Check, Loader2, Clipboard, AlertCircle, Trash2, ArrowLeft, BookOpen,
-  Plus, FolderPlus, Folder, Edit3, X, ChevronRight, ChevronDown, MoreVertical,
-  Calendar, FileSignature, ArrowUpRight, Menu, MessageSquare, Send, Search, LogOut,
-  Shield, QrCode, Key, Share2, Globe, Lock, Copy, ExternalLink,
-  Mic, MicOff, Users, UserPlus, Link2, Crown, Hash,
+  FileText, Sparkles,
+  Check, Loader2, AlertCircle, Trash2, BookOpen,
+  Plus, FolderPlus, Folder, Edit3, X, ChevronRight,
+  Calendar, Menu, MessageSquare, Send, Search, LogOut,
+  Shield, Key, Share2, Copy,
+  Mic, Users, UserPlus, Link2, Crown, Hash,
   ImageDown, Smartphone, Square, Download, Clock, Settings, RefreshCw,
   House, GraduationCap
 } from 'lucide-react';
@@ -61,17 +61,15 @@ import {
   joinStudyGroup,
   getGroupMembers,
   shareFolderWithGroup,
-  getGroupFolders,
   leaveStudyGroup,
   getChatThreads,
   createChatThread,
   deleteChatThread,
-  renameChatThread,
   getUserProfile,
   saveOnboardingData,
   getUserSubscription
 } from '@/lib/db';
-import type { Folder as FolderType, Summary as SummaryType, ChatMessage, StudyGroup, ChatThread } from '@/lib/types';
+import type { Folder as FolderType, Summary as SummaryType, ChatMessage, ChatThread } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import { bufferToWav, getAudioDuration, sliceAudioBuffer } from '@/lib/capture/audio';
@@ -143,7 +141,7 @@ const formatRelativeTime = (dateStr: string): string => {
     if (diffDays === 1) return 'Kemarin';
     if (diffDays < 7) return `${diffDays} hari yang lalu`;
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-  } catch (e) {
+  } catch {
     return 'Baru saja';
   }
 };
@@ -819,15 +817,15 @@ export default function Home() {
         // Mode Asli Sandbox/Production
         if (typeof window !== 'undefined' && (window as any).snap) {
           (window as any).snap.pay(token, {
-            onSuccess: async (result: any) => {
+            onSuccess: async () => {
               showToast(`Pembayaran berhasil! Akun ${tier === 'max' ? 'Max' : 'Pro'} Anda aktif. 🎉`, 'success');
               await loadBillingData();
             },
-            onPending: async (result: any) => {
+            onPending: async () => {
               showToast('Pembayaran pending. Selesaikan tagihan Anda.', 'info');
               await loadBillingData();
             },
-            onError: async (result: any) => {
+            onError: async () => {
               setBillingError('Pembayaran gagal atau dibatalkan.');
               await loadBillingData();
             },
@@ -1525,7 +1523,7 @@ export default function Home() {
                   m.id === tempAssistantId ? { ...m, content: assistantText } : m
                 ));
               }
-            } catch (jsonErr) {
+            } catch {
               // chunk incomplete
             }
           }
@@ -6693,15 +6691,15 @@ export default function Home() {
                             const tier = subscriptionData.amount === 99000 ? 'max' : 'pro';
                             if (typeof window !== 'undefined' && (window as any).snap) {
                               (window as any).snap.pay(subscriptionData.snap_token, {
-                                onSuccess: async (result: any) => {
+                                onSuccess: async () => {
                                   showToast(`Pembayaran berhasil! Akun ${tier === 'max' ? 'Max' : 'Pro'} Anda aktif. 🎉`, 'success');
                                   await loadBillingData();
                                 },
-                                onPending: async (result: any) => {
+                                onPending: async () => {
                                   showToast('Pembayaran pending. Selesaikan tagihan Anda.', 'info');
                                   await loadBillingData();
                                 },
-                                onError: async (result: any) => {
+                                onError: async () => {
                                   setBillingError('Pembayaran gagal atau dibatalkan.');
                                   await loadBillingData();
                                 },
