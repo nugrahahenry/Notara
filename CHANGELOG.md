@@ -4,7 +4,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.8.
+Belum ada perubahan setelah kandidat rilis v0.3.9.
+
+## [0.3.9] - 2026-08-13
+### Added
+- Helper navigasi auth teruji untuk membangun URL login dan callback dengan tujuan lokal yang telah disanitasi.
+- Regression test untuk tujuan public summary yang valid, path tiruan, encoded separator, dan fallback external URL.
+
+### Changed
+- Google OAuth dan verifikasi email meneruskan tujuan aman melalui parameter `next` pada callback resmi.
+- Tombol fork menyimpan hanya ID pengguna bertipe `string`, bukan objek sesi bertipe `any`.
+
+### Fixed
+- Pengguna tamu yang login dari halaman public summary kini kembali ke materi yang sama untuk melanjutkan penyimpanan.
+- Fork yang berhasil kini membuka `/dashboard`, sehingga hasil salinan dapat dipilih dan toast sukses dikonsumsi.
+- Seluruh tautan Dashboard dan Pustaka pada halaman publik tidak lagi salah menuju landing page.
+- Import ikon public summary yang tidak digunakan dihapus.
+
+### Security
+- Tujuan auth tetap menolak external URL, protocol-relative URL, encoded separator, dan path public-summary tiruan; fallback tetap `/dashboard`.
+- Insert fork, RLS, schema database, migration, API, billing, provider AI, dan konfigurasi deployment tidak berubah.
 
 ## [0.3.8] - 2026-08-13
 ### Added

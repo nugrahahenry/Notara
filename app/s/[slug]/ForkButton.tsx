@@ -6,6 +6,7 @@ import { GitFork, Loader2, Check, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { forkSummary } from '@/lib/db';
 import type { Summary } from '@/lib/types';
+import { buildLoginPath, DEFAULT_AUTH_DESTINATION } from '@/lib/auth/redirect';
 
 interface ForkButtonProps {
   summary: Summary;
@@ -13,7 +14,7 @@ interface ForkButtonProps {
 
 export default function ForkButton({ summary }: ForkButtonProps) {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [forked, setForked] = useState<boolean>(false);
   const [checkingSession, setCheckingSession] = useState<boolean>(true);
@@ -23,7 +24,7 @@ export default function ForkButton({ summary }: ForkButtonProps) {
     async function checkUser() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user || null);
+        setUserId(session?.user.id ?? null);
       } catch (err) {
         console.error('Error checking user session:', err);
       } finally {
@@ -36,16 +37,15 @@ export default function ForkButton({ summary }: ForkButtonProps) {
   const handleFork = async () => {
     if (loading || forked) return;
 
-    if (!user) {
+    if (!userId) {
       // Jika user belum login, arahkan ke login dengan target kembali
-      const currentPath = window.location.pathname;
-      router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      router.push(buildLoginPath(window.location.pathname));
       return;
     }
 
     try {
       setLoading(true);
-      const newSummary = await forkSummary(summary, user.id);
+      const newSummary = await forkSummary(summary, userId);
       if (newSummary) {
         setForked(true);
         // Set info di localStorage untuk memilih rangkuman ini secara otomatis di dashboard
@@ -56,7 +56,7 @@ export default function ForkButton({ summary }: ForkButtonProps) {
         
         // Arahkan ke dashboard utama
         setTimeout(() => {
-          router.push('/');
+          router.push(DEFAULT_AUTH_DESTINATION);
         }, 1200);
       } else {
         alert('Gagal menduplikasi rangkuman. Silakan coba lagi.');
@@ -86,7 +86,7 @@ export default function ForkButton({ summary }: ForkButtonProps) {
           ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default shadow-emerald-500/5'
           : loading
             ? 'bg-violet-600/50 border-violet-500/30 text-white cursor-not-allowed'
-            : user
+            : userId
               ? 'bg-violet-600 border-violet-500 hover:bg-violet-500 text-white shadow-violet-500/10 hover:shadow-violet-500/20 active:scale-95 cursor-pointer'
               : 'bg-white/5 border-white/10 hover:border-white/20 text-zinc-300 hover:text-white active:scale-95 cursor-pointer'
       }`}
@@ -101,7 +101,7 @@ export default function ForkButton({ summary }: ForkButtonProps) {
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Menyalin Materi...</span>
         </>
-      ) : user ? (
+      ) : userId ? (
         <>
           <GitFork className="h-4 w-4" />
           <span>Simpan ke Nalira Saya</span>
@@ -114,7 +114,7 @@ export default function ForkButton({ summary }: ForkButtonProps) {
       )}
       
       {/* Subtle pulsing background glow if logged in and ready */}
-      {user && !loading && !forked && (
+      {userId && !loading && !forked && (
         <span className="absolute -inset-px rounded-xl border border-violet-500/50 animate-ping opacity-25 pointer-events-none" />
       )}
     </button>

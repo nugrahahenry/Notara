@@ -1,11 +1,9 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Calendar, Clock, FileText, Brain, ArrowLeft, BookOpen, 
-  FileAudio, Sparkles, Check, ChevronRight 
-} from 'lucide-react';
+import { Calendar, Brain, ArrowLeft, BookOpen, FileAudio, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase-server';
 import { getSummaryBySlug, formatDuration } from '@/lib/db';
+import { buildLoginPath, DEFAULT_AUTH_DESTINATION } from '@/lib/auth/redirect';
 import ForkButton from './ForkButton';
 
 // 1. DYNAMIC METADATA (SEO)
@@ -299,7 +297,7 @@ export default async function PublicSummaryPage({
       {/* HEADER BAR */}
       <header className="sticky top-0 z-50 bg-[#09080E]/60 backdrop-blur-xl border-b border-white/[0.04]">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href={isLoggedIn ? '/' : '/login'} className="flex items-center gap-2 group">
+          <Link href={isLoggedIn ? DEFAULT_AUTH_DESTINATION : '/'} className="flex items-center gap-2 group">
             <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform duration-200">
               <Brain className="h-5 w-5 text-white" />
             </div>
@@ -314,7 +312,7 @@ export default async function PublicSummaryPage({
           <div className="flex items-center gap-3">
             {isLoggedIn ? (
               <Link 
-                href="/"
+                href={DEFAULT_AUTH_DESTINATION}
                 className="h-10 px-4 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5"
               >
                 <span>Ke Dashboard</span>
@@ -322,7 +320,7 @@ export default async function PublicSummaryPage({
               </Link>
             ) : (
               <Link 
-                href="/login"
+                href={buildLoginPath(`/s/${slug}`)}
                 className="h-10 px-4 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-300 hover:text-white transition-all flex items-center"
               >
                 Masuk
@@ -339,7 +337,7 @@ export default async function PublicSummaryPage({
         
         {/* Breadcrumb back */}
         {isLoggedIn && (
-          <Link href="/" className="inline-flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors group">
+          <Link href={DEFAULT_AUTH_DESTINATION} className="inline-flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors group">
             <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-1 transition-transform" />
             <span>Kembali ke Perpustakaan Saya</span>
           </Link>
@@ -413,7 +411,7 @@ export default async function PublicSummaryPage({
           <div className="pt-2 flex justify-center gap-3">
             {isLoggedIn ? (
               <Link 
-                href="/"
+                href={DEFAULT_AUTH_DESTINATION}
                 className="h-10 px-5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all shadow-lg shadow-violet-500/10 flex items-center"
               >
                 Buka Nalira Saya
@@ -421,7 +419,7 @@ export default async function PublicSummaryPage({
             ) : (
               <>
                 <Link 
-                  href="/login"
+                  href={buildLoginPath(`/s/${slug}`)}
                   className="h-10 px-5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all shadow-lg shadow-violet-500/10 flex items-center"
                 >
                   Daftar Gratis Sekarang

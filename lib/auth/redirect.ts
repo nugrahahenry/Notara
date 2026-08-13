@@ -1,6 +1,7 @@
 export const DEFAULT_AUTH_DESTINATION = '/dashboard';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+const PUBLIC_SUMMARY_PATH = /^\/s\/[A-Za-z0-9_-]{1,128}$/;
 const PUBLIC_OPERATIONAL_ROUTES = new Set(['/api/health', '/api/version']);
 
 export function isPublicOperationalRoute(pathname: string): boolean {
@@ -18,11 +19,26 @@ export function sanitizeAuthDestination(value: string | null | undefined): strin
   try {
     const parsed = new URL(candidate, 'https://notara.local');
     if (parsed.origin !== 'https://notara.local') return DEFAULT_AUTH_DESTINATION;
-    if (!parsed.pathname.startsWith('/dashboard')) return DEFAULT_AUTH_DESTINATION;
+    const isDashboard = parsed.pathname.startsWith('/dashboard');
+    const isPublicSummary = PUBLIC_SUMMARY_PATH.test(parsed.pathname);
+    if (!isDashboard && !isPublicSummary) return DEFAULT_AUTH_DESTINATION;
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return DEFAULT_AUTH_DESTINATION;
   }
+}
+
+export function buildLoginPath(destination: string | null | undefined): string {
+  return `/login?redirect=${encodeURIComponent(sanitizeAuthDestination(destination))}`;
+}
+
+export function buildAuthCallbackUrl(
+  origin: string,
+  destination: string | null | undefined,
+): string {
+  const callbackUrl = new URL('/auth/callback', origin);
+  callbackUrl.searchParams.set('next', sanitizeAuthDestination(destination));
+  return callbackUrl.toString();
 }
 
 export function resolveAuthOrigin(browserOrigin: string, configuredSiteUrl?: string): string {

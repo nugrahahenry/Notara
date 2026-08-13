@@ -2,6 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  buildAuthCallbackUrl,
+  buildLoginPath,
   buildOAuthRecoveryUrl,
   getRequestBaseUrl,
   isPublicOperationalRoute,
@@ -15,6 +17,27 @@ test('auth destination accepts only local dashboard paths', () => {
   assert.equal(sanitizeAuthDestination('https://attacker.example'), '/dashboard');
   assert.equal(sanitizeAuthDestination('//attacker.example'), '/dashboard');
   assert.equal(sanitizeAuthDestination('/login'), '/dashboard');
+});
+
+test('auth destination accepts a valid public summary and rejects lookalike paths', () => {
+  assert.equal(sanitizeAuthDestination('/s/abc12345'), '/s/abc12345');
+  assert.equal(sanitizeAuthDestination('/s/abc12345/extra'), '/dashboard');
+  assert.equal(sanitizeAuthDestination('/s/%2Fsecret'), '/dashboard');
+});
+
+test('login and callback URLs preserve only a safe local destination', () => {
+  assert.equal(
+    buildLoginPath('/s/abc12345'),
+    '/login?redirect=%2Fs%2Fabc12345',
+  );
+  assert.equal(
+    buildAuthCallbackUrl('https://nalira.example.com', '/s/abc12345'),
+    'https://nalira.example.com/auth/callback?next=%2Fs%2Fabc12345',
+  );
+  assert.equal(
+    buildAuthCallbackUrl('https://nalira.example.com', 'https://attacker.example'),
+    'https://nalira.example.com/auth/callback?next=%2Fdashboard',
+  );
 });
 
 test('auth origin keeps localhost local and can pin the production origin', () => {

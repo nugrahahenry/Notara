@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { resolveAuthOrigin, sanitizeAuthDestination } from '@/lib/auth/redirect';
+import { buildAuthCallbackUrl, resolveAuthOrigin, sanitizeAuthDestination } from '@/lib/auth/redirect';
 import { getAuthCallbackError, getFriendlyAuthErrorMessage } from '@/lib/auth/errors';
 import { Mail, Lock, User, ArrowRight, Loader2, Zap, MessageSquare, FolderGit2, AlertCircle } from 'lucide-react';
 import { NaliraBrand } from '../components/brand/NaliraBrand';
@@ -93,11 +93,12 @@ function LoginForm() {
       localStorage.setItem('login_success', '1');
       sessionStorage.setItem('login_success', '1');
 
+      const nextParam = sanitizeAuthDestination(searchParams.get('redirect'));
       const redirectOrigin = resolveAuthOrigin(
         window.location.origin,
         process.env.NEXT_PUBLIC_SITE_URL,
       );
-      const redirectTo = `${redirectOrigin}/auth/callback`;
+      const redirectTo = buildAuthCallbackUrl(redirectOrigin, nextParam);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -156,12 +157,12 @@ function LoginForm() {
       setErrorMsg(null);
       setSuccessMsg(null);
 
+      const nextParam = sanitizeAuthDestination(searchParams.get('redirect'));
       const redirectOrigin = resolveAuthOrigin(
         window.location.origin,
         process.env.NEXT_PUBLIC_SITE_URL,
       );
-      const emailRedirectTo = `${redirectOrigin}/auth/callback`;
-      const nextParam = sanitizeAuthDestination(searchParams.get('redirect'));
+      const emailRedirectTo = buildAuthCallbackUrl(redirectOrigin, nextParam);
 
       if (isSignUp) {
         // Sign Up Flow
