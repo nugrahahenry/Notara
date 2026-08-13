@@ -60,7 +60,6 @@ import {
   createStudyGroup,
   joinStudyGroup,
   getGroupMembers,
-  shareFolderWithGroup,
   leaveStudyGroup,
   getChatThreads,
   createChatThread,
@@ -153,7 +152,6 @@ const formatRelativeTime = (dateStr: string): string => {
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const [showUserDropdown, setShowUserDropdown] = useState<boolean>(false);
   const [captureTasks, setCaptureTasks] = useState<CaptureTask<File>[]>([]);
   const files = captureTasks
     .filter((task) => task.source === 'upload')
@@ -206,7 +204,6 @@ export default function Home() {
   // Thinking Panel States
   const [thinkingLog, setThinkingLog] = useState<string[]>([]);
   const [showThinkingPanel, setShowThinkingPanel] = useState<boolean>(false);
-  const [thinkingStartTime, setThinkingStartTime] = useState<number>(0);
   const [thinkingElapsed, setThinkingElapsed] = useState<number>(0);
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -310,13 +307,11 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Keamanan Dua Faktor (2FA) States (Sprint 13)
-  const [showMfaModal, setShowMfaModal] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [settingsTab, setSettingsTab] = useState<'profile' | 'security' | 'app' | 'billing'>('profile');
   const [editingName, setEditingName] = useState<string>('');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState<boolean>(false);
   const [mfaEnabled, setMfaEnabled] = useState<boolean>(false);
-  const [mfaFactors, setMfaFactors] = useState<any[]>([]);
   const [mfaQrCode, setMfaQrCode] = useState<string>('');
   const [mfaSecret, setMfaSecret] = useState<string>('');
   const [mfaFactorId, setMfaFactorId] = useState<string>('');
@@ -705,7 +700,6 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
-    setShowUserDropdown(false);
     setShowSettingsModal(false);
     await supabase.auth.signOut();
     // Set flag so login page can show logout success toast
@@ -899,7 +893,7 @@ export default function Home() {
   };
 
   // MFA functions (Sprint 13)
-  const checkMfaStatus = async (currentUser: User) => {
+  const checkMfaStatus = async () => {
     try {
       const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (error) throw error;
@@ -910,7 +904,6 @@ export default function Home() {
       const activeFactors = factorsData.all.filter(f => f.status === 'verified');
       const hasActiveMfa = activeFactors.length > 0;
       setMfaEnabled(hasActiveMfa);
-      setMfaFactors(activeFactors);
       
       if (data.nextLevel === 'aal2' && data.currentLevel !== 'aal2') {
         setShowMfaChallengeBlock(true);
@@ -971,7 +964,7 @@ export default function Home() {
       setMfaVerificationCode('');
       
       if (user) {
-        await checkMfaStatus(user);
+        await checkMfaStatus();
       }
     } catch (err: any) {
       console.error('MFA Verify Error:', err);
@@ -1008,7 +1001,7 @@ export default function Home() {
           setMfaVerificationCode('');
           
           if (user) {
-            await checkMfaStatus(user);
+            await checkMfaStatus();
           }
         } catch (err: any) {
           console.error('MFA Unenroll Error:', err);
@@ -1084,7 +1077,7 @@ export default function Home() {
           if (user) {
             setUser(user);
             // Check MFA status
-            await checkMfaStatus(user);
+            await checkMfaStatus();
             // Load database data
             const [fetchedFolders, fetchedSummaries, fetchedGroups] = await Promise.all([
               getFolders(),
@@ -1145,7 +1138,7 @@ export default function Home() {
       
       if (currentUser) {
         // Check MFA status
-        await checkMfaStatus(currentUser);
+        await checkMfaStatus();
 
         // SIGNED_IN fires when user actively logs in (both Google OAuth & email)
         // This is the most reliable way to detect a fresh login vs page refresh
@@ -1905,7 +1898,6 @@ export default function Home() {
   // Start/stop the thinking timer
   const startThinkingTimer = () => {
     const startTime = Date.now();
-    setThinkingStartTime(startTime);
     setThinkingElapsed(0);
     if (thinkingTimerRef.current) clearInterval(thinkingTimerRef.current);
     thinkingTimerRef.current = setInterval(() => {
@@ -3157,12 +3149,6 @@ export default function Home() {
     }
   };
 
-  const handleShareFolderToGroup = async (folderId: string, groupId: string, folderName: string) => {
-    const success = await shareFolderWithGroup(folderId, groupId);
-    if (success) {
-      showToast(`Folder "${folderName}" berhasil dibagikan ke kelompok! 📁`, 'success');
-    }
-  };
 
   // ────────────────────────────────────────────────
   // SHARE CARD (4.5C) — Sprint 17

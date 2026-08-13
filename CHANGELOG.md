@@ -4,7 +4,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.12.
+Belum ada perubahan setelah kandidat rilis v0.3.13.
+
+## [0.3.13] - 2026-08-13
+### Removed
+- State dashboard untuk dropdown pengguna, waktu mulai panel berpikir, modal MFA lama, dan cache faktor MFA yang tidak pernah dibaca.
+- Handler berbagi folder dan import database pendukung yang tidak memiliki pemanggil.
+
+### Changed
+- Pemeriksaan status MFA tidak lagi menerima objek pengguna yang tidak digunakan; deteksi faktor terverifikasi dan kebutuhan challenge AAL2 tetap dipertahankan.
+
+### Quality
+- Seluruh temuan `no-unused-vars` dashboard telah dihapus; baseline lint turun dari 38 error/12 warning menjadi 37 error/5 warning tanpa pengecualian aturan baru.
+- Tampilan, logout, timer berpikir, MFA aktif, Study Group, Capture, database, RLS, billing, API, dan provider AI tidak berubah.
 
 ## [0.3.12] - 2026-08-13
 ### Removed
