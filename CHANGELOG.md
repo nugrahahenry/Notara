@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.9.
+Belum ada perubahan setelah kandidat rilis v0.3.10.
+
+## [0.3.10] - 2026-08-13
+### Removed
+- Dua import ikon landing page, satu ref animasi bintang, dan satu deklarasi Midtrans client key yang tidak pernah digunakan.
+
+### Quality
+- Lint terfokus pada Home, StarryBackground, dan helper Midtrans kini bersih; baseline repository turun dari 44 error/74 warning menjadi 44 error/70 warning tanpa melemahkan aturan.
+- Rendering landing page, animasi parallax, kontrak billing, environment variable, database, auth, API, dan deployment tidak berubah.
 
 ## [0.3.9] - 2026-08-13
 ### Added

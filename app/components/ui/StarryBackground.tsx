@@ -25,7 +25,6 @@ interface ShootingStar {
 
 export function StarryBackground() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const mouseRef = useRef({ x: 0, y: 0 });
   const offsetRef = useRef({ currentX: 0, currentY: 0, targetX: 0, targetY: 0 });
 
   useEffect(() => {

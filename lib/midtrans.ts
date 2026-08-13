@@ -23,7 +23,6 @@ interface MidtransResponse {
 }
 
 const SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || '';
-const CLIENT_KEY = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '';
 const IS_PROD = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true';
 
 const SNAP_API_URL = IS_PROD

@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Sparkles, Mic, FileText, Brain, Shield, Lock,
-  ChevronDown, ChevronRight, ArrowRight, Zap,
-  MessageSquare, Users, Crown, Check, X, Star,
+  ChevronDown, ArrowRight, Zap,
+  MessageSquare, Users, Crown, Check, X,
   Globe, Eye, Folder
 } from 'lucide-react';
 import { NaliraBrand } from './components/brand/NaliraBrand';
