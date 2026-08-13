@@ -93,7 +93,7 @@ npm run build
 - Study Canvas baru berupa fondasi produksi. Speaker diarization, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
-- Endpoint API AI belum memiliki rate limit server-side dan tidak boleh diekspos ke publik tanpa perbaikan autentikasi/abuse protection.
+- Endpoint API AI sudah memvalidasi sesi dan memakai rate limit per pengguna; kuota harian/berdasarkan tier, sinyal IP, dan kontrol penyalahgunaan multi-akun belum tersedia.
 - Billing harus dianggap belum siap production sampai webhook dapat menerima request tanpa sesi pengguna, menggunakan service role server-only, dan RPC sensitif dicabut dari akses publik.
 
 ## Roadmap terdekat

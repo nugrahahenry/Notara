@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.18.
+Belum ada perubahan setelah kandidat rilis v0.3.19.
+
+## [0.3.19] - 2026-08-13
+### Security
+- Endpoint Capture, rangkuman transkrip gabungan, dan chat kini memvalidasi sesi Supabase kembali di route sebelum membaca input atau menghubungi Groq.
+- Rate limit atomik per pengguna membatasi Capture 30, rangkuman 10, dan chat 30 permintaan per jendela 10 menit melalui RPC Supabase dengan hak akses minimum.
+- Request API tanpa sesi kini menerima JSON 401; kuota habis menerima 429 beserta Retry-After, sedangkan kegagalan limiter berhenti aman dengan 503.
+
+### Quality
+- Bypass autentikasi lokal tetap dibatasi ke development dan tidak menyentuh Supabase ketika aktif.
+- Kontrak auth, rate limit, migration, proxy, dan urutan guard dilindungi test baru tanpa mengubah prompt, model, chunking, UI, billing, atau subscription.
 
 ## [0.3.18] - 2026-08-13
 ### Changed

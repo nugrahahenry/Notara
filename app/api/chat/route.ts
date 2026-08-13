@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL } from '../../../lib/ai';
 import { getErrorMessage, normalizeChatHistory } from '../../../lib/api/boundary';
+import { authorizeAiRequest } from '../../../lib/api/ai-access';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
 export async function POST(request: NextRequest) {
   try {
+    const access = await authorizeAiRequest('chat');
+    if (!access.ok) return access.response;
+
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey) {
       return NextResponse.json(

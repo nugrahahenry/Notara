@@ -22,6 +22,7 @@
     "lib/capture/task.ts",
     "lib/auth/redirect.ts",
     "lib/api/boundary.ts",
+    "lib/api/ai-access-policy.ts",
     "lib/auth/errors.ts",
     "lib/learning/fallback.ts",
     "lib/runtime/health.ts",

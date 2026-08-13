@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   buildOAuthRecoveryUrl,
   getRequestBaseUrl,
+  isApiRequestPath,
   isPublicOperationalRoute,
   sanitizeAuthDestination,
 } from '@/lib/auth/redirect';
@@ -76,6 +77,19 @@ export async function proxy(request: NextRequest) {
   // redirect ke /login
   if (!user) {
     if (!isPublicRoute) {
+      if (isApiRequestPath(url.pathname)) {
+        const unauthorizedResponse = NextResponse.json(
+          {
+            code: 'unauthorized',
+            error: 'Sesi tidak valid. Silakan login kembali.',
+          },
+          { status: 401 },
+        );
+        supabaseResponse.cookies.getAll().forEach((cookie) =>
+          unauthorizedResponse.cookies.set(cookie)
+        );
+        return unauthorizedResponse;
+      }
       const requestedDestination = sanitizeAuthDestination(`${url.pathname}${url.search}`);
       url.pathname = '/login';
       url.search = '';

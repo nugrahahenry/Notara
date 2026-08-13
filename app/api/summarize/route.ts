@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL, GROQ_STT_MODEL } from '../../../lib/ai';
 import { getErrorMessage } from '../../../lib/api/boundary';
+import { authorizeAiRequest } from '../../../lib/api/ai-access';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
 export async function POST(request: NextRequest) {
   try {
+    const access = await authorizeAiRequest('capture');
+    if (!access.ok) return access.response;
+
     // 1. Validasi API Key — Groq satu key untuk dua hal: Whisper + LLM
     const groqApiKey = process.env.GROQ_API_KEY;
 

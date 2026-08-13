@@ -6,6 +6,7 @@ const {
   buildLoginPath,
   buildOAuthRecoveryUrl,
   getRequestBaseUrl,
+  isApiRequestPath,
   isPublicOperationalRoute,
   resolveAuthOrigin,
   sanitizeAuthDestination,
@@ -87,4 +88,11 @@ test('only operational health and version endpoints bypass authentication', () =
   assert.equal(isPublicOperationalRoute('/api/chat'), false);
   assert.equal(isPublicOperationalRoute('/api/summarize'), false);
   assert.equal(isPublicOperationalRoute('/dashboard'), false);
+});
+test('API path classification excludes page and lookalike routes', () => {
+  assert.equal(isApiRequestPath('/api/chat'), true);
+  assert.equal(isApiRequestPath('/api/summarize-transcript'), true);
+  assert.equal(isApiRequestPath('/api'), true);
+  assert.equal(isApiRequestPath('/apiary'), false);
+  assert.equal(isApiRequestPath('/dashboard'), false);
 });

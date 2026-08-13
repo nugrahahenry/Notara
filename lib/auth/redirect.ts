@@ -8,6 +8,10 @@ export function isPublicOperationalRoute(pathname: string): boolean {
   return PUBLIC_OPERATIONAL_ROUTES.has(pathname);
 }
 
+export function isApiRequestPath(pathname: string): boolean {
+  return pathname === '/api' || pathname.startsWith('/api/');
+}
+
 export function sanitizeAuthDestination(value: string | null | undefined): string {
   if (!value) return DEFAULT_AUTH_DESTINATION;
 
