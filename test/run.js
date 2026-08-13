@@ -11,11 +11,11 @@ try {
   execSync('node test/compile.js', { stdio: 'inherit' });
 
   console.log('\n--------------------------------------------------');
-  console.log(' Running Test Suite: Tiers 1 - 4 + Capture, Learning, Auth, API Boundaries, Health, Identity, App Shell UI, and Technical Config Policies');
+  console.log(' Running Test Suite: Tiers 1 - 4 + Capture, Learning, Auth, Auth Errors, API Boundaries, Health, Identity, App Shell UI, and Technical Config Policies');
   console.log('--------------------------------------------------\n');
 
   // 2. Run the test suite via Node.js native test runner
-  execSync('node --test test/tier1.test.js test/tier2.test.js test/tier3.test.js test/tier4.test.js test/capture-policy.test.js test/capture-pipeline.test.js test/capture-task.test.js test/learning-fallback.test.js test/auth-redirect.test.js test/api-boundary.test.js test/runtime-health.test.js test/product-identity.test.js test/app-shell-ui.test.js test/technical-config.test.js', { stdio: 'inherit' });
+  execSync('node --test test/tier1.test.js test/tier2.test.js test/tier3.test.js test/tier4.test.js test/capture-policy.test.js test/capture-pipeline.test.js test/capture-task.test.js test/learning-fallback.test.js test/auth-redirect.test.js test/auth-errors.test.js test/api-boundary.test.js test/runtime-health.test.js test/product-identity.test.js test/app-shell-ui.test.js test/technical-config.test.js', { stdio: 'inherit' });
 
   console.log('\n==================================================');
   console.log(' ✅ ALL TEST SUITES EXECUTED AND PASSED SUCCESSFUL!');

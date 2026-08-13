@@ -4,7 +4,8 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { resolveAuthOrigin, sanitizeAuthDestination } from '@/lib/auth/redirect';
-import { Mail, Lock, User, ArrowRight, Loader2, Sparkles, Zap, MessageSquare, FolderGit2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { getAuthCallbackError, getFriendlyAuthErrorMessage } from '@/lib/auth/errors';
+import { Mail, Lock, User, ArrowRight, Loader2, Zap, MessageSquare, FolderGit2, AlertCircle } from 'lucide-react';
 import { NaliraBrand } from '../components/brand/NaliraBrand';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
 import StarryBackground from '../components/ui/StarryBackground';
@@ -35,35 +36,6 @@ const getPasswordStrength = (pass: string) => {
   return { text: 'Kuat', color: 'bg-emerald-500' };
 };
 
-// Helper for translating Supabase Auth API error messages to user-friendly Indonesian
-const getFriendlyErrorMessage = (msg: string): string => {
-  const cleanMsg = msg.toLowerCase();
-  if (cleanMsg.includes('password should be at least 6 characters')) {
-    return 'Kata sandi terlalu pendek. Minimal harus 6 karakter.';
-  }
-  if (cleanMsg.includes('invalid email') || cleanMsg.includes('is invalid')) {
-    return 'Format email tidak valid. Silakan periksa kembali penulisan email Anda.';
-  }
-  if (cleanMsg.includes('invalid login credentials')) {
-    return 'Email atau kata sandi salah. Silakan periksa kembali. Jika baru mendaftar, pastikan Anda sudah verifikasi email terlebih dahulu.';
-  }
-  if (cleanMsg.includes('email not confirmed')) {
-    return 'Email Anda belum terverifikasi. Silakan cek kotak masuk email dan klik link verifikasi sebelum masuk.';
-  }
-  if (cleanMsg.includes('user already registered')) {
-    return 'Email ini sudah terdaftar. Silakan masuk menggunakan email ini.';
-  }
-  if (cleanMsg.includes('signup requires a valid email')) {
-    return 'Pendaftaran memerlukan email yang valid.';
-  }
-  if (cleanMsg.includes('flow_state') || cleanMsg.includes('state has already been used')) {
-    return 'Sesi login sebelumnya kedaluwarsa. Silakan coba masuk lagi.';
-  }
-  if (cleanMsg.includes('rate limit') || cleanMsg.includes('too many requests')) {
-    return 'Terlalu banyak percobaan login. Silakan tunggu beberapa menit sebelum mencoba lagi.';
-  }
-  return msg;
-};
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -78,22 +50,14 @@ function LoginForm() {
   
   // Loading and Error States
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(() => getAuthCallbackError(searchParams.get('error')));
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Toast state for logout success notification
-  const [loginToast, setLoginToast] = useState<{ show: boolean; message: string; isSuccess: boolean }>({ show: false, message: '', isSuccess: true });
 
   // Full-screen logout success state
   const [showLogoutSuccess, setShowLogoutSuccess] = useState<boolean>(false);
 
-  // Show toast briefly, then dismiss
-  const showLoginToast = (message: string, isSuccess = true) => {
-    setLoginToast({ show: true, message, isSuccess });
-    setTimeout(() => setLoginToast(prev => ({ ...prev, show: false })), 3500);
-  };
 
-  // Check URL query parameters & sessionStorage/localStorage flags on mount
+  // Clear transient auth flags and recover the logout-success state on mount.
   useEffect(() => {
     // ─── PENTING: bersihkan login_success flag jika kita ada di halaman login ───
     // Ini mencegah toast 'selamat datang' muncul jika user cancel lalu login ulang
@@ -101,24 +65,19 @@ function LoginForm() {
     sessionStorage.removeItem('login_success');
 
     // ─── Cek error dari callback URL ─────────────────────────────────────────
-    const errorParam = searchParams.get('error');
-    if (errorParam === 'auth-code-exchange-failed') {
-      setErrorMsg('Gagal memproses sesi dari Google. Silakan coba lagi.');
-    } else if (errorParam === 'oauth-error') {
-      setErrorMsg('Terjadi kesalahan saat login dengan Google. Silakan coba lagi.');
-    } else if (errorParam === 'session-expired') {
-      setErrorMsg('Sesi login kedaluwarsa atau sudah pernah digunakan. Silakan coba masuk kembali.');
-    }
     // Jika cancelled=1 → user sengaja klik Batal, tidak perlu tampilkan error
 
     // ─── Toast logout sukses (dari dashboard) ────────────────────────────────
     const logoutFlag = localStorage.getItem('logout_success') || sessionStorage.getItem('logout_success');
+    let logoutTimer: ReturnType<typeof setTimeout> | null = null;
     if (logoutFlag) {
       localStorage.removeItem('logout_success');
       sessionStorage.removeItem('logout_success');
-      setShowLogoutSuccess(true);
+      logoutTimer = setTimeout(() => setShowLogoutSuccess(true), 0);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      if (logoutTimer) clearTimeout(logoutTimer);
+    };
   }, []);
 
 
@@ -153,9 +112,9 @@ function LoginForm() {
         sessionStorage.removeItem('login_success');
         throw error;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Google login error:', err);
-      setErrorMsg(err.message || 'Terjadi kesalahan saat masuk menggunakan Google.');
+      setErrorMsg(getFriendlyAuthErrorMessage(err, 'Terjadi kesalahan saat masuk menggunakan Google.'));
       setLoading(false);
     }
   };
@@ -261,9 +220,9 @@ function LoginForm() {
           window.location.replace(nextParam);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Auth error:', err);
-      setErrorMsg(getFriendlyErrorMessage(err.message || 'Terjadi kesalahan sistem. Silakan coba beberapa saat lagi.'));
+      setErrorMsg(getFriendlyAuthErrorMessage(err, 'Terjadi kesalahan sistem. Silakan coba beberapa saat lagi.'));
     } finally {
       setLoading(false);
     }
@@ -272,21 +231,6 @@ function LoginForm() {
   return (
     <main data-page="login" className="relative min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100 overflow-y-auto px-4 py-12 md:p-6 select-none font-sans">
       
-      {/* ====== TOAST NOTIFICATION (login page) ====== */}
-      {loginToast.show && (
-        <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border text-sm font-medium animate-fadeIn transition-all ${
-          loginToast.isSuccess
-            ? 'bg-emerald-900/90 border-emerald-500/30 text-emerald-200'
-            : 'bg-red-900/90 border-red-500/30 text-red-200'
-        }`}>
-          {loginToast.isSuccess ? (
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
-          ) : (
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
-          )}
-          <span>{loginToast.message}</span>
-        </div>
-      )}
 
       {/* Starry night cosmic background */}
       <StarryBackground />

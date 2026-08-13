@@ -4,7 +4,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.7.
+Belum ada perubahan setelah kandidat rilis v0.3.8.
+
+## [0.3.8] - 2026-08-13
+### Added
+- Helper auth teruji untuk memetakan error callback dan menerjemahkan pesan Supabase tanpa mempercayai nilai tangkapan yang tidak dikenal.
+- Regression test untuk error callback OAuth, kredensial tidak valid, dan fallback error asing.
+
+### Changed
+- Pesan error callback Login kini diturunkan saat state dibuat, bukan melalui pembaruan state sinkron di effect.
+- Nilai error dari login Google dan email/password memakai tipe `unknown` sebelum diterjemahkan secara aman.
+- Pemulihan status logout dijadwalkan setelah mount dan membersihkan timer saat halaman dilepas.
+
+### Removed
+- State, fungsi, markup, dan ikon toast Login lama yang tidak pernah dipanggil.
+
+### Security
+- Provider Google, PKCE callback, redirect allow-list contract, sign-up, sign-in, dan session navigation tidak berubah.
+- Objek atau string asing yang tertangkap tidak dipantulkan sebagai pesan kepada pengguna.
 
 ## [0.3.7] - 2026-08-13
 ### Changed
