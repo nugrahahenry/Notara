@@ -1,12 +1,12 @@
 // test/simulators/app.simulator.js
-const { resetDb, dbState, mockSupabaseClient } = require('../mocks/supabase.mock');
+const { resetDb, mockSupabaseClient } = require('../mocks/supabase.mock');
 
 // We will require the database operations from the compiled output
 // The test runner will compile lib/db.ts to build/lib/db.js
 let dbOps;
 try {
   dbOps = require('../../build/lib/db');
-} catch (e) {
+} catch {
   // Fallback in case not compiled yet
   dbOps = {};
 }
@@ -93,7 +93,7 @@ class AppSimulator {
       const { data, error } = await mockSupabaseClient.auth.signInWithPassword({ email, password });
       if (error) throw error;
       this.user = data.user;
-      await this.checkMfaStatus(this.user);
+      await this.checkMfaStatus();
       this.showToast('Login berhasil!', 'success');
       await this.loadInitialData();
       return true;
@@ -183,7 +183,7 @@ class AppSimulator {
         this.showToast(`Folder "${name}" berhasil dibuat.`, 'success');
         return newFolder;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal membuat folder.', 'delete');
     }
     return null;
@@ -197,7 +197,7 @@ class AppSimulator {
         this.showToast('Nama folder berhasil diubah.', 'success');
         return true;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal mengubah nama folder.', 'delete');
     }
     return false;
@@ -213,7 +213,7 @@ class AppSimulator {
         this.showToast('Folder berhasil dihapus.', 'success');
         return true;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal menghapus folder.', 'delete');
     }
     return false;
@@ -280,7 +280,7 @@ class AppSimulator {
         this.showToast('Rangkuman berhasil dipindahkan.', 'success');
         return true;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal memindahkan rangkuman.', 'delete');
     }
     return false;
@@ -297,7 +297,7 @@ class AppSimulator {
         this.showToast('Judul rangkuman berhasil diubah.', 'success');
         return true;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal mengubah nama rangkuman.', 'delete');
     }
     return false;
@@ -318,7 +318,7 @@ class AppSimulator {
             this.showToast('Rangkuman berhasil dihapus secara permanen dari perpustakaan Anda 🗑️', 'delete');
             return true;
           }
-        } catch (e) {
+        } catch {
           this.showToast('Gagal menghapus rangkuman.', 'delete');
         }
         return false;
@@ -337,7 +337,7 @@ class AppSimulator {
         this.showToast(isPublic ? 'Link berbagi publik aktif!' : 'Rangkuman diubah menjadi privat.', 'success');
         return true;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal mengubah status publik.', 'delete');
     }
     return false;
@@ -357,7 +357,7 @@ class AppSimulator {
         this.showToast('Rangkuman berhasil disalin ke perpustakaan Anda! 📁', 'success');
         return forked;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal menyalin rangkuman.', 'delete');
     }
     return null;
@@ -523,7 +523,7 @@ class AppSimulator {
         this.showToast(`Kelompok "${name}" berhasil dibuat!`, 'success');
         return group;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal membuat kelompok.', 'delete');
     }
     return null;
@@ -544,7 +544,7 @@ class AppSimulator {
         this.showToast('Kode undangan tidak ditemukan.', 'delete');
         return null;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Kode undangan tidak ditemukan.', 'delete');
     }
     return null;
@@ -554,7 +554,7 @@ class AppSimulator {
     this.activeGroupId = groupId;
     try {
       this.groupMembers = await dbOps.getGroupMembers(groupId);
-    } catch (e) {
+    } catch {
       this.showToast('Gagal memuat anggota kelompok.', 'delete');
     }
   }
@@ -572,7 +572,7 @@ class AppSimulator {
         this.showToast('Berhasil keluar dari kelompok.', 'info');
         return true;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal keluar kelompok.', 'delete');
     }
     return false;
@@ -585,7 +585,7 @@ class AppSimulator {
         this.showToast('Folder berhasil dibagikan ke kelompok.', 'success');
         return true;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal membagikan folder.', 'delete');
     }
     return false;
@@ -598,7 +598,7 @@ class AppSimulator {
         this.showToast('Folder dihentikan berbagi.', 'info');
         return true;
       }
-    } catch (e) {
+    } catch {
       this.showToast('Gagal menghentikan berbagi.', 'delete');
     }
     return false;
@@ -607,7 +607,7 @@ class AppSimulator {
   // ─────────────────────────────────────────────
   // 2FA TOTP SECURITY
   // ─────────────────────────────────────────────
-  async checkMfaStatus(user) {
+  async checkMfaStatus() {
     try {
       const { data, error } = await mockSupabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
       if (error) throw error;
@@ -662,7 +662,7 @@ class AppSimulator {
       this.mfaSuccess = 'Keamanan Dua Faktor (2FA) berhasil diaktifkan!';
       this.showToast('2FA berhasil diaktifkan! 🔒', 'success');
       if (this.user) {
-        await this.checkMfaStatus(this.user);
+        await this.checkMfaStatus();
       }
       return true;
     } catch (err) {
@@ -683,10 +683,10 @@ class AppSimulator {
       this.mfaQrCode = '';
       this.mfaSecret = '';
       if (this.user) {
-        await this.checkMfaStatus(this.user);
+        await this.checkMfaStatus();
       }
       return true;
-    } catch (e) {
+    } catch {
       this.showToast('Gagal menonaktifkan 2FA.', 'delete');
       return false;
     }
@@ -795,7 +795,7 @@ class AppSimulator {
     const blob = new Blob([fileContent], { type: 'application/msword' });
     const link = global.document.createElement('a');
     link.download = `${this.selectedSummary.title.replace(/\s+/g, '_')}.doc`;
-    link.href = 'blob:url/' + Math.random();
+    link.href = 'blob:url/' + blob.size + '-' + Math.random();
     link.click();
     this.showToast('Word Doc berhasil diunduh!', 'success');
   }

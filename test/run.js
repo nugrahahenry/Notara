@@ -1,6 +1,5 @@
 // test/run.js
 const { execSync } = require('child_process');
-const path = require('path');
 
 console.log('==================================================');
 console.log('          NALIRA TEST INFRASTRUCTURE RUNNER        ');
@@ -21,7 +20,7 @@ try {
   console.log(' ✅ ALL TEST SUITES EXECUTED AND PASSED SUCCESSFUL!');
   console.log('==================================================');
   process.exit(0);
-} catch (error) {
+} catch {
   console.log('\n==================================================');
   console.log(' ❌ TEST SUITE EXECUTION FAILED! PLEASE CHECK ERROR LOG.');
   console.log('==================================================');

@@ -1,7 +1,7 @@
 // test/tier1.test.js
 // Tier 1: Feature Coverage (>=5 test cases per feature)
 require('./mocks/browser.mock');
-const { resetDb, dbState } = require('./mocks/supabase.mock');
+const { dbState } = require('./mocks/supabase.mock');
 const { AppSimulator } = require('./simulators/app.simulator');
 const test = require('node:test');
 const assert = require('node:assert');
@@ -78,9 +78,7 @@ test.describe('Tier 1: Feature Coverage', () => {
     test('2.3 should format custom safe download filenames properly', async () => {
       app.selectedSummary = { id: 'sum-1', title: 'My Awesome Physics Lecture!@#' };
       await app.generateShareCard('story');
-      // The last element created should be a link 'a' with custom download
-      const lastCreatedElement = global.document.createElement('a'); // simulated
-      // verify title formatting directly
+      // Verify title formatting directly.
       const safeTitle = app.selectedSummary.title.replace(/[^a-zA-Z0-9\s]/g, '').trim().slice(0, 40).replace(/\s+/g, '_');
       assert.strictEqual(safeTitle, 'My_Awesome_Physics_Lecture');
     });

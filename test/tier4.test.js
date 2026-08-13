@@ -1,7 +1,7 @@
 // test/tier4.test.js
 // Tier 4: Real-World Application Scenarios (>=5 test cases simulating complete user workflows)
 require('./mocks/browser.mock');
-const { resetDb, dbState } = require('./mocks/supabase.mock');
+const { dbState } = require('./mocks/supabase.mock');
 const { AppSimulator } = require('./simulators/app.simulator');
 const test = require('node:test');
 const assert = require('node:assert');

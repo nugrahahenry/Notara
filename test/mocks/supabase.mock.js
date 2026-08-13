@@ -266,7 +266,7 @@ const mockAuth = {
     return { data: { user, session: { access_token: 'mock-token' } }, error: null };
   },
 
-  async signInWithOAuth({ provider, options }) {
+  async signInWithOAuth() {
     const user = {
       id: 'google-user-id',
       email: 'google@notara.com',
@@ -349,7 +349,7 @@ const mockAuth = {
       };
     },
 
-    verify: async ({ factorId, challengeId, code }) => {
+    verify: async ({ factorId, code }) => {
       if (code === '123456') {
         const factor = dbState.factors.find(f => f.id === factorId);
         if (factor) {
@@ -377,7 +377,7 @@ const mockSupabaseClient = {
 
 // Setup require hook to intercept modules
 const originalLoad = Module._load;
-Module._load = function (request, parent, isMain) {
+Module._load = function (request) {
   if (request === '@supabase/ssr' || request === '@supabase/supabase-js') {
     return {
       createBrowserClient: () => mockSupabaseClient,

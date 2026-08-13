@@ -175,7 +175,7 @@ global.HTMLCanvasElement = class HTMLCanvasElement {};
 
 // Intercept html2canvas module import
 const originalLoad = Module._load;
-Module._load = function(request, parent, isMain) {
+Module._load = function(request) {
   if (request === 'html2canvas') {
     const mockFunc = async () => {
       return {

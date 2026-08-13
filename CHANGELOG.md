@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.10.
+Belum ada perubahan setelah kandidat rilis v0.3.11.
+
+## [0.3.11] - 2026-08-13
+### Changed
+- Test runner, browser/Supabase mocks, simulator aplikasi, dan Tier 1-4 tidak lagi menyimpan import, parameter, atau catch binding yang tidak digunakan.
+- Simulator ekspor Word memakai ukuran Blob yang memang dibuat untuk membentuk URL tiruan, sehingga alur simulasi tetap eksplisit.
+
+### Quality
+- Seluruh test harness kini lint-clean; baseline repository turun dari 44 error/70 warning menjadi 44 error/36 warning tanpa pengecualian aturan baru.
+- Seluruh temuan lint yang tersisa terisolasi di dashboard monolitik; source produksi, kontrak mock, jumlah skenario, dan hasil perilaku test tidak berubah.
 
 ## [0.3.10] - 2026-08-13
 ### Removed

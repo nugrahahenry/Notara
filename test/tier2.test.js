@@ -1,7 +1,7 @@
 // test/tier2.test.js
 // Tier 2: Boundary & Corner Cases (>=5 test cases per feature)
 require('./mocks/browser.mock');
-const { resetDb, dbState } = require('./mocks/supabase.mock');
+const { dbState } = require('./mocks/supabase.mock');
 const { AppSimulator } = require('./simulators/app.simulator');
 const test = require('node:test');
 const assert = require('node:assert');
@@ -91,7 +91,7 @@ test.describe('Tier 2: Boundary & Corner Cases', () => {
       app.selectedSummary = { id: 'sum-1', title: 'Calculus' };
       // Mock html2canvas throwing an error
       const originalGenerate = app.generateShareCard;
-      app.generateShareCard = async function(format) {
+      app.generateShareCard = async function() {
         this.showToast('Gagal memproses gambar halaman. Coba lagi.', 'delete');
         return false;
       };

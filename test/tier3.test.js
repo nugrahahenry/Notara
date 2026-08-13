@@ -1,7 +1,7 @@
 // test/tier3.test.js
 // Tier 3: Cross-Feature Combinations (>=5 test cases covering interactions)
 require('./mocks/browser.mock');
-const { resetDb, dbState } = require('./mocks/supabase.mock');
+const { dbState } = require('./mocks/supabase.mock');
 const { AppSimulator } = require('./simulators/app.simulator');
 const test = require('node:test');
 const assert = require('node:assert');
