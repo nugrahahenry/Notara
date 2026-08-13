@@ -4,7 +4,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.19.
+Belum ada perubahan setelah kandidat rilis v0.3.20.
+
+## [0.3.20] - 2026-08-13
+### Security
+- Webhook Midtrans sekarang menjadi rute publik exact-match yang memakai signature SHA-512 sebagai autentikasi mesin, gagal tertutup ketika server key tidak tersedia, dan membandingkan signature secara timing-safe.
+- Mutasi pembayaran berpindah ke client Supabase service-role server-only; route tidak lagi bergantung pada cookie atau sesi pengguna.
+- Migration hardening mencabut akses publik/authenticated ke RPC pembayaran, mengunci tiga fungsi `SECURITY DEFINER` dengan `search_path` kosong, dan membatasi helper grup ke role authenticated.
+
+### Changed
+- Status notifikasi Midtrans divalidasi dan dinormalisasi sebelum RPC; status tidak dikenal diabaikan, status sukses tidak dapat dimundurkan, webhook berulang tidak memperpanjang periode, dan upgrade gagal tidak menghapus tier lama yang masih aktif.
+- Delapan policy yang memakai helper keanggotaan grup kini ditargetkan eksplisit ke authenticated tanpa mengubah policy share rangkuman publik.
+
+### Quality
+- Test baru melindungi signature, validasi payload, pemetaan status, kegagalan konfigurasi/RPC, batas route publik, client admin server-only, grant fungsi, state transition, dan policy RLS.
+- Source v0.3.20 siap direview; migration belum diterapkan dan billing production tetap tertahan sampai secret Vercel serta verifikasi rollout selesai.
 
 ## [0.3.19] - 2026-08-13
 ### Security

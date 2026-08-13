@@ -1,6 +1,6 @@
 // lib/midtrans.ts
 // Client REST API sederhana untuk berinteraksi dengan Midtrans Snap
-// Mendukung mode mock otomatis jika kunci server diatur sebagai dummy untuk pengujian lokal offline
+// Mendukung mode mock terbatas untuk pengujian lokal saat development.
 
 interface TransactionDetails {
   order_id: string;
@@ -22,7 +22,14 @@ interface MidtransResponse {
   redirect_url: string;
 }
 
-const SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || '';
+function getServerKey(): string {
+  return process.env.MIDTRANS_SERVER_KEY?.trim() ?? '';
+}
+
+function isDummyServerKey(serverKey: string): boolean {
+  return !serverKey || serverKey.toLowerCase().includes('dummy');
+}
+
 const IS_PROD = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true';
 
 const SNAP_API_URL = IS_PROD
@@ -35,12 +42,16 @@ const SNAP_API_URL = IS_PROD
 export async function createMidtransTransaction(
   input: CreateTransactionInput
 ): Promise<MidtransResponse | null> {
-  const isDummy = SERVER_KEY.includes('dummy') || !SERVER_KEY;
+  const serverKey = getServerKey();
+  const isDummy = isDummyServerKey(serverKey);
 
-  // Mode Mock / Sandbox Lokal (jika memakai kredensial dummy)
   if (isDummy) {
+    if (process.env.NODE_ENV !== 'development') {
+      console.error('Midtrans server configuration is unavailable.');
+      return null;
+    }
+
     console.log('[Midtrans Mock] Membuat transaksi dummy untuk order:', input.transaction_details.order_id);
-    // Simulasikan delay jaringan lambat (~1 detik)
     await new Promise(resolve => setTimeout(resolve, 1000));
     return {
       token: `mock-snap-token-${input.transaction_details.order_id}`,
@@ -49,7 +60,7 @@ export async function createMidtransTransaction(
   }
 
   try {
-    const authHeader = Buffer.from(`${SERVER_KEY}:`).toString('base64');
+    const authHeader = Buffer.from(`${serverKey}:`).toString('base64');
     const response = await fetch(SNAP_API_URL, {
       method: 'POST',
       headers: {
@@ -89,22 +100,24 @@ export async function verifyMidtransSignature(payload: {
   gross_amount: string;
   signature_key: string;
 }): Promise<boolean> {
-  const isDummy = SERVER_KEY.includes('dummy') || !SERVER_KEY;
+  const serverKey = getServerKey();
+  const isDummy = isDummyServerKey(serverKey);
   if (isDummy) {
-    // Mode Mock: Selalu valid jika menggunakan sandbox dummy
-    return true;
+    return process.env.NODE_ENV === 'development' && payload.signature_key === 'dummy';
   }
 
   try {
-    const rawString = `${payload.order_id}${payload.status_code}${payload.gross_amount}${SERVER_KEY}`;
-    
-    // Hash menggunakan SHA-512 bawaan Node.js
+    const rawString = `${payload.order_id}${payload.status_code}${payload.gross_amount}${serverKey}`;
     const crypto = await import('crypto');
-    const hash = crypto.createHash('sha512').update(rawString).digest('hex');
-    
-    return hash === payload.signature_key;
-  } catch (err) {
-    console.error('Signature verification failed:', err);
+    const expected = Buffer.from(
+      crypto.createHash('sha512').update(rawString).digest('hex'),
+      'utf8',
+    );
+    const received = Buffer.from(payload.signature_key, 'utf8');
+
+    return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+  } catch (error) {
+    console.error('Signature verification failed:', error);
     return false;
   }
 }

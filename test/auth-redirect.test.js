@@ -82,9 +82,11 @@ test('ordinary landing requests never trigger OAuth recovery', () => {
   );
 });
 
-test('only operational health and version endpoints bypass authentication', () => {
+test('only explicitly allowlisted operational endpoints bypass authentication', () => {
   assert.equal(isPublicOperationalRoute('/api/health'), true);
   assert.equal(isPublicOperationalRoute('/api/version'), true);
+  assert.equal(isPublicOperationalRoute('/api/webhooks/billing'), true);
+  assert.equal(isPublicOperationalRoute('/api/webhooks/billing/extra'), false);
   assert.equal(isPublicOperationalRoute('/api/chat'), false);
   assert.equal(isPublicOperationalRoute('/api/summarize'), false);
   assert.equal(isPublicOperationalRoute('/dashboard'), false);
