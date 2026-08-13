@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import packageJson from '../../package.json';
 import { 
@@ -4294,9 +4295,12 @@ export default function Home() {
                   title={user.user_metadata?.full_name || user.email || 'Profil Saya'}
                 >
                   {user.user_metadata?.avatar_url ? (
-                    <img
+                    <Image
                       src={user.user_metadata.avatar_url}
-                      alt="Avatar"
+                      alt="Foto profil"
+                      width={44}
+                      height={44}
+                      unoptimized
                       className="h-full w-full rounded-full object-cover"
                       referrerPolicy="no-referrer"
                     />
@@ -6244,9 +6248,12 @@ export default function Home() {
                     <div className="flex items-center gap-4 bg-white/[0.01] border border-white/[0.03] p-3 rounded-2xl">
                       <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-base font-bold text-white border border-white/10 shrink-0">
                         {user.user_metadata?.avatar_url ? (
-                          <img
+                          <Image
                             src={user.user_metadata.avatar_url}
-                            alt="Avatar"
+                            alt="Foto profil"
+                            width={48}
+                            height={48}
+                            unoptimized
                             className="h-full w-full rounded-full object-cover"
                             referrerPolicy="no-referrer"
                           />
@@ -6379,9 +6386,12 @@ export default function Home() {
                             <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-violet-500/60 rounded-br-md" />
 
                             <div className="bg-white p-2.5 rounded-2xl shadow-xl shadow-black/40 w-44 h-44 flex items-center justify-center transition-all duration-300 hover:scale-[1.03]">
-                              <img 
-                                src={mfaQrCode} 
-                                alt="MFA QR Code" 
+                              <Image
+                                src={mfaQrCode}
+                                alt="Kode QR untuk autentikasi dua faktor"
+                                width={176}
+                                height={176}
+                                unoptimized
                                 className="w-full h-full object-contain select-none"
                                 draggable={false}
                               />

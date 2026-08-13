@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.17.
+Belum ada perubahan setelah kandidat rilis v0.3.18.
+
+## [0.3.18] - 2026-08-13
+### Changed
+- Dua avatar pengguna dinamis dan QR autentikasi dua faktor sekarang memakai komponen next/image dengan dimensi intrinsik eksplisit.
+- Sumber eksternal dan data URL tetap memakai mode unoptimized agar tidak mengubah kontrak provider atau pemuatan QR lokal.
+
+### Quality
+- Seluruh lint repository kini bersih tanpa error maupun warning.
+- Ukuran visual, fallback inisial profil, kebijakan referrer avatar, alur MFA, dan sumber gambar tidak berubah.
 
 ## [0.3.17] - 2026-08-13
 ### Changed
