@@ -42,7 +42,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
   const [isExiting, setIsExiting] = useState(false);
   const [progress, setProgress] = useState(100);
   const duration = toast.duration ?? 4500;
-  const startTime = useRef(Date.now());
+  const startTime = useRef<number | null>(null);
 
   const handleDismiss = useCallback(() => {
     setIsExiting(true);
@@ -50,20 +50,23 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
   }, [toast.id, onRemove]);
 
   useEffect(() => {
+    startTime.current = Date.now();
     const timer = setTimeout(handleDismiss, duration);
+    let raf = 0;
     
     // Animate progress bar
     const frame = () => {
-      const elapsed = Date.now() - startTime.current;
+      const elapsed = Date.now() - (startTime.current ?? Date.now());
       const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
       setProgress(remaining);
-      if (remaining > 0) requestAnimationFrame(frame);
+      if (remaining > 0) raf = requestAnimationFrame(frame);
     };
-    const raf = requestAnimationFrame(frame);
+    raf = requestAnimationFrame(frame);
 
     return () => {
       clearTimeout(timer);
       cancelAnimationFrame(raf);
+      startTime.current = null;
     };
   }, [duration, handleDismiss]);
 
@@ -186,10 +189,12 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
       }}>
         <div style={{
           height: '100%',
-          width: `${progress}%`,
+          width: '100%',
+          transform: `scaleX(${progress / 100})`,
+          transformOrigin: 'left center',
           background: `linear-gradient(90deg, ${config.progressColor}, ${config.progressColor}88)`,
           borderRadius: '0 2px 2px 0',
-          transition: 'width 0.1s linear',
+          transition: 'transform 0.1s linear',
         }} />
       </div>
     </div>

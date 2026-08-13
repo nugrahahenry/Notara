@@ -13,13 +13,9 @@ import { NaliraBrand } from '../brand/NaliraBrand';
 // Di local dev: buildId selalu "dev-development", tidak ada notif.
 // ─────────────────────────────────────────────────────────────
 
-interface VersionUpdateBannerProps {
-  appVersion: string;
-}
-
 const CHECK_DELAY_MS = 2000; // delay setelah window focus sebelum check
 
-export function VersionUpdateBanner({ appVersion }: VersionUpdateBannerProps) {
+export function VersionUpdateBanner() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [newVersion, setNewVersion] = useState('');
   const [isVisible, setIsVisible] = useState(false);
@@ -64,9 +60,9 @@ export function VersionUpdateBanner({ appVersion }: VersionUpdateBannerProps) {
 
   // Check saat mount (untuk capture baseline buildId)
   useEffect(() => {
-    checkForUpdate();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const initialCheck = setTimeout(() => void checkForUpdate(), 0);
+    return () => clearTimeout(initialCheck);
+  }, [checkForUpdate]);
 
   // Check saat window mendapat fokus kembali (user balik ke tab)
   useEffect(() => {
@@ -148,7 +144,7 @@ export function VersionUpdateBanner({ appVersion }: VersionUpdateBannerProps) {
             transform: `translateX(-50%) translateY(${isVisible ? '0' : '120%'})`,
             zIndex: 99998,
             opacity: isVisible ? 1 : 0,
-            transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease',
+            transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease',
             width: 'calc(100% - 48px)',
             maxWidth: '480px',
           }}

@@ -107,9 +107,17 @@ export function DashboardTour({ steps, onComplete, onSkip }: DashboardTourProps)
 
   // Update position on step change or resize
   useEffect(() => {
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    return () => window.removeEventListener('resize', updatePosition);
+    let frameId = requestAnimationFrame(updatePosition);
+    const handleResize = () => {
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(updatePosition);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [updatePosition]);
 
   const goNext = () => {

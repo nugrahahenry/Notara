@@ -4,7 +4,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.6.
+Belum ada perubahan setelah kandidat rilis v0.3.7.
+
+## [0.3.7] - 2026-08-13
+### Changed
+- Dashboard Tour menjadwalkan pengukuran layout melalui animation frame dan membatalkan pekerjaan tertunda saat unmount atau resize.
+- Progress Toast memakai transform terakselerasi alih-alih menganimasikan lebar layout, serta membersihkan animation frame aktif dengan benar.
+- Pemeriksaan versi awal dijadwalkan setelah mount dan kontrak prop versi yang tidak digunakan dihapus.
+
+### Fixed
+- Tiga pelanggaran React hooks/purity pada Dashboard Tour, Toast, dan Version Update Banner.
+- Easing banner pembaruan tidak lagi memakai gerak memantul.
+
+### Security
+- Tidak ada perubahan autentikasi, database, RLS, billing, provider AI, maupun kontrak API.
 
 ## [0.3.6] - 2026-08-12
 ### Added

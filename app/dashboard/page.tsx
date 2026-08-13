@@ -6976,7 +6976,7 @@ export default function Home() {
 
       {/* ─── VERSION UPDATE BANNER ─── */}
       {/* Detects new Vercel deployments on window focus — shows update prompt */}
-      <VersionUpdateBanner appVersion={`v${packageJson.version}`} />
+      <VersionUpdateBanner />
 
     </AppShellRoot>
   );
