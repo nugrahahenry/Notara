@@ -158,6 +158,38 @@ test('operational workspaces use customer language instead of implementation jar
   assert.match(visibleCopy, /Nalira/);
 });
 
+test('Home gives one primary daily action while keeping capture within reach', () => {
+  assert.ifError(moduleLoadError);
+
+  const returningHome = renderToStaticMarkup(React.createElement(homeModule.HomeWorkspace, {
+    userName: 'Henry',
+    folders: [folder],
+    summaries: [summary],
+    onUpload: noop,
+    onRecord: noop,
+    onOpenSummary: noop,
+    onOpenCourses: noop,
+    onOpenNotara: noop,
+  }));
+  const emptyHome = renderToStaticMarkup(React.createElement(homeModule.HomeWorkspace, {
+    userName: 'Henry',
+    folders: [],
+    summaries: [],
+    onUpload: noop,
+    onRecord: noop,
+    onOpenSummary: noop,
+    onOpenCourses: noop,
+    onOpenNotara: noop,
+  }));
+
+  assert.match(returningHome, /data-home-primary="continue"/);
+  assert.match(returningHome, /Buka Study Canvas/);
+  assert.match(returningHome, /Rekam kuliah/);
+  assert.match(returningHome, /Upload file/);
+  assert.match(emptyHome, /data-home-primary="capture"/);
+  assert.match(emptyHome, /Mulai rekam/);
+});
+
 test('operational routes consume compact ambient headers without losing their controls', () => {
   assert.ifError(moduleLoadError);
 
@@ -222,6 +254,51 @@ test('mobile navigation makes the background workspace unavailable to assistive 
 
   assert.match(workspace, /aria-hidden="true"/);
   assert.match(workspace, /inert=""/);
+});
+
+test('blocking product dialogs make the whole app shell unavailable to assistive technology', () => {
+  assert.ifError(moduleLoadError);
+
+  const shell = renderToStaticMarkup(
+    React.createElement(appShellModule.AppShellRoot, {
+      blocked: true,
+    }, React.createElement('main', null, 'Ruang belajar')),
+  );
+
+  assert.match(shell, /aria-hidden="true"/);
+  assert.match(shell, /inert=""/);
+});
+
+test('sidebar toggle names the action and exposes the controlled navigation state', () => {
+  assert.ifError(moduleLoadError);
+
+  const collapsed = renderToStaticMarkup(
+    React.createElement(appShellModule.SidebarToggle, {
+      expanded: false,
+      onToggle: noop,
+    }),
+  );
+  const expanded = renderToStaticMarkup(
+    React.createElement(appShellModule.SidebarToggle, {
+      expanded: true,
+      onToggle: noop,
+    }),
+  );
+  const mobileClose = renderToStaticMarkup(
+    React.createElement(appShellModule.SidebarToggle, {
+      expanded: true,
+      label: 'Tutup navigasi',
+      onToggle: noop,
+    }),
+  );
+
+  assert.match(collapsed, /aria-label="Buka sidebar"/);
+  assert.match(collapsed, /aria-controls="notara-navigation"/);
+  assert.match(collapsed, /aria-expanded="false"/);
+  assert.match(expanded, /aria-label="Ciutkan sidebar"/);
+  assert.match(expanded, /aria-expanded="true"/);
+  assert.match(mobileClose, /aria-label="Tutup navigasi"/);
+  assert.match(mobileClose, /title="Tutup navigasi"/);
 });
 
 test('capture workspace maps source mode into the compact ambient header without hiding limits', () => {

@@ -27,17 +27,18 @@ test('privileged Supabase client is server-only and requires the service-role ke
   assert.match(adminClient, /autoRefreshToken:\s*false/);
   assert.doesNotMatch(adminClient, /NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY/);
 });
-test('Nalira v0.3.20 metadata documents the server-only rollout gate', () => {
+test('release metadata keeps the server-only billing rollout gate documented', () => {
   const packageJson = JSON.parse(read('package.json'));
   const packageLock = JSON.parse(read('package-lock.json'));
   const readme = read('README.md');
   const changelog = read('CHANGELOG.md');
 
-  assert.equal(packageJson.version, '0.3.20');
-  assert.equal(packageLock.version, '0.3.20');
-  assert.equal(packageLock.packages[''].version, '0.3.20');
+  assert.equal(packageJson.version, '0.4.0');
+  assert.equal(packageLock.version, packageJson.version);
+  assert.equal(packageLock.packages[''].version, packageJson.version);
   assert.match(readme, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(readme, /server-only/i);
+  assert.match(changelog, /## \[0\.4\.0\] - 2026-08-14/);
   assert.match(changelog, /## \[0\.3\.20\] - 2026-08-13/);
   assert.match(changelog, /signature/i);
   assert.match(changelog, /RPC/i);

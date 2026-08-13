@@ -110,10 +110,10 @@ function AmbientScene({
   return (
     <header className="notara-home-ambient" data-daypart={daypart} aria-labelledby="home-greeting">
       <div className="notara-home-ambient-copy">
-        <span className="notara-home-ambient-label">{daypartLabel[daypart]}</span>
         <h1 id="home-greeting">{greetingByDaypart[daypart]}, {firstName}.</h1>
         <p>{subcopy}</p>
         <div className="notara-home-ambient-meta">
+          <span>{daypartLabel[daypart]}</span>
           <time>{dateLabel || 'Hari ini'}</time>
           <span><i aria-hidden="true" /> {firstUse ? 'Siap membuat materi pertama' : 'Fokus hari ini: 1 materi aktif'}</span>
         </div>
@@ -175,6 +175,7 @@ export function HomeWorkspace({
   const continuationFolder = continuation?.folder_id
     ? folders.find((folder) => folder.id === continuation.folder_id) ?? null
     : null;
+  const otherRecent = recent.filter((summary) => summary.id !== continuation?.id);
 
   const moveSequence = (itemId: string, offset: -1 | 1) => {
     const ids = orderedSequence.map((item) => item.id);
@@ -196,11 +197,10 @@ export function HomeWorkspace({
           activeMaterial={null}
         />
 
-        <section className="notara-home-first-use" aria-labelledby="first-use-heading">
+        <section className="notara-home-first-use" data-home-primary="capture" aria-labelledby="first-use-heading">
           <div className="notara-home-first-copy">
-            <span className="notara-eyebrow">Ruang belajar pertamamu</span>
             <h2 id="first-use-heading">Dari rekaman kuliah menjadi materi yang bisa dipahami.</h2>
-            <p>Rekam atau unggah audio/video. Nalira menyiapkan transkrip, rangkuman, dan ruang belajar terstruktur tanpa membuat chatbot mendominasi layar.</p>
+            <p>Rekam atau unggah materi. Nalira mengubahnya menjadi transkrip dan rangkuman terstruktur yang siap dibuka kembali kapan pun.</p>
             <div className="notara-home-first-actions">
               <button type="button" onClick={onRecord} className="notara-primary-button"><Mic className="h-4 w-4" /> Mulai rekam</button>
               <button type="button" onClick={onUpload} className="notara-secondary-button"><Upload className="h-4 w-4" /> Upload file</button>
@@ -217,7 +217,7 @@ export function HomeWorkspace({
               <span><BookOpen className="h-4 w-4" /></span><i /><i /><i />
             </div>
             <div className="notara-home-preview-canvas">
-              <span className="notara-eyebrow">Study Canvas</span>
+              <span className="notara-home-preview-label">Study Canvas</span>
               <h3>Materi pertamamu akan tinggal di sini</h3>
               <div className="notara-home-preview-lines" aria-hidden="true"><i /><i /><i /></div>
               <div className="notara-home-preview-formula">Rangkuman · Transkrip</div>
@@ -252,67 +252,10 @@ export function HomeWorkspace({
 
       <div className="notara-home-grid">
         <div className="notara-home-main">
-          {learning && orderedSequence.length > 1 && (
-            <section className="notara-home-learning-priority" aria-labelledby="learning-next-heading">
-              <div className="notara-home-learning-head">
-                <div>
-                  <span className="notara-eyebrow">Pilihan berikutnya</span>
-                  <h2 id="learning-next-heading">Belajar apa dulu?</h2>
-                  <p>Nalira menempatkan materi terbaru lebih dahulu agar kamu dapat melanjutkan selagi konteksnya masih segar.</p>
-                </div>
-                <span className="notara-home-foundation-badge">Berdasarkan aktivitas terbaru</span>
-              </div>
-
-              <div className="notara-home-priority-reason">
-                <span><Lightbulb className="h-4 w-4" /></span>
-                <div>
-                  <strong>Mulai dari {learning.recommendation.title}</strong>
-                  <p>{learning.reason} Estimasi sesi sekitar {learning.estimateMinutes} menit.</p>
-                </div>
-              </div>
-
-              <ol className="notara-home-path" aria-label="Urutan materi">
-                {orderedSequence.slice(0, 3).map((item, index, visibleItems) => (
-                  <li key={item.id} data-recommended={item.id === learning.recommendation.id}>
-                    <button type="button" className="notara-home-path-main" onClick={() => onOpenSummary(item)}>
-                      <span>{index + 1}</span>
-                      <strong>{item.title}</strong>
-                      <small>
-                        {index === 0
-                          ? 'mulai di sini'
-                          : item.duration_sec
-                            ? `${Math.max(1, Math.round(item.duration_sec / 60))} menit`
-                            : 'durasi belum tersedia'}
-                      </small>
-                    </button>
-                    {manualMode && (
-                      <span className="notara-home-path-controls">
-                        <button type="button" onClick={() => moveSequence(item.id, -1)} disabled={index === 0} aria-label={`Naikkan ${item.title}`}><ArrowUp className="h-3.5 w-3.5" /></button>
-                        <button type="button" onClick={() => moveSequence(item.id, 1)} disabled={index === visibleItems.length - 1} aria-label={`Turunkan ${item.title}`}><ArrowDown className="h-3.5 w-3.5" /></button>
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ol>
-
-              <div className="notara-home-learning-actions">
-                <button type="button" onClick={() => orderedSequence[0] && onOpenSummary(orderedSequence[0])} className="notara-primary-button">
-                  Ikuti urutan belajar <ArrowRight className="h-4 w-4" />
-                </button>
-                <button type="button" onClick={onOpenNotara} className="notara-secondary-button"><MessageSquareText className="h-4 w-4" /> Tanya Nalira</button>
-                <button type="button" onClick={() => setManualMode((value) => !value)} className="notara-home-text-button" aria-pressed={manualMode}>
-                  <ListOrdered className="h-4 w-4" /> {manualMode ? 'Selesai mengatur' : 'Atur sendiri'}
-                </button>
-                <span>Kamu tetap memegang kontrol atas urutan belajar.</span>
-              </div>
-            </section>
-          )}
-
           {continuation && (
-            <section className="notara-home-continuation" aria-labelledby="continue-learning-heading">
+            <section className="notara-home-continuation" data-home-primary="continue" aria-labelledby="continue-learning-heading">
               <div className="notara-home-continuation-head">
                 <div>
-                  <span className="notara-eyebrow">Lanjutkan belajar</span>
                   <h2 id="continue-learning-heading">{continuation.title}</h2>
                   <p>{summaryPreview(continuation.summary)}</p>
                 </div>
@@ -334,24 +277,81 @@ export function HomeWorkspace({
             </section>
           )}
 
-          <section aria-labelledby="recent-materials-heading">
-            <div className="notara-home-section-heading">
-              <h2 id="recent-materials-heading">Materi terbaru</h2>
-              <button type="button" onClick={onOpenCourses}>Lihat semua</button>
-            </div>
-            <div className="notara-home-recent-list">
-              {recent.map((summary) => (
-                <button key={summary.id} type="button" onClick={() => onOpenSummary(summary)}>
-                  <span className="notara-home-recent-icon"><BookOpen className="h-4 w-4" /></span>
-                  <span><strong>{summary.title}</strong><small>{folders.find((folder) => folder.id === summary.folder_id)?.name ?? 'Belum dikategorikan'}</small></span>
-                  <time>{relativeDate(summary.created_at)}</time>
+          {learning && orderedSequence.length > 1 && (
+            <section className="notara-home-learning-priority" aria-labelledby="learning-next-heading">
+              <div className="notara-home-learning-head">
+                <div>
+                  <h2 id="learning-next-heading">Urutan materi berikutnya</h2>
+                  <p>Disusun dari aktivitas terbaru agar konteks yang masih hangat tidak terlewat.</p>
+                </div>
+              </div>
+
+              <div className="notara-home-priority-reason">
+                <span><Lightbulb className="h-4 w-4" /></span>
+                <div>
+                  <strong>Mulai dari {learning.recommendation.title}</strong>
+                  <p>{learning.reason} Estimasi sesi sekitar {learning.estimateMinutes} menit.</p>
+                </div>
+              </div>
+
+              <ol className="notara-home-path" aria-label="Urutan materi">
+                {orderedSequence.slice(0, 3).map((item, index, visibleItems) => (
+                  <li key={item.id} data-recommended={item.id === learning.recommendation.id}>
+                    <button type="button" className="notara-home-path-main" onClick={() => onOpenSummary(item)}>
+                      <span>{index + 1}</span>
+                      <strong>{item.title}</strong>
+                      <small>{item.duration_sec ? `${Math.max(1, Math.round(item.duration_sec / 60))} menit` : 'durasi belum tersedia'}</small>
+                    </button>
+                    {manualMode && (
+                      <span className="notara-home-path-controls">
+                        <button type="button" onClick={() => moveSequence(item.id, -1)} disabled={index === 0} aria-label={`Naikkan ${item.title}`}><ArrowUp className="h-3.5 w-3.5" /></button>
+                        <button type="button" onClick={() => moveSequence(item.id, 1)} disabled={index === visibleItems.length - 1} aria-label={`Turunkan ${item.title}`}><ArrowDown className="h-3.5 w-3.5" /></button>
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+
+              <div className="notara-home-learning-actions">
+                <button type="button" onClick={() => orderedSequence[0] && onOpenSummary(orderedSequence[0])} className="notara-secondary-button">
+                  Buka urutan belajar <ArrowRight className="h-4 w-4" />
                 </button>
-              ))}
-            </div>
-          </section>
+                <button type="button" onClick={onOpenNotara} className="notara-home-text-button"><MessageSquareText className="h-4 w-4" /> Tanya Nalira</button>
+                <button type="button" onClick={() => setManualMode((value) => !value)} className="notara-home-text-button" aria-pressed={manualMode}>
+                  <ListOrdered className="h-4 w-4" /> {manualMode ? 'Selesai mengatur' : 'Atur urutan'}
+                </button>
+              </div>
+            </section>
+          )}
+
+          {otherRecent.length > 0 && (
+            <section aria-labelledby="recent-materials-heading">
+              <div className="notara-home-section-heading">
+                <h2 id="recent-materials-heading">Materi terbaru lainnya</h2>
+                <button type="button" onClick={onOpenCourses}>Lihat semua</button>
+              </div>
+              <div className="notara-home-recent-list">
+                {otherRecent.map((summary) => (
+                  <button key={summary.id} type="button" onClick={() => onOpenSummary(summary)}>
+                    <span className="notara-home-recent-icon"><BookOpen className="h-4 w-4" /></span>
+                    <span><strong>{summary.title}</strong><small>{folders.find((folder) => folder.id === summary.folder_id)?.name ?? 'Belum dikategorikan'}</small></span>
+                    <time>{relativeDate(summary.created_at)}</time>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         <aside className="notara-home-side">
+          <section className="notara-home-side-panel notara-home-capture-panel" aria-labelledby="add-material-heading">
+            <div className="notara-home-section-heading"><h2 id="add-material-heading">Tambahkan materi</h2></div>
+            <div className="notara-home-utility-grid">
+              <button type="button" onClick={onRecord}><span><Mic className="h-4 w-4" /></span><strong>Rekam kuliah</strong><small>Mulai dari mikrofon</small></button>
+              <button type="button" onClick={onUpload}><span><Upload className="h-4 w-4" /></span><strong>Upload file</strong><small>Audio atau video</small></button>
+            </div>
+          </section>
+
           <section className="notara-home-side-panel" aria-labelledby="home-courses-heading">
             <div className="notara-home-section-heading">
               <h2 id="home-courses-heading">Mata kuliah</h2>
@@ -372,13 +372,6 @@ export function HomeWorkspace({
             </div>
           </section>
 
-          <section className="notara-home-side-panel" aria-labelledby="add-material-heading">
-            <div className="notara-home-section-heading"><h2 id="add-material-heading">Tambahkan materi</h2><span>Cara menambah</span></div>
-            <div className="notara-home-utility-grid">
-              <button type="button" onClick={onRecord}><span><Mic className="h-4 w-4" /></span><strong>Rekam kuliah</strong><small>Mulai dari mikrofon</small></button>
-              <button type="button" onClick={onUpload}><span><Upload className="h-4 w-4" /></span><strong>Upload file</strong><small>Audio atau video</small></button>
-            </div>
-          </section>
         </aside>
       </div>
     </div>

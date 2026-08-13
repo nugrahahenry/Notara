@@ -6,14 +6,20 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface AppShellRootProps {
   children: ReactNode;
+  blocked?: boolean;
 }
 
-export function AppShellRoot({ children }: AppShellRootProps) {
+export function AppShellRoot({ children, blocked = false }: AppShellRootProps) {
   return (
-    <div className="notara-app-shell">
+    <div
+      className="notara-app-shell"
+      aria-hidden={blocked || undefined}
+      inert={blocked || undefined}
+    >
       <a className="notara-skip-link" href="#notara-main-content">
         Lewati ke konten utama
       </a>
@@ -138,4 +144,30 @@ export function AppShellWorkspace({ sidebarExpanded, mobileNavigationOpen, child
 
 export function AppShellTopbar({ children }: { children: ReactNode }) {
   return <header className="notara-shell-topbar">{children}</header>;
+}
+
+interface SidebarToggleProps {
+  expanded: boolean;
+  onToggle: () => void;
+  className?: string;
+  label?: string;
+}
+
+export function SidebarToggle({ expanded, onToggle, className = '', label }: SidebarToggleProps) {
+  const actionLabel = label ?? (expanded ? 'Ciutkan sidebar' : 'Buka sidebar');
+  const Icon = expanded ? PanelLeftClose : PanelLeftOpen;
+
+  return (
+    <button
+      type="button"
+      className={`notara-sidebar-toggle ${className}`.trim()}
+      aria-label={actionLabel}
+      aria-controls="notara-navigation"
+      aria-expanded={expanded}
+      title={actionLabel}
+      onClick={onToggle}
+    >
+      <Icon aria-hidden="true" />
+    </button>
+  );
 }

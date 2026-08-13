@@ -7,7 +7,7 @@ import packageJson from '../../package.json';
 import { 
   FileText, Sparkles,
   Check, Loader2, AlertCircle, Trash2, BookOpen,
-  Plus, FolderPlus, Folder, Edit3, X, ChevronRight,
+  Plus, FolderPlus, Folder, Edit3, X,
   Calendar, Menu, MessageSquare, Send, Search, LogOut,
   Shield, Key, Share2, Copy,
   Mic, Users, UserPlus, Link2, Crown, Hash,
@@ -16,8 +16,6 @@ import {
 } from 'lucide-react';
 import { NaliraBrand } from '../components/brand/NaliraBrand';
 import { OnboardingModal } from '../components/ui/OnboardingModal';
-import { DashboardTour, DEFAULT_TOUR_STEPS } from '../components/ui/DashboardTour';
-import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
 import { VersionUpdateBanner } from '../components/ui/VersionUpdateBanner';
 import { CaptureSourceTabs } from '../components/capture/CaptureSourceTabs';
 import { CaptureTaskList } from '../components/capture/CaptureTaskList';
@@ -32,6 +30,7 @@ import {
   AppShellSidebar,
   AppShellTopbar,
   AppShellWorkspace,
+  SidebarToggle,
 } from '../components/shell/AppShell';
 import { ThemeSwitcher } from '../components/theme/ThemeSwitcher';
 import { HomeWorkspace } from '../components/workspace/HomeWorkspace';
@@ -104,6 +103,7 @@ import {
 } from '@/lib/capture/task';
 import type { BrowserWindow, SpeechRecognitionLike } from '@/lib/browser';
 import { getErrorMessage } from '@/lib/api/boundary';
+import { getPostAuthExperience } from '@/lib/auth/post-auth-experience';
 
 // Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
 // membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
@@ -349,11 +349,6 @@ export default function Home() {
 
   // Onboarding & Dashboard Tour States
   const [showOnboardingModal, setShowOnboardingModal] = useState<boolean>(false);
-  const [showDashboardTour, setShowDashboardTour] = useState<boolean>(false);
-
-  // Full-screen login success states
-  const [showLoginSuccess, setShowLoginSuccess] = useState<boolean>(false);
-  const [isFirstTimeLogin, setIsFirstTimeLogin] = useState<boolean>(false);
 
   // Subscription & Billing States (Phase 5)
   const [profileTier, setProfileTier] = useState<'free' | 'pro' | 'max'>('free');
@@ -717,14 +712,12 @@ export default function Home() {
     router.replace('/login');
   };
 
-  // Handle onboarding survey completion — save data, start guided tour
+  // Save onboarding without interrupting the first workspace visit.
   const handleOnboardingComplete = async (onboardingData: { role: string; university: string; major: string; find_source: string }) => {
+    if (!user) throw new Error('Sesi pengguna tidak tersedia.');
+    const saved = await saveOnboardingData(user.id, onboardingData);
+    if (!saved) throw new Error('Profil onboarding belum berhasil disimpan.');
     setShowOnboardingModal(false);
-    if (user) {
-      await saveOnboardingData(user.id, onboardingData);
-    }
-    // Start guided tour shortly after modal closes
-    setTimeout(() => setShowDashboardTour(true), 500);
   };
 
 
@@ -754,6 +747,13 @@ export default function Home() {
 
   const loadBillingData = useCallback(async () => {
     if (!user) return;
+    if (DEV_BYPASS_AUTH) {
+      setProfileTier('free');
+      setSubscriptionData(null);
+      setBillingError(null);
+      setBillingLoading(false);
+      return;
+    }
     setBillingLoading(true);
     setBillingError(null);
     try {
@@ -1115,9 +1115,10 @@ export default function Home() {
               // ─── CHECK ONBOARDING STATUS ───
               // Show onboarding modal if user hasn't completed it yet
               const profile = await getUserProfile(user.id);
-              const loginFlag = sessionStorage.getItem('login_success');
-              if (profile && !profile.is_onboarded && active && !loginFlag) {
-                setTimeout(() => setShowOnboardingModal(true), 1500);
+              if (getPostAuthExperience(profile) === 'onboarding' && active) {
+                setTimeout(() => {
+                  if (active) setShowOnboardingModal(true);
+                }, 500);
               }
             }
           } else {
@@ -1137,7 +1138,7 @@ export default function Home() {
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!active) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -1145,12 +1146,6 @@ export default function Home() {
       if (currentUser) {
         // Check MFA status
         await checkMfaStatus();
-
-        // SIGNED_IN fires when user actively logs in (both Google OAuth & email)
-        // This is the most reliable way to detect a fresh login vs page refresh
-        if (event === 'SIGNED_IN') {
-          sessionStorage.setItem('login_success', '1');
-        }
 
         setIsDataLoading(true);
         try {
@@ -1184,30 +1179,6 @@ export default function Home() {
       subscription.unsubscribe();
     };
   }, [router, showToast]);
-
-  // Show login success screen when data loading is complete
-  useEffect(() => {
-    async function checkLoginSuccess() {
-      if (!isDataLoading && user) {
-        const loginFlag = localStorage.getItem('login_success') || sessionStorage.getItem('login_success');
-        if (loginFlag) {
-          localStorage.removeItem('login_success');
-          sessionStorage.removeItem('login_success');
-          try {
-            const profile = await getUserProfile(user.id);
-            const isFirst = profile ? !profile.is_onboarded : true;
-            setIsFirstTimeLogin(isFirst);
-            setShowLoginSuccess(true);
-          } catch (e) {
-            console.error('Error checking onboarding for login screen:', e);
-            setIsFirstTimeLogin(false);
-            setShowLoginSuccess(true);
-          }
-        }
-      }
-    }
-    checkLoginSuccess();
-  }, [isDataLoading, user]);
 
   // Capture jobs are still browser-bound. Protect work that would otherwise
   // disappear when the tab is closed or refreshed mid-process.
@@ -3521,8 +3492,7 @@ export default function Home() {
   };
 
   return (
-    <AppShellRoot>
-
+    <>
       {/* ─── ONBOARDING SURVEY MODAL (First-time users) ─── */}
       {showOnboardingModal && user && (
         <OnboardingModal
@@ -3531,31 +3501,9 @@ export default function Home() {
         />
       )}
 
-      {/* ─── FULL-SCREEN LOGIN SUCCESS SCREEN ─── */}
-      {showLoginSuccess && (
-        <LoginSuccessScreen
-          userName={user?.user_metadata?.full_name || user?.email || 'Pengguna'}
-          isFirstTime={isFirstTimeLogin}
-          type="login"
-          onDismiss={() => {
-            setShowLoginSuccess(false);
-            if (isFirstTimeLogin) {
-              setTimeout(() => {
-                setShowOnboardingModal(true);
-              }, 300);
-            }
-          }}
-        />
-      )}
+      <AppShellRoot blocked={showOnboardingModal}>
 
       {/* ─── DASHBOARD GUIDED TOUR ─── */}
-      {showDashboardTour && (
-        <DashboardTour
-          steps={DEFAULT_TOUR_STEPS}
-          onComplete={() => setShowDashboardTour(false)}
-          onSkip={() => setShowDashboardTour(false)}
-        />
-      )}
 
       <AppShellSidebar
         mobileOpen={sidebarOpen}
@@ -3572,24 +3520,21 @@ export default function Home() {
                 <NaliraBrand variant="horizontal" size={32} />
               </div>
             </div>
-            {/* Lock Pin Button */}
-            <button 
-              onClick={() => updateSidebarExpanded(!sidebarExpanded)}
-              className="hidden h-11 w-11 items-center justify-center rounded-lg text-[var(--text-tertiary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)] md:flex"
-              title={sidebarExpanded ? "Ciutkan Sidebar" : "Kunci Lebar Sidebar"}
-            >
-              <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${sidebarExpanded ? 'rotate-180' : ''}`} />
-            </button>
+            <SidebarToggle
+              expanded
+              label={sidebarOpen ? 'Tutup navigasi' : 'Ciutkan sidebar'}
+              onToggle={() => {
+                if (sidebarOpen) setSidebarOpen(false);
+                else updateSidebarExpanded(false);
+              }}
+            />
           </div>
         ) : (
           <div className="flex h-16 shrink-0 items-center justify-center border-b border-[var(--border-subtle)]">
-            <button 
-              onClick={() => updateSidebarExpanded(true)}
-              className="flex h-11 w-11 items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95"
-              title="Buka Menu Sidebar"
-            >
-              <NaliraBrand size={32} />
-            </button>
+            <SidebarToggle
+              expanded={false}
+              onToggle={() => updateSidebarExpanded(true)}
+            />
           </div>
         )}
 
@@ -6981,6 +6926,7 @@ export default function Home() {
       {/* Detects new Vercel deployments on window focus — shows update prompt */}
       <VersionUpdateBanner />
 
-    </AppShellRoot>
+      </AppShellRoot>
+    </>
   );
 }

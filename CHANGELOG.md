@@ -4,7 +4,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.20.
+Belum ada perubahan setelah kandidat rilis v0.4.0.
+
+## [0.4.0] - 2026-08-14
+### Added
+- Onboarding tiga langkah yang ringkas untuk memilih konteks penggunaan, institusi atau bidang opsional, dan sumber penemuan Nalira.
+- Kontrol sidebar terpusat dengan status terbuka yang jelas untuk desktop dan drawer mobile.
+
+### Changed
+- Beranda sekarang memprioritaskan satu tindakan harian: melanjutkan materi aktif untuk pengguna lama atau mulai merekam dan mengunggah untuk pengguna baru.
+- Empty state Beranda diringkas agar tindakan utama terlihat pada viewport pertama, dengan preview Study Canvas sebagai satu-satunya permukaan pendukung.
+- Sesi yang dipulihkan langsung masuk ke ruang kerja; onboarding hanya muncul untuk profil yang secara eksplisit belum selesai.
+- Penyelesaian onboarding kembali ke ruang kerja tanpa memicu tur layar penuh kedua.
+
+### Fixed
+- Pesan selamat datang layar penuh tidak lagi berulang setiap sesi Supabase dipulihkan atau tab kembali aktif.
+- Tombol sidebar dapat membuka dan menutup navigasi secara konsisten, termasuk label aksesibilitas “Tutup navigasi” pada drawer mobile.
+
+### Quality
+- Perilaku post-auth, onboarding, hierarki Beranda, dialog blocking, dan kontrol sidebar dilindungi oleh test regresi baru.
+- Seluruh 162 test lulus, lint bersih, dan build production berhasil.
 
 ## [0.3.20] - 2026-08-13
 ### Security

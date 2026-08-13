@@ -57,13 +57,8 @@ function LoginForm() {
   const [showLogoutSuccess, setShowLogoutSuccess] = useState<boolean>(false);
 
 
-  // Clear transient auth flags and recover the logout-success state on mount.
+  // Recover the logout-success state on mount.
   useEffect(() => {
-    // ─── PENTING: bersihkan login_success flag jika kita ada di halaman login ───
-    // Ini mencegah toast 'selamat datang' muncul jika user cancel lalu login ulang
-    localStorage.removeItem('login_success');
-    sessionStorage.removeItem('login_success');
-
     // ─── Cek error dari callback URL ─────────────────────────────────────────
     // Jika cancelled=1 → user sengaja klik Batal, tidak perlu tampilkan error
 
@@ -88,11 +83,6 @@ function LoginForm() {
       setErrorMsg(null);
       setSuccessMsg(null);
       
-      // Set flag BEFORE OAuth redirect — sessionStorage persists across
-      // cross-origin navigations in the same tab (Google → back to Nalira)
-      localStorage.setItem('login_success', '1');
-      sessionStorage.setItem('login_success', '1');
-
       const nextParam = sanitizeAuthDestination(searchParams.get('redirect'));
       const redirectOrigin = resolveAuthOrigin(
         window.location.origin,
@@ -108,9 +98,6 @@ function LoginForm() {
       });
 
       if (error) {
-        // If OAuth fails before redirecting, clear the flag
-        localStorage.removeItem('login_success');
-        sessionStorage.removeItem('login_success');
         throw error;
       }
     } catch (err: unknown) {
@@ -196,8 +183,6 @@ function LoginForm() {
           setFullName('');
         } else if (data.session) {
           // Direct session after sign-up (email confirmation disabled)
-          localStorage.setItem('login_success', '1');
-          sessionStorage.setItem('login_success', '1');
           // Navigasi dokumen penuh (bukan soft-nav): menjamin cookie sesi yang baru
           // diset ikut terkirim di permintaan pertama, sehingga proxy langsung
           // melihat user sebagai sudah login dan tidak memantulkan ke halaman publik.
@@ -213,8 +198,6 @@ function LoginForm() {
         if (error) throw error;
 
         if (data.session) {
-          localStorage.setItem('login_success', '1');
-          sessionStorage.setItem('login_success', '1');
           // Navigasi dokumen penuh (bukan soft-nav): menjamin cookie sesi yang baru
           // diset ikut terkirim di permintaan pertama, sehingga proxy langsung
           // melihat user sebagai sudah login dan tidak memantulkan ke halaman publik.
