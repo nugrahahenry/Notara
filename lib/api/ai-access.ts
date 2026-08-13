@@ -6,7 +6,7 @@ import {
 } from '@/lib/api/ai-access-policy';
 
 export type AiAuthorizationResult =
-  | { ok: true; userId: string }
+  | { ok: true; userId: string; bypassed: boolean }
   | { ok: false; response: Response };
 
 export async function authorizeAiRequest(
@@ -43,5 +43,6 @@ export async function authorizeAiRequest(
   return {
     ok: true,
     userId: decision.userId,
+    bypassed: decision.bypassed,
   };
 }

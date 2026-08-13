@@ -3,11 +3,19 @@ import { GROQ_LLM_MODEL, GROQ_STT_MODEL } from '../../../lib/ai';
 import { getErrorMessage } from '../../../lib/api/boundary';
 import { authorizeAiRequest } from '../../../lib/api/ai-access';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
+import {
+  createAiUsageEvent,
+  parseGroqCompletionUsage,
+  parseGroqProviderRequestId,
+  parseGroqTranscriptionDurationMs,
+} from '../../../lib/ai/usage';
+import { recordAiUsageSafely } from '../../../lib/ai/usage-recorder';
 
 export async function POST(request: NextRequest) {
   try {
     const access = await authorizeAiRequest('capture');
     if (!access.ok) return access.response;
+    const requestId = crypto.randomUUID();
 
     // 1. Validasi API Key — Groq satu key untuk dua hal: Whisper + LLM
     const groqApiKey = process.env.GROQ_API_KEY;
@@ -40,6 +48,7 @@ export async function POST(request: NextRequest) {
     groqFormData.append('file', fileBlob, file.name || 'audio.mp3');
     groqFormData.append('model', GROQ_STT_MODEL);
     groqFormData.append('language', 'id'); // Paksa Bahasa Indonesia agar akurat
+    groqFormData.append('response_format', 'verbose_json');
 
     console.log('Asisten 1: Groq Whisper sedang mentranskripsi audio...');
 
@@ -63,6 +72,16 @@ export async function POST(request: NextRequest) {
 
     const groqData = await groqResponse.json();
     const transcript = groqData.text;
+
+    await recordAiUsageSafely(createAiUsageEvent({
+      userId: access.userId,
+      requestId,
+      operation: 'capture',
+      stage: 'transcription',
+      model: GROQ_STT_MODEL,
+      providerRequestId: parseGroqProviderRequestId(groqData),
+      audioDurationMs: parseGroqTranscriptionDurationMs(groqData),
+    }), { bypassed: access.bypassed });
 
     if (!transcript || transcript.trim() === '') {
       return NextResponse.json(
@@ -210,6 +229,17 @@ ${transcript}
 
     const llmData = await llmResponse.json();
     const summary = llmData.choices[0]?.message?.content || '';
+    const completionUsage = parseGroqCompletionUsage(llmData);
+
+    await recordAiUsageSafely(createAiUsageEvent({
+      userId: access.userId,
+      requestId,
+      operation: 'capture',
+      stage: 'generation',
+      model: GROQ_LLM_MODEL,
+      providerRequestId: parseGroqProviderRequestId(llmData),
+      ...(completionUsage ?? {}),
+    }), { bypassed: access.bypassed });
 
     console.log(`Rangkuman selesai! Proses ${PRODUCT_IDENTITY.name} berhasil.`);
 

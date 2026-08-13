@@ -14,7 +14,7 @@ try {
   console.log('--------------------------------------------------\n');
 
   // 2. Run the test suite via Node.js native test runner
-  execSync('node --test test/tier1.test.js test/tier2.test.js test/tier3.test.js test/tier4.test.js test/capture-policy.test.js test/capture-pipeline.test.js test/capture-task.test.js test/learning-fallback.test.js test/auth-redirect.test.js test/post-auth-experience.test.js test/auth-errors.test.js test/api-boundary.test.js test/ai-api-access.test.js test/ai-api-security.test.js test/billing-plans.test.js test/billing-security.test.js test/billing-security-contract.test.js test/supabase-billing-security.test.js test/runtime-health.test.js test/product-identity.test.js test/app-shell-ui.test.js test/onboarding-ui.test.js test/technical-config.test.js', { stdio: 'inherit' });
+  execSync('node --test test/tier1.test.js test/tier2.test.js test/tier3.test.js test/tier4.test.js test/capture-policy.test.js test/capture-pipeline.test.js test/capture-task.test.js test/learning-fallback.test.js test/auth-redirect.test.js test/post-auth-experience.test.js test/auth-errors.test.js test/api-boundary.test.js test/ai-api-access.test.js test/ai-api-security.test.js test/ai-usage.test.js test/ai-usage-security.test.js test/billing-plans.test.js test/billing-security.test.js test/billing-security-contract.test.js test/supabase-billing-security.test.js test/runtime-health.test.js test/product-identity.test.js test/app-shell-ui.test.js test/onboarding-ui.test.js test/technical-config.test.js', { stdio: 'inherit' });
 
   console.log('\n==================================================');
   console.log(' ✅ ALL TEST SUITES EXECUTED AND PASSED SUCCESSFUL!');

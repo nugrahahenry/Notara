@@ -3,11 +3,15 @@ import { GROQ_LLM_MODEL } from '../../../lib/ai';
 import { getErrorMessage, normalizeChatHistory } from '../../../lib/api/boundary';
 import { authorizeAiRequest } from '../../../lib/api/ai-access';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
+import { createAiUsageEvent } from '../../../lib/ai/usage';
+import { recordAiUsageSafely } from '../../../lib/ai/usage-recorder';
+import { observeGroqChatStream } from '../../../lib/ai/stream-usage';
 
 export async function POST(request: NextRequest) {
   try {
     const access = await authorizeAiRequest('chat');
     if (!access.ok) return access.response;
+    const requestId = crypto.randomUUID();
 
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey) {
@@ -84,8 +88,32 @@ ${contextTranscript || 'Tidak ada transkrip materi kuliah yang tersedia untuk se
       );
     }
 
-    // Forward the streaming response directly to Next.js client
-    return new Response(response.body, {
+    const responseBody = response.body
+      ? observeGroqChatStream(response.body, async (observation) => {
+        await recordAiUsageSafely(createAiUsageEvent({
+          userId: access.userId,
+          requestId,
+          operation: 'chat',
+          stage: 'generation',
+          model: GROQ_LLM_MODEL,
+          providerRequestId: observation.providerRequestId,
+          ...(observation.usage ?? {}),
+        }), { bypassed: access.bypassed });
+      })
+      : null;
+
+    if (!responseBody) {
+      await recordAiUsageSafely(createAiUsageEvent({
+        userId: access.userId,
+        requestId,
+        operation: 'chat',
+        stage: 'generation',
+        model: GROQ_LLM_MODEL,
+      }), { bypassed: access.bypassed });
+    }
+
+    // Preserve the provider SSE bytes while observing optional usage metadata.
+    return new Response(responseBody, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',

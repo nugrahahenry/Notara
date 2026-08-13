@@ -3,11 +3,18 @@ import { GROQ_LLM_MODEL } from '../../../lib/ai';
 import { getErrorMessage } from '../../../lib/api/boundary';
 import { authorizeAiRequest } from '../../../lib/api/ai-access';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
+import {
+  createAiUsageEvent,
+  parseGroqCompletionUsage,
+  parseGroqProviderRequestId,
+} from '../../../lib/ai/usage';
+import { recordAiUsageSafely } from '../../../lib/ai/usage-recorder';
 
 export async function POST(request: NextRequest) {
   try {
     const access = await authorizeAiRequest('summarize');
     if (!access.ok) return access.response;
+    const requestId = crypto.randomUUID();
 
     const groqApiKey = process.env.GROQ_API_KEY;
 
@@ -156,6 +163,17 @@ ${transcript}
 
     const llmData = await llmResponse.json();
     const summary = llmData.choices[0]?.message?.content || '';
+    const completionUsage = parseGroqCompletionUsage(llmData);
+
+    await recordAiUsageSafely(createAiUsageEvent({
+      userId: access.userId,
+      requestId,
+      operation: 'summarize',
+      stage: 'generation',
+      model: GROQ_LLM_MODEL,
+      providerRequestId: parseGroqProviderRequestId(llmData),
+      ...(completionUsage ?? {}),
+    }), { bypassed: access.bypassed });
 
     console.log('Rangkuman transkrip gabungan berhasil! 🎉');
 

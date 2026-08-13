@@ -4,7 +4,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.4.1.
+Belum ada perubahan setelah kandidat rilis v0.5.0.
+
+## [0.5.0] - 2026-08-14
+### Added
+- Metering privat per akun mencatat panggilan Groq yang diterima untuk Capture, rangkuman gabungan, dan chat tanpa menyimpan audio, prompt, transkrip, rangkuman, pesan, nama file, atau alamat IP.
+- Estimasi biaya memakai katalog harga berversi untuk GPT-OSS 120B dan Whisper Large v3, termasuk diskon cached input dan minimum billing audio sepuluh detik per request.
+- Migration Supabase menambahkan event store privat serta RPC service-role-only yang idempoten; migration belum diterapkan ke production pada checkpoint ini.
+
+### Changed
+- Transkripsi meminta format `verbose_json` agar durasi audio berasal dari metadata provider, bukan angka yang dapat dimanipulasi browser.
+- Chat tetap meneruskan byte SSE dengan backpressure sambil mengamati usage akhir bila provider mengirimkannya; stream tanpa metadata tetap tercatat dengan biaya yang belum diketahui.
+- Bypass autentikasi development tidak menulis telemetry. Kegagalan metering dicatat secara aman tetapi tidak membatalkan hasil AI pengguna.
+
+### Security
+- Tabel usage berada di schema privat dengan RLS aktif dan tanpa akses tabel langsung bagi public, anon, authenticated, maupun service role; penulisan hanya melalui satu RPC `SECURITY DEFINER` ber-`search_path` kosong.
+- Event hanya membawa identitas user, operasi, tahap provider, model, request ID, metrik numerik, versi harga, dan waktu server.
+
+### Quality
+- Test baru melindungi parsing usage, cached-token pricing, minimum biaya Whisper, model tanpa harga, SSE terpotong/cancel, fail-soft recorder, idempotensi, serta privilege dan batas privasi migration.
 
 ## [0.4.1] - 2026-08-14
 ### Changed

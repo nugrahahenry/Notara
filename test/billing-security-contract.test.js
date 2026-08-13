@@ -33,7 +33,7 @@ test('release metadata keeps the server-only billing rollout gate documented', (
   const readme = read('README.md');
   const changelog = read('CHANGELOG.md');
 
-  assert.equal(packageJson.version, '0.4.1');
+  assert.equal(packageJson.version, '0.5.0');
   assert.equal(packageLock.version, packageJson.version);
   assert.equal(packageLock.packages[''].version, packageJson.version);
   assert.match(readme, /SUPABASE_SERVICE_ROLE_KEY/);
