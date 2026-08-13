@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, DragEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import packageJson from '../../package.json';
 import { 
@@ -429,7 +429,7 @@ export default function Home() {
   const folderEmojis = ['📁', '🧠', '💻', '📐', '📊', '📚', '🧪', '📝', '🎨', '⚙️', '🌐', '⚖️'];
 
   // Sound Synthesizer chimes
-  const playSoundEffect = (type: 'success' | 'delete' | 'info') => {
+  const playSoundEffect = useCallback((type: 'success' | 'delete' | 'info') => {
     try {
       const browserWindow = window as BrowserWindow;
       const AudioContextClass = browserWindow.AudioContext || browserWindow.webkitAudioContext;
@@ -513,7 +513,7 @@ export default function Home() {
     } catch (e) {
       console.warn('AudioContext sound failed:', e);
     }
-  };
+  }, []);
 
   // Canvas particle explosion effect for successful deletion
   const triggerParticleExplosion = (x: number, y: number) => {
@@ -693,7 +693,7 @@ export default function Home() {
     animate();
   };
 
-  const showToast = (message: string, type: 'success' | 'delete' | 'info' = 'success') => {
+  const showToast = useCallback((message: string, type: 'success' | 'delete' | 'info' = 'success') => {
     setToast({ isOpen: true, message, type });
     playSoundEffect(type);
     
@@ -701,7 +701,7 @@ export default function Home() {
       setToast(prev => ({ ...prev, isOpen: false }));
     }, 3000);
     return timer;
-  };
+  }, [playSoundEffect]);
 
   const handleLogout = async () => {
     setShowSettingsModal(false);
@@ -751,7 +751,7 @@ export default function Home() {
     }
   };
 
-  const loadBillingData = async () => {
+  const loadBillingData = useCallback(async () => {
     if (!user) return;
     setBillingLoading(true);
     setBillingError(null);
@@ -768,7 +768,7 @@ export default function Home() {
     } finally {
       setBillingLoading(false);
     }
-  };
+  }, [user]);
 
   const handleUpgrade = async (tier: 'pro' | 'max') => {
     if (isProcessingPayment) return;
@@ -865,7 +865,7 @@ export default function Home() {
         document.body.appendChild(script);
       }
     }
-  }, [showSettingsModal, settingsTab]);
+  }, [showSettingsModal, settingsTab, loadBillingData]);
 
   const openSettings = () => {
     if (user) {
@@ -1182,7 +1182,7 @@ export default function Home() {
       active = false;
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, showToast]);
 
   // Show login success screen when data loading is complete
   useEffect(() => {

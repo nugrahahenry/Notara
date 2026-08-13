@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.3.16.
+Belum ada perubahan setelah kandidat rilis v0.3.17.
+
+## [0.3.17] - 2026-08-13
+### Changed
+- Callback suara toast, toast global, dan pemuatan billing kini memiliki identitas React yang stabil.
+- Effect billing dan listener autentikasi mencantumkan callback stabil yang dipakainya sebagai dependency.
+
+### Quality
+- Dua warning react-hooks/exhaustive-deps dashboard telah dihapus; lint hanya menyisakan tiga warning optimasi gambar untuk checkpoint terpisah.
+- Siklus listener auth, pemuatan profil/langganan, toast, dan callback pembayaran tetap mempertahankan perilaku sebelumnya.
 
 ## [0.3.16] - 2026-08-13
 ### Changed
