@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.5.1.
+Belum ada perubahan setelah kandidat rilis v0.5.2.
+
+## [0.5.2] - 2026-08-18
+### Fixed
+- Pemrosesan audio bertahap kini membaca `Retry-After` ketika batas aman API tercapai, menunggu sesuai arahan server, lalu mencoba kembali bagian yang sama tanpa mengulang transkrip dari awal.
+- Jeda otomatis dibatasi maksimal dua percobaan dan ditampilkan sebagai status pemrosesan yang jelas; pengaman server 30 permintaan per 10 menit tetap dipertahankan.
+
+### Quality
+- Test regresi melindungi pembacaan `Retry-After`, penggunaan ulang payload yang sama, dan penghentian retry ketika batas percobaan tercapai.
+- Dukungan satu berkas 90 menit belum dinyatakan stabil karena jalur saat ini masih mendekode seluruh audio ke memori browser sebelum pemotongan. Untuk acceptance terdekat, rekaman penuh tetap disimpan di Voice Recorder dan upload panjang diuji dalam potongan lebih kecil.
 
 ## [0.5.1] - 2026-08-14
 ### Fixed

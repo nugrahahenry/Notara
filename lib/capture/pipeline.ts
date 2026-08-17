@@ -15,19 +15,34 @@ export class CapturePipelineError extends Error {
   readonly code: string;
   readonly status: number;
   readonly retryable: boolean;
+  readonly retryAfterSeconds?: number;
 
   constructor(options: {
     code: string;
     message: string;
     status?: number;
     retryable: boolean;
+    retryAfterSeconds?: number;
   }) {
     super(options.message);
     this.name = 'CapturePipelineError';
     this.code = options.code;
     this.status = options.status ?? 0;
     this.retryable = options.retryable;
+    this.retryAfterSeconds = options.retryAfterSeconds;
   }
+}
+
+const DEFAULT_RATE_LIMIT_RETRY_SECONDS = 10;
+const MAX_RATE_LIMIT_RETRY_SECONDS = 10 * 60;
+
+function parseRetryAfterSeconds(value: string | null | undefined): number | undefined {
+  if (!value?.trim()) return undefined;
+
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds < 0) return undefined;
+
+  return Math.min(Math.ceil(seconds), MAX_RATE_LIMIT_RETRY_SECONDS);
 }
 
 function getResponseMessage(responseText: string, fallback: string): string {
@@ -43,7 +58,11 @@ function getResponseMessage(responseText: string, fallback: string): string {
   }
 }
 
-export function createCaptureHttpError(status: number, responseText = ''): CapturePipelineError {
+export function createCaptureHttpError(
+  status: number,
+  responseText = '',
+  retryAfterHeader?: string | null,
+): CapturePipelineError {
   const fallback = status === 0
     ? 'Koneksi ke Nalira terputus.'
     : 'Nalira belum dapat memproses file ini.';
@@ -86,6 +105,7 @@ export function createCaptureHttpError(status: number, responseText = ''): Captu
       message,
       status,
       retryable: true,
+      retryAfterSeconds: parseRetryAfterSeconds(retryAfterHeader),
     });
   }
 
@@ -142,7 +162,11 @@ export function requestCaptureJson<TResponse>(
 
     xhr.onload = () => {
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(createCaptureHttpError(xhr.status, xhr.responseText));
+        reject(createCaptureHttpError(
+          xhr.status,
+          xhr.responseText,
+          xhr.getResponseHeader('Retry-After'),
+        ));
         return;
       }
 
@@ -167,4 +191,54 @@ export function requestCaptureJson<TResponse>(
 
     xhr.send(options.body ?? null);
   });
+}
+
+export interface CaptureRateLimitRetryNotice {
+  attempt: number;
+  retryAfterSeconds: number;
+}
+
+export interface CaptureRateLimitRetryOptions {
+  maxRateLimitRetries?: number;
+  wait?: (milliseconds: number) => Promise<void>;
+  onRateLimited?: (notice: CaptureRateLimitRetryNotice) => void;
+}
+
+function defaultWait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+export async function requestCaptureJsonWithRateLimitRetry<TResponse>(
+  url: string,
+  options: CaptureRequestOptions = {},
+  retryOptions: CaptureRateLimitRetryOptions = {},
+): Promise<TResponse> {
+  const maxRateLimitRetries = Math.max(
+    0,
+    Math.min(Math.floor(retryOptions.maxRateLimitRetries ?? 2), 3),
+  );
+  const wait = retryOptions.wait ?? defaultWait;
+  let retryCount = 0;
+
+  while (true) {
+    try {
+      return await requestCaptureJson<TResponse>(url, options);
+    } catch (error) {
+      if (
+        !(error instanceof CapturePipelineError) ||
+        error.code !== 'rate-limited' ||
+        retryCount >= maxRateLimitRetries
+      ) {
+        throw error;
+      }
+
+      retryCount += 1;
+      const retryAfterSeconds = error.retryAfterSeconds ?? DEFAULT_RATE_LIMIT_RETRY_SECONDS;
+      retryOptions.onRateLimited?.({
+        attempt: retryCount,
+        retryAfterSeconds,
+      });
+      await wait(retryAfterSeconds * 1000);
+    }
+  }
 }

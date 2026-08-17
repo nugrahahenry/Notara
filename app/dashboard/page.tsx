@@ -92,6 +92,7 @@ import {
 import {
   CapturePipelineError,
   requestCaptureJson,
+  requestCaptureJsonWithRateLimitRetry,
   toCapturePipelineError,
 } from '@/lib/capture/pipeline';
 import {
@@ -2186,9 +2187,29 @@ export default function Home() {
         // banyak rangkuman penuh sekaligus dan gampang kena limit Groq.
         formData.append('transcribeOnly', 'true');
         
-        const data = await requestCaptureJson<{ transcript: string }>('/api/summarize', {
-          body: formData,
-        });
+        const data = await requestCaptureJsonWithRateLimitRetry<{ transcript: string }>(
+          '/api/summarize',
+          { body: formData },
+          {
+            maxRateLimitRetries: 2,
+            onRateLimited: ({ attempt, retryAfterSeconds }) => {
+              const waitLabel = retryAfterSeconds >= 60
+                ? `${Math.ceil(retryAfterSeconds / 60)} menit`
+                : `${retryAfterSeconds} detik`;
+              addThinkingLog(
+                `⏳ Batas aman API tercapai. Bagian ${activePart} disimpan dan dilanjutkan otomatis dalam ${waitLabel} (percobaan ${attempt}/2).`,
+              );
+              setChunkProgress(
+                `Menunggu ${waitLabel}, lalu melanjutkan bagian ${activePart} dari ${totalChunks}...`,
+              );
+              setCaptureTaskStage(taskId, 'transcribing', {
+                progress: partProgress,
+                stageLabel: 'Menunggu giliran aman',
+                stageDescription: `Bagian ${activePart} tetap aktif dan akan dicoba kembali otomatis.`,
+              });
+            },
+          },
+        );
 
         addThinkingLog(`✅ Bagian ${activePart} selesai ditranskripsi!`);
         concatenatedTranscript += `${data.transcript} `;
@@ -2303,7 +2324,7 @@ export default function Home() {
       return;
     }
 
-    // Any file > 20MB (audio or video) goes through browser chunking
+    // Any file >4 MB (audio or video) goes through browser chunking.
     if (sourceFile.size > CHUNK_THRESHOLD_BYTES) {
       await processLargeAudio(sourceFile, name, queueIndex, taskId);
       return;
