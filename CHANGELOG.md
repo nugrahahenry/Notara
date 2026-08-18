@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.5.2.
+Belum ada perubahan setelah kandidat rilis v0.5.3.
+
+## [0.5.3] - 2026-08-18
+### Fixed
+- Pemulihan sesi dashboard tidak lagi menjalankan permintaan MFA dan database dari dalam callback autentikasi Supabase yang dapat terkunci; membuka Nalira langsung dari shortcut kini dapat menyelesaikan pemuatan ruang belajar.
+- Pemulihan sesi awal dan pembaruan token di latar belakang tidak lagi memulai pemuatan data kedua atau mengembalikan ruang kerja yang sudah aktif ke skeleton.
+- Keluar akun membatalkan pekerjaan autentikasi tertunda dan membersihkan state mata kuliah, rangkuman, serta grup belajar sebelum kembali ke halaman login.
+
+### Quality
+- Test regresi menjaga callback autentikasi tetap sinkron, pekerjaan Supabase tetap ditunda keluar dari auth lock, dan event sesi rutin tidak memuat ulang workspace.
+- Shortcut Desktop tetap menunjuk ke domain production Nalira yang benar; masalah berada pada lifecycle sesi aplikasi, bukan target shortcut.
 
 ## [0.5.2] - 2026-08-18
 ### Fixed

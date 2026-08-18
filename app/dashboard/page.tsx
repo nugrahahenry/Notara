@@ -1072,6 +1072,9 @@ export default function Home() {
   // Load User & listen to auth state changes
   useEffect(() => {
     let active = true;
+    let initialAuthCheckPending = true;
+    let hydratedUserId: string | null = null;
+    let deferredAuthSync: ReturnType<typeof setTimeout> | null = null;
 
     if (DEV_BYPASS_AUTH) {
       setUser(DEV_BYPASS_USER);
@@ -1102,6 +1105,7 @@ export default function Home() {
               setFolders(fetchedFolders);
               setSummaries(fetchedSummaries);
               setStudyGroups(fetchedGroups);
+              hydratedUserId = user.id;
 
               // Auto-select forked summary if redirected from public view
               const forkedId = localStorage.getItem('notara_selected_summary_id');
@@ -1137,6 +1141,7 @@ export default function Home() {
         console.error('Error checking user/data:', err);
         setError('Gagal memuat data dari database. Pastikan koneksi internet stabil.');
       } finally {
+        initialAuthCheckPending = false;
         if (active) {
           setIsDataLoading(false);
         }
@@ -1145,45 +1150,78 @@ export default function Home() {
 
     checkUser();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    async function syncAuthenticatedWorkspace(currentUser: User) {
+      await checkMfaStatus();
+
+      if (!active) return;
+      setIsDataLoading(true);
+      try {
+        const [fetchedFolders, fetchedSummaries, fetchedGroups] = await Promise.all([
+          getFolders(),
+          getAllSummaries(),
+          getStudyGroups(currentUser.id)
+        ]);
+        if (active) {
+          setFolders(fetchedFolders);
+          setSummaries(fetchedSummaries);
+          setStudyGroups(fetchedGroups);
+          hydratedUserId = currentUser.id;
+        }
+      } catch (err) {
+        console.error('Error refreshing authenticated workspace:', err);
+        if (active) {
+          setError('Gagal memperbarui ruang belajar. Coba muat ulang halaman.');
+        }
+      } finally {
+        if (active) {
+          setIsDataLoading(false);
+        }
+      }
+    }
+
+    // Keep this callback synchronous. Supabase can deadlock when another auth or
+    // database request is awaited while onAuthStateChange still holds its lock.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      
-      if (currentUser) {
-        // Check MFA status
-        await checkMfaStatus();
 
-        setIsDataLoading(true);
-        try {
-          const [fetchedFolders, fetchedSummaries, fetchedGroups] = await Promise.all([
-            getFolders(),
-            getAllSummaries(),
-            getStudyGroups(currentUser.id)
-          ]);
-          if (active) {
-            setFolders(fetchedFolders);
-            setSummaries(fetchedSummaries);
-            setStudyGroups(fetchedGroups);
-          }
-        } catch (err) {
-          console.error(err);
-        } finally {
-          if (active) {
-            setIsDataLoading(false);
-          }
+      if (currentUser) {
+        // checkUser owns initial hydration. Token refreshes can happen in the
+        // background and must not blank an already usable workspace.
+        const isRestoredUser = hydratedUserId === currentUser.id;
+        if (
+          initialAuthCheckPending ||
+          event === 'INITIAL_SESSION' ||
+          event === 'TOKEN_REFRESHED' ||
+          (event === 'SIGNED_IN' && isRestoredUser)
+        ) {
+          return;
         }
+
+        if (deferredAuthSync) clearTimeout(deferredAuthSync);
+        deferredAuthSync = setTimeout(() => {
+          deferredAuthSync = null;
+          if (active) void syncAuthenticatedWorkspace(currentUser);
+        }, 0);
       } else {
+        hydratedUserId = null;
+        if (deferredAuthSync) {
+          clearTimeout(deferredAuthSync);
+          deferredAuthSync = null;
+        }
         setFolders([]);
         setSummaries([]);
+        setStudyGroups([]);
         setSelectedSummary(null);
+        setIsDataLoading(false);
         router.replace('/login');
       }
     });
 
     return () => {
       active = false;
+      if (deferredAuthSync) clearTimeout(deferredAuthSync);
       subscription.unsubscribe();
     };
   }, [router, showToast]);
