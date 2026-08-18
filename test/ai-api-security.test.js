@@ -50,7 +50,7 @@ test('AI rate-limit objects expose only the narrow authenticated RPC', () => {
 test('all Groq routes authorize before reading input or provider secrets', () => {
   const routes = [
     ['app/api/summarize/route.ts', 'capture', 'request.formData()'],
-    ['app/api/summarize-transcript/route.ts', 'summarize', 'request.json()'],
+    ['app/api/summarize-transcript/route.ts', 'summarize', 'readBoundedJsonBody<'],
     ['app/api/chat/route.ts', 'chat', 'request.json()'],
   ];
 

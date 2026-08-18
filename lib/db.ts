@@ -4,6 +4,10 @@
 
 import { supabase } from './supabase';
 import type { Folder, Summary, CreateFolderInput, CreateSummaryInput, ChatMessage, StudyGroup, GroupMember, ChatThread } from './types';
+import {
+  buildTranscriptEvidenceRpcPayload,
+  type TranscriptEvidenceInput,
+} from './transcript/persistence';
 
 // ─────────────────────────────────────────────
 // FOLDER OPERATIONS
@@ -130,6 +134,33 @@ export async function createSummary(input: CreateSummaryInput, userId: string): 
     return null;
   }
   return data;
+}
+
+/** Simpan bukti timestamp setelah rangkuman berhasil dibuat. */
+export async function persistTranscriptEvidence(
+  summaryId: string,
+  evidence: TranscriptEvidenceInput,
+): Promise<boolean> {
+  let payload;
+
+  try {
+    payload = buildTranscriptEvidenceRpcPayload({
+      summaryId,
+      ...evidence,
+    });
+  } catch {
+    console.error('Transcript evidence payload validation failed.');
+    return false;
+  }
+
+  const { error } = await supabase.rpc('persist_transcript_evidence', payload);
+
+  if (error) {
+    console.error('Transcript evidence persistence failed.');
+    return false;
+  }
+
+  return true;
 }
 
 /** Update folder yang berisi rangkuman ini */
@@ -756,4 +787,3 @@ export async function updateUserSubscriptionTier(
   }
   return true;
 }
-

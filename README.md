@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: MVP aktif. App Shell dan pipeline AI berjalan; hardening billing v0.3.20 siap direview secara lokal dan masih menunggu rollout production. Terakhir diverifikasi: 13 Agustus 2026.
+> Status: kandidat lokal Nalira v0.8.0. App Shell, Guided Learning, dan pipeline AI berjalan; persistensi evidence transkrip sudah lolos QA lokal tetapi migration v0.8.0 belum diterapkan ke production. Terakhir diverifikasi: 19 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -14,6 +14,7 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - App Shell responsif dengan tema System/Light/Dark, sidebar desktop/mobile, Home, Mata Kuliah, Dibagikan, Tanya Nalira, dan Capture sebagai workspace yang jelas.
 - Antrean Capture maksimal tiga file secara sekuensial, dengan preview metadata, validasi, progress yang hanya muncul saat benar-benar terukur, kegagalan per item, serta retry dari awal tanpa menghapus hasil item lain.
 - Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform; rangkuman dibuat sekali dari transkrip gabungan.
+- Saat material disimpan, Nalira v0.8.0 dapat menyimpan processing run dan segmen bertimestamp secara privat serta idempoten. Timestamp antarchunk tetap mengacu ke posisi rekaman asal.
 - Folder/mata kuliah, pencarian, pengelolaan rangkuman, ekspor Word, dan riwayat chat.
 - Chat streaming dengan scope satu rangkuman, satu folder, atau koleksi pengguna.
 - Study Canvas, Study Dock, serta slot Learning Lab untuk konsep, rumus, visual, quiz, dan pembicara sudah memiliki fondasi UI; kemampuan analisis Learning Lab belum tersedia.
@@ -29,15 +30,16 @@ Browser
   ├─ berkas ≤ 20 MB: /api/summarize → transkripsi + rangkuman dalam satu request
   └─ berkas > 20 MB: decode → 16 kHz mono → chunk ±2 menit (≤ 4 MB/request)
                          └─ /api/summarize (per chunk) → Groq Whisper
-                                  └─ transkrip gabungan → /api/summarize-transcript → Groq LLM
-                                                                        └─ Supabase Postgres
+                                  └─ transkrip + segmen gabungan → /api/summarize-transcript → Groq LLM
+                                                                                 └─ simpan summary
+                                                                                       └─ RPC evidence → Supabase Postgres
 
 Chat dashboard → /api/chat → Groq LLM streaming (SSE)
 Auth, data, RLS, share, dan grup → Supabase
 Checkout → Midtrans Snap → webhook signature → RPC service-role (rollout production tertunda)
 ```
 
-Audio bersifat *transcribe-and-discard*: implementasi saat ini tidak mengunggah atau menyimpan berkas audio ke database/storage aplikasi. Transkrip, rangkuman, metadata, dan riwayat chat dapat tersimpan sesuai aksi pengguna.
+Audio bersifat *transcribe-and-discard*: implementasi saat ini tidak mengunggah atau menyimpan berkas audio ke database/storage aplikasi. Transkrip, rangkuman, metadata processing, segmen bertimestamp, dan riwayat chat dapat tersimpan sesuai aksi pengguna. Segmen privat ini adalah evidence belajar milik pengguna, bukan attestation kriptografis atau bukti forensik dari provider.
 
 ## Stack aktual
 
@@ -93,7 +95,8 @@ npm run build
 
 ## Database dan deployment
 
-- Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`. Hardening billing berikutnya berada di `supabase/migrations/20260813125948_harden_billing_security.sql`; jangan terapkan sebelum deployment v0.3.20 dan `SUPABASE_SERVICE_ROLE_KEY` siap.
+- Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`. Hardening billing berada di `supabase/migrations/20260813125948_harden_billing_security.sql`.
+- Evidence transkrip v0.8.0 berada di `supabase/migrations/20260818181455_persist_transcript_evidence.sql`. Terapkan hanya ke project Supabase yang benar setelah source v0.8.0 direview, verifikasi RLS/grant/RPC, lalu deploy source dan jalankan smoke test Capture. Migration ini belum diterapkan ke production pada checkpoint lokal ini.
 - Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, saat ini `https://notara-hengs.vercel.app`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://notara-hengs.vercel.app/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
 - Jangan menjalankan `supabase/schema.sql` secara utuh pada project live; ia historis dan memiliki urutan/policy yang tidak aman untuk dipakai sebagai migrasi canonical.
 - Deploy di Vercel setelah environment variable tersedia pada target environment. Perubahan migrasi, RLS, atau billing harus diverifikasi dulu di lingkungan yang aman.
@@ -102,18 +105,20 @@ npm run build
 ## Keterbatasan yang diketahui
 
 - `app/dashboard/page.tsx` masih menjadi orchestrator besar. Shell, tema, workspace, dan capture sudah memiliki batas komponen stabil, tetapi ekstraksi logic berikutnya tetap harus bertahap agar flow lama tidak regresi.
-- Study Canvas baru berupa fondasi produksi. Speaker diarization, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan.
+- Segmen timestamp kini memiliki jalur persistensi privat, tetapi navigasi timestamp dan tampilan evidence belum diekspos di UI.
+- Speaker diarization, identitas/peran pembicara, koreksi label pembicara, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
 - Endpoint API AI sudah memvalidasi sesi dan memakai rate limit per pengguna; kuota harian/berdasarkan tier, sinyal IP, dan kontrol penyalahgunaan multi-akun belum tersedia.
+- Audit dependency setelah patch Next.js Active LTS 16.2.11 masih melaporkan empat advisory high pada dependency runtime transitif. Jangan deploy v0.8.0 sebelum risiko ini ditutup atau diterima secara eksplisit dalam checkpoint dependency terpisah; jangan memakai `npm audit fix --force` tanpa review.
 - Hardening billing sudah siap di source, tetapi belum aktif di production sampai secret server tersedia di Vercel, migration privilege/RLS diterapkan ke project yang benar, dan smoke test webhook serta checkout lulus.
 
 ## Roadmap terdekat
 
-1. Review dan merge App Shell secara manual, lalu lakukan smoke test preview/production dengan auth Supabase sebelum rilis.
-2. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
-3. Rollout migration billing v0.3.20 setelah secret Vercel siap, lalu verifikasi webhook, checkout, grant RPC, public share, dan Study Group di production.
-4. Bangun retrieval/provenance dan progress belajar yang nyata sebelum mengaktifkan scope global/course serta Learning Lab berbasis AI.
-5. Riset provider diarization sebelum membangun Speaker Context; lanjutkan Formula Notes dan Neurova setelah kontrak bukti sumber serta renderer matematika dikunci.
+1. Review dan commit kandidat v0.8.0 secara manual.
+2. Jalankan checkpoint dependency terpisah untuk mengevaluasi Next.js 16.3.1 dan menutup/menyetujui empat advisory runtime tanpa upgrade paksa.
+3. Setelah gate dependency lulus dan dengan persetujuan rollout terpisah, terapkan migration evidence ke project Supabase yang benar, verifikasi isolasi owner/anonymous, deploy source, lalu uji satu Capture nyata end-to-end.
+4. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
+5. Riset provider diarization sebelum membangun Speaker Context; lanjutkan retrieval/provenance, progress belajar, Formula Notes, dan Neurova setelah kontrak masing-masing dikunci.
 
 Catatan produk, desain, dan prototype internal sengaja disimpan terpisah dari repository publik.

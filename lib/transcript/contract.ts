@@ -106,6 +106,47 @@ export function normalizeGroqTranscriptSegments(
   });
 }
 
+export function normalizeTranscriptSegments(value: unknown): TranscriptSegment[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.slice(0, 5_000).flatMap((candidate, index) => {
+    if (!candidate || typeof candidate !== 'object') return [];
+
+    const segment = candidate as Record<string, unknown>;
+    const startMs = finiteNumber(segment.startMs);
+    const endMs = finiteNumber(segment.endMs);
+    const text = typeof segment.text === 'string' ? segment.text.trim() : '';
+
+    if (
+      startMs === null
+      || endMs === null
+      || startMs < 0
+      || endMs < startMs
+      || !text
+    ) {
+      return [];
+    }
+
+    const noSpeechProbability = finiteNumber(segment.noSpeechProbability);
+
+    return [{
+      id: `segment-${index + 1}`,
+      startMs: Math.round(startMs),
+      endMs: Math.round(endMs),
+      text: text.slice(0, 20_000),
+      speakerKey: null,
+      speakerRole: 'unknown' as const,
+      averageLogProbability: finiteNumber(segment.averageLogProbability),
+      noSpeechProbability:
+        noSpeechProbability !== null
+        && noSpeechProbability >= 0
+        && noSpeechProbability <= 1
+          ? noSpeechProbability
+          : null,
+    }];
+  });
+}
+
 export function normalizeTranscriptGlossary(value: unknown): string[] {
   const entries = Array.isArray(value)
     ? value

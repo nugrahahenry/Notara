@@ -142,7 +142,17 @@ export async function POST(request: NextRequest) {
     }), { bypassed: access.bypassed });
 
     if (transcribeOnly) {
-      return NextResponse.json({ transcript, segments, quality });
+      return NextResponse.json({
+        transcript,
+        segments,
+        quality,
+        processing: {
+          requestId,
+          provider: 'groq',
+          transcriptionModel: GROQ_STT_MODEL,
+          summaryModel: null,
+        },
+      });
     }
 
     const prompt = buildGroundedSummaryPrompt({
@@ -195,7 +205,18 @@ export async function POST(request: NextRequest) {
       ...(completionUsage ?? {}),
     }), { bypassed: access.bypassed });
 
-    return NextResponse.json({ transcript, summary, segments, quality });
+    return NextResponse.json({
+      transcript,
+      summary,
+      segments,
+      quality,
+      processing: {
+        requestId,
+        provider: 'groq',
+        transcriptionModel: GROQ_STT_MODEL,
+        summaryModel: GROQ_LLM_MODEL,
+      },
+    });
   } catch (error: unknown) {
     console.error('Capture API failed.', {
       error: getErrorMessage(error, 'unknown-error'),

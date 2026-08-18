@@ -4,7 +4,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.7.1.
+Belum ada perubahan setelah kandidat rilis v0.8.0.
+
+## [0.8.0] - 2026-08-19
+### Added
+- Hasil Capture yang disimpan kini dapat memiliki satu processing run privat dan segmen transkrip bertimestamp sebagai bukti belajar milik pengguna.
+- Migration versioned menambahkan `processing_runs`, `transcript_segments`, serta RPC persistensi atomik dan idempoten yang hanya menerima rangkuman milik sesi aktif.
+
+### Changed
+- Pemrosesan berkas panjang mempertahankan segmen setiap chunk dan menggeser timestamp ke posisi audio asli sebelum rangkuman gabungan dibuat.
+- Kedua API Capture mengembalikan metadata request/provider/model; endpoint rangkuman transkrip menerima segmen tanpa memutus kompatibilitas klien lama.
+- Next.js dan konfigurasi lint Next diperbarui dari 16.2.7 ke rilis keamanan Active LTS 16.2.11.
+
+### Security
+- Body JSON rangkuman dibaca secara streaming dengan batas 2 MB sebelum decoding; total teks segmen dibatasi 500.000 karakter.
+- RLS dan grant memberi akses baca hanya kepada pemilik, sementara penulisan wajib melalui RPC yang memverifikasi `auth.uid()`, mengunci keputusan kuota per pengguna, dan membatasi laju serta total penyimpanan akun.
+- Audio mentah, tebakan identitas, dan tebakan peran pembicara tidak disimpan. Evidence ini adalah catatan belajar privat yang immutable, bukan attestation kriptografis atau bukti forensik dari provider.
+- Next.js mengikuti patch Active LTS 16.2.11, tetapi empat advisory high transitif masih tercatat pada audit runtime dan harus ditutup atau diterima eksplisit sebelum deployment; upgrade paksa tidak dijalankan.
+
+### Quality
+- Fresh-database PostgreSQL acceptance memverifikasi migration, idempotensi, isolasi dua pengguna, penolakan anonymous, normalisasi metadata, serta cascade delete.
+- Kontrak baru menguji payload bounded, offset timestamp, sanitasi speaker, persistence RPC, privilege database, kuota, dan kegagalan persistensi yang tidak menggandakan rangkuman.
+- Migration belum diterapkan ke Supabase production dan tidak ada deployment pada checkpoint ini.
 
 ## [0.7.1] - 2026-08-19
 ### Fixed

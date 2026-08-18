@@ -52,6 +52,7 @@ import {
   deleteFolder,
   getAllSummaries,
   createSummary,
+  persistTranscriptEvidence,
   deleteSummary,
   renameSummary,
   moveSummaryToFolder,
@@ -116,6 +117,15 @@ import { shouldLoadChatThreadHistory } from '@/lib/chat/thread-state';
 import type { BrowserWindow, SpeechRecognitionLike } from '@/lib/browser';
 import { getErrorMessage } from '@/lib/api/boundary';
 import { getPostAuthExperience } from '@/lib/auth/post-auth-experience';
+import type {
+  TranscriptQualityReport,
+  TranscriptSegment,
+} from '@/lib/transcript/contract';
+import {
+  offsetTranscriptSegments,
+  type TranscriptEvidenceInput,
+  type TranscriptProcessingMetadata,
+} from '@/lib/transcript/persistence';
 
 // Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
 // membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
@@ -134,6 +144,31 @@ const DEV_BYPASS_USER = {
 } as User;
 
 const USE_INLINE_MATERIAL_TUTOR = true;
+
+interface CaptureTranscriptionResponse {
+  transcript: string;
+  segments: TranscriptSegment[];
+  quality: TranscriptQualityReport;
+  processing: TranscriptProcessingMetadata & {
+    transcriptionModel: string;
+  };
+}
+
+interface CaptureSummaryResponse extends CaptureTranscriptionResponse {
+  summary: string;
+  processing: TranscriptProcessingMetadata & {
+    transcriptionModel: string;
+    summaryModel: string;
+  };
+}
+
+interface AggregateSummaryResponse {
+  summary: string;
+  quality: TranscriptQualityReport;
+  processing: TranscriptProcessingMetadata & {
+    summaryModel: string;
+  };
+}
 
 const createCaptureTaskId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -320,6 +355,7 @@ export default function Home() {
     transcript: string;
     summary: string;
     word_count: number;
+    evidence: TranscriptEvidenceInput;
   } | null>(null);
   const [showSaveFolderModal, setShowSaveFolderModal] = useState<boolean>(false);
   const [chosenSaveFolderId, setChosenSaveFolderId] = useState<string>('null');
@@ -2141,7 +2177,17 @@ export default function Home() {
       if (newSummary) {
         setSummaries(prev => [newSummary, ...prev]);
         setSelectedSummary(newSummary);
-        showToast(`Rangkuman "${newSummary.title}" berhasil disimpan!`, 'success');
+        const evidenceStored = await persistTranscriptEvidence(
+          newSummary.id,
+          pendingSummary.evidence,
+        );
+
+        showToast(
+          evidenceStored
+            ? `Rangkuman "${newSummary.title}" dan bukti waktunya berhasil disimpan!`
+            : `Rangkuman "${newSummary.title}" tersimpan, tetapi bukti waktunya belum tersimpan.`,
+          evidenceStored ? 'success' : 'info',
+        );
         
         await completeSavedCaptureTask(captureTaskId);
       } else {
@@ -2226,6 +2272,8 @@ export default function Home() {
       addThinkingLog(`✂️ Audio akan dipotong menjadi ${totalChunks} bagian @ 2 menit...`);
       
       let concatenatedTranscript = '';
+      const concatenatedSegments: TranscriptSegment[] = [];
+      let transcriptionModel: string | null = null;
       
       for (let c = 0; c < totalChunks; c++) {
         const activePart = c + 1;
@@ -2267,7 +2315,7 @@ export default function Home() {
         // banyak rangkuman penuh sekaligus dan gampang kena limit Groq.
         formData.append('transcribeOnly', 'true');
         
-        const data = await requestCaptureJsonWithRateLimitRetry<{ transcript: string }>(
+        const data = await requestCaptureJsonWithRateLimitRetry<CaptureTranscriptionResponse>(
           '/api/summarize',
           { body: formData },
           {
@@ -2293,6 +2341,12 @@ export default function Home() {
 
         addThinkingLog(`✅ Bagian ${activePart} selesai ditranskripsi!`);
         concatenatedTranscript += `${data.transcript} `;
+        concatenatedSegments.push(...offsetTranscriptSegments(
+          data.segments,
+          Math.round(start * 1000),
+          `part-${activePart}`,
+        ));
+        transcriptionModel ??= data.processing.transcriptionModel;
         setChunkCompleted(activePart);
         setCaptureTaskStage(taskId, 'transcribing', {
           progress: {
@@ -2309,19 +2363,28 @@ export default function Home() {
         progress: { kind: 'indeterminate' },
       });
 
-      const summarizeData = await requestCaptureJson<{ summary: string }>(
+      const summarizeData = await requestCaptureJson<AggregateSummaryResponse>(
         '/api/summarize-transcript',
         {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             transcript: concatenatedTranscript,
             durationSec: fileDurationSec,
+            segments: concatenatedSegments,
           }),
         },
       );
       
       const title = extractTitleFromSummary(summarizeData.summary);
       const targetFolderId = chosenSaveFolderId !== 'null' ? chosenSaveFolderId : (activeFolderId !== 'all' && activeFolderId !== 'uncategorized' && activeFolderId !== 'recent' ? activeFolderId : 'null');
+
+      if (!transcriptionModel) {
+        throw new CapturePipelineError({
+          code: 'invalid-response',
+          message: 'Metadata model transkripsi tidak tersedia.',
+          retryable: true,
+        });
+      }
       
       setPendingSummary({
         captureTaskId: taskId,
@@ -2331,6 +2394,14 @@ export default function Home() {
         transcript: concatenatedTranscript,
         summary: summarizeData.summary,
         word_count: concatenatedTranscript.split(/\s+/).length,
+        evidence: {
+          clientRequestId: taskId,
+          provider: summarizeData.processing.provider,
+          transcriptionModel,
+          summaryModel: summarizeData.processing.summaryModel,
+          quality: summarizeData.quality,
+          segments: concatenatedSegments,
+        },
       });
       setChosenSaveFolderId(targetFolderId);
       setCaptureTaskStage(taskId, 'awaiting_save');
@@ -2439,7 +2510,7 @@ export default function Home() {
         },
       });
 
-      const data = await requestCaptureJson<{ transcript: string; summary: string }>(
+      const data = await requestCaptureJson<CaptureSummaryResponse>(
         '/api/summarize',
         {
           body: formData,
@@ -2470,6 +2541,14 @@ export default function Home() {
         transcript: data.transcript,
         summary: data.summary,
         word_count: data.transcript.split(/\s+/).length,
+        evidence: {
+          clientRequestId: taskId,
+          provider: data.processing.provider,
+          transcriptionModel: data.processing.transcriptionModel,
+          summaryModel: data.processing.summaryModel,
+          quality: data.quality,
+          segments: data.segments,
+        },
       });
       setChosenSaveFolderId(targetFolderId);
       setCaptureTaskStage(taskId, 'awaiting_save');

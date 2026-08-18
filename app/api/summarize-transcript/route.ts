@@ -3,6 +3,10 @@ import { GROQ_LLM_MODEL } from '../../../lib/ai';
 import { authorizeAiRequest } from '../../../lib/api/ai-access';
 import { getErrorMessage } from '../../../lib/api/boundary';
 import {
+  BoundedJsonBodyError,
+  readBoundedJsonBody,
+} from '../../../lib/api/bounded-json';
+import {
   createAiUsageEvent,
   parseGroqCompletionUsage,
   parseGroqProviderRequestId,
@@ -11,16 +15,20 @@ import { recordAiUsageSafely } from '../../../lib/ai/usage-recorder';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 import {
   analyzeTranscriptQuality,
+  normalizeTranscriptSegments,
   normalizeTranscriptGlossary,
 } from '../../../lib/transcript/contract';
 import { buildGroundedSummaryPrompt } from '../../../lib/transcript/summary-prompt';
 
 const MAX_TRANSCRIPT_CHARACTERS = 300_000;
+const MAX_TRANSCRIPT_SEGMENT_CHARACTERS = 500_000;
+const MAX_SUMMARIZE_BODY_BYTES = 2_000_000;
 
 interface SummarizeTranscriptPayload {
   transcript?: unknown;
   durationSec?: unknown;
   glossary?: unknown;
+  segments?: unknown;
 }
 
 function parseDurationSec(value: unknown): number | null {
@@ -60,7 +68,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const payload = await request.json() as SummarizeTranscriptPayload;
+    let payload: SummarizeTranscriptPayload;
+    try {
+      payload = await readBoundedJsonBody<SummarizeTranscriptPayload>(
+        request,
+        MAX_SUMMARIZE_BODY_BYTES,
+      );
+    } catch (error) {
+      if (error instanceof BoundedJsonBodyError) {
+        return NextResponse.json(
+          {
+            error: error.code === 'body-too-large'
+              ? 'Data transkrip terlalu besar untuk satu permintaan.'
+              : 'Format data transkrip tidak valid.',
+          },
+          { status: error.code === 'body-too-large' ? 413 : 400 },
+        );
+      }
+      throw error;
+    }
     const transcript = typeof payload.transcript === 'string'
       ? payload.transcript.trim()
       : '';
@@ -79,9 +105,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const segments = normalizeTranscriptSegments(payload.segments);
+    const segmentCharacters = segments.reduce(
+      (total, segment) => total + segment.text.length,
+      0,
+    );
+    if (segmentCharacters > MAX_TRANSCRIPT_SEGMENT_CHARACTERS) {
+      return NextResponse.json(
+        { error: 'Bukti segmen terlalu besar untuk satu permintaan.' },
+        { status: 413 },
+      );
+    }
     const quality = analyzeTranscriptQuality({
       transcript,
       durationSec: parseDurationSec(payload.durationSec),
+      segments,
     });
     const glossary = normalizeTranscriptGlossary(payload.glossary);
     const prompt = buildGroundedSummaryPrompt({
@@ -135,7 +173,16 @@ export async function POST(request: NextRequest) {
       ...(completionUsage ?? {}),
     }), { bypassed: access.bypassed });
 
-    return NextResponse.json({ summary, quality });
+    return NextResponse.json({
+      summary,
+      quality,
+      processing: {
+        requestId,
+        provider: 'groq',
+        transcriptionModel: null,
+        summaryModel: GROQ_LLM_MODEL,
+      },
+    });
   } catch (error: unknown) {
     console.error('Summarize transcript API failed.', {
       error: getErrorMessage(error, 'unknown-error'),
