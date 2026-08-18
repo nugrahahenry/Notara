@@ -29,6 +29,8 @@
     "lib/ai/usage.ts",
     "lib/ai/usage-recorder-policy.ts",
     "lib/ai/stream-usage.ts",
+    "lib/transcript/contract.ts",
+    "lib/transcript/summary-prompt.ts",
     "lib/auth/errors.ts",
     "lib/midtrans.ts",
     "lib/billing/plans.ts",

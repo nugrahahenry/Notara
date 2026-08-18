@@ -4,7 +4,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.5.4.
+Belum ada perubahan setelah kandidat rilis v0.6.0.
+
+## [0.6.0] - 2026-08-18
+### Added
+- API Capture kini mengembalikan segmen transkrip bertimestamp beserta metadata keyakinan yang tersedia, menggunakan kontrak netral yang siap menerima konteks pembicara tanpa mengarang identitas atau peran.
+- Pemeriksaan kualitas deterministik menilai kepadatan kata, keyakinan segmen, kemungkinan bagian tanpa ucapan, pengulangan frasa mencurigakan, dan ketersediaan timestamp.
+- Glosarium opsional dibatasi dan dinormalisasi agar ejaan istilah kuliah dapat membantu transkripsi tanpa menjadi sumber fakta baru.
+
+### Changed
+- Rangkuman kini dibangun dari prompt yang memperlakukan transkrip sebagai bukti tidak tepercaya, menandai bagian yang tidak jelas, dan melarang penambahan nama, deadline, tugas, jawaban, atau peran pembicara yang tidak didukung sumber.
+- Jalur rangkuman berkas panjang meneruskan durasi audio agar backend dapat mendeteksi transkrip yang terlalu tipis dibandingkan rekaman asal.
+- Temperatur generasi faktual diturunkan dan kesalahan penyedia dikembalikan sebagai pesan Nalira yang aman tanpa membocorkan respons mentah.
+
+### Quality
+- Test baru menjaga timestamp, placeholder pembicara `unknown`, batas glosarium, deteksi transkrip kuliah 34 menit berkepadatan rendah, grounding prompt, dan kontrak kedua API Capture.
+- Checkpoint ini tidak menambah diarization provider, tabel database, migration, worker, atau UI pengaturan pembicara.
 
 ## [0.5.4] - 2026-08-18
 ### Fixed

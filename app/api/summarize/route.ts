@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL, GROQ_STT_MODEL } from '../../../lib/ai';
-import { getErrorMessage } from '../../../lib/api/boundary';
 import { authorizeAiRequest } from '../../../lib/api/ai-access';
-import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
+import { getErrorMessage } from '../../../lib/api/boundary';
 import {
   createAiUsageEvent,
   parseGroqCompletionUsage,
@@ -10,68 +9,127 @@ import {
   parseGroqTranscriptionDurationMs,
 } from '../../../lib/ai/usage';
 import { recordAiUsageSafely } from '../../../lib/ai/usage-recorder';
+import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
+import {
+  analyzeTranscriptQuality,
+  normalizeGroqTranscriptSegments,
+  normalizeTranscriptGlossary,
+} from '../../../lib/transcript/contract';
+import { buildGroundedSummaryPrompt } from '../../../lib/transcript/summary-prompt';
+
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+
+function parseTranscriptText(value: unknown): string {
+  if (!value || typeof value !== 'object') return '';
+  const text = (value as { text?: unknown }).text;
+  return typeof text === 'string' ? text.trim() : '';
+}
+
+function parseSummaryText(value: unknown): string {
+  if (!value || typeof value !== 'object') return '';
+
+  const choices = (value as { choices?: unknown }).choices;
+  if (!Array.isArray(choices)) return '';
+
+  const firstChoice = choices[0];
+  if (!firstChoice || typeof firstChoice !== 'object') return '';
+
+  const message = (firstChoice as { message?: unknown }).message;
+  if (!message || typeof message !== 'object') return '';
+
+  const content = (message as { content?: unknown }).content;
+  return typeof content === 'string' ? content.trim() : '';
+}
 
 export async function POST(request: NextRequest) {
   try {
     const access = await authorizeAiRequest('capture');
     if (!access.ok) return access.response;
-    const requestId = crypto.randomUUID();
 
-    // 1. Validasi API Key — Groq satu key untuk dua hal: Whisper + LLM
+    const requestId = crypto.randomUUID();
     const groqApiKey = process.env.GROQ_API_KEY;
 
     if (!groqApiKey) {
       return NextResponse.json(
-        { error: 'GROQ_API_KEY belum diset di file .env.local' },
-        { status: 500 }
+        { error: 'Konfigurasi layanan transkripsi belum tersedia.' },
+        { status: 500 },
       );
     }
 
-    // 2. Ambil file audio dari request
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
+    const file = formData.get('file');
     const transcribeOnly = formData.get('transcribeOnly') === 'true';
+    const glossary = normalizeTranscriptGlossary(formData.get('glossary'));
 
-    if (!file) {
+    if (!(file instanceof File)) {
       return NextResponse.json(
         { error: 'File audio tidak ditemukan. Silakan upload file.' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // 3. Konversi file ke buffer untuk dikirim ke Groq Whisper
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    if (file.size <= 0) {
+      return NextResponse.json(
+        { error: 'File audio kosong.' },
+        { status: 400 },
+      );
+    }
+
+    if (file.size > MAX_AUDIO_BYTES) {
+      return NextResponse.json(
+        { error: 'Bagian audio terlalu besar untuk satu permintaan transkripsi.' },
+        { status: 413 },
+      );
+    }
 
     const groqFormData = new FormData();
-    const fileBlob = new Blob([buffer], { type: file.type });
-    groqFormData.append('file', fileBlob, file.name || 'audio.mp3');
+    groqFormData.append('file', new Blob([await file.arrayBuffer()], { type: file.type }), file.name || 'audio.mp3');
     groqFormData.append('model', GROQ_STT_MODEL);
-    groqFormData.append('language', 'id'); // Paksa Bahasa Indonesia agar akurat
+    groqFormData.append('language', 'id');
     groqFormData.append('response_format', 'verbose_json');
+    groqFormData.append('timestamp_granularities[]', 'segment');
 
-    console.log('Asisten 1: Groq Whisper sedang mentranskripsi audio...');
+    if (glossary.length > 0) {
+      groqFormData.append(
+        'prompt',
+        `Konteks kuliah Bahasa Indonesia. Ejaan istilah: ${glossary.join(', ')}`.slice(0, 700),
+      );
+    }
 
-    // 4. Panggil Groq Whisper untuk transkripsi suara → teks
     const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${groqApiKey}`,
-      },
+      headers: { Authorization: `Bearer ${groqApiKey}` },
       body: groqFormData,
     });
 
     if (!groqResponse.ok) {
-      const errorText = await groqResponse.text();
-      console.error('Groq Whisper Error:', errorText);
+      console.error('Groq transcription request failed.', { status: groqResponse.status });
       return NextResponse.json(
-        { error: 'Gagal mentranskripsi audio melalui Groq Whisper.' },
-        { status: 500 }
+        { error: 'Nalira belum berhasil mentranskripsi audio.' },
+        { status: 502 },
       );
     }
 
-    const groqData = await groqResponse.json();
-    const transcript = groqData.text;
+    const groqData: unknown = await groqResponse.json();
+    const transcript = parseTranscriptText(groqData);
+
+    if (!transcript) {
+      return NextResponse.json(
+        { error: 'Audio terlalu sunyi atau tidak ada suara yang bisa ditranskripsi.' },
+        { status: 400 },
+      );
+    }
+
+    const rawSegments = groqData && typeof groqData === 'object'
+      ? (groqData as { segments?: unknown }).segments
+      : null;
+    const segments = normalizeGroqTranscriptSegments(rawSegments);
+    const audioDurationMs = parseGroqTranscriptionDurationMs(groqData);
+    const quality = analyzeTranscriptQuality({
+      transcript,
+      durationSec: audioDurationMs === null ? null : audioDurationMs / 1000,
+      segments,
+    });
 
     await recordAiUsageSafely(createAiUsageEvent({
       userId: access.userId,
@@ -80,155 +138,51 @@ export async function POST(request: NextRequest) {
       stage: 'transcription',
       model: GROQ_STT_MODEL,
       providerRequestId: parseGroqProviderRequestId(groqData),
-      audioDurationMs: parseGroqTranscriptionDurationMs(groqData),
+      audioDurationMs,
     }), { bypassed: access.bypassed });
 
-    if (!transcript || transcript.trim() === '') {
-      return NextResponse.json(
-        { error: 'Audio terlalu sunyi atau tidak ada suara yang bisa ditranskripsi.' },
-        { status: 400 }
-      );
-    }
-
-    console.log('Transkripsi selesai! Panjang teks:', transcript.length, 'karakter');
-
-    // Audio panjang dipecah di browser. Setiap chunk hanya perlu melewati
-    // Whisper; rangkuman dibuat sekali di /api/summarize-transcript setelah
-    // semua transcript digabung agar tidak memboroskan quota Groq.
     if (transcribeOnly) {
-      return NextResponse.json({ transcript });
+      return NextResponse.json({ transcript, segments, quality });
     }
 
-    console.log(`Asisten rangkuman: ${GROQ_LLM_MODEL} sedang membuat rangkuman...`);
-
-    // 5. Panggil model rangkuman Groq yang dikelola terpusat di lib/ai.ts.
-    const prompt = `Anda adalah asisten AI yang sangat cerdas dan bersahabat bernama ${PRODUCT_IDENTITY.name}. Tugas Anda adalah menganalisis transkrip audio dan menghasilkan rangkuman yang sangat terstruktur, visual, dan informatif dalam Bahasa Indonesia.
-
-**LANGKAH 1 — DETEKSI KONTEKS:**
-Pertama, baca dan pahami isi transkrip. Tentukan tipe konten berdasarkan isinya:
-- **TIPE A — Kuliah / Materi Akademis**: Konten berisi penjelasan dosen, teori, konsep akademis, istilah ilmiah, atau materi pelajaran.
-- **TIPE B — Rapat / Meeting / Wawancara Bisnis**: Konten berisi diskusi tim, keputusan rapat, presentasi bisnis, atau wawancara dengan narasumber.
-- **TIPE C — Ide / Brainstorming / Catatan Suara**: Konten berisi gagasan, eksplorasi ide, perencanaan pribadi, atau catatan bebas.
-
-**LANGKAH 2 — BUAT RANGKUMAN SESUAI TIPE:**
-
-Jika **TIPE A — Kuliah / Akademis**, gunakan format berikut:
-\`\`\`
-# 📝 [Judul Kuliah yang Relevan Berdasarkan Isi]
-
-> 🎓 *Materi Akademis — ${PRODUCT_IDENTITY.name} AI telah merangkum kuliah ini untuk kamu.*
-
-## 🎯 Ringkasan Singkat
-[1–2 paragraf menjelaskan topik utama dan tujuan materi kuliah ini secara padat]
-
-## 📌 Poin-Poin Utama
-[Jelaskan 5–10 poin terpenting secara berurutan dengan penjelasan yang detail per poin]
-
-## 🔑 Istilah & Konsep Kunci
-[Tabel berisi istilah penting — WAJIB gunakan tabel Markdown jika ada 3+ istilah:]
-| Istilah | Definisi & Penjelasan |
-|---|---|
-| [Istilah 1] | [Definisi lengkap] |
-| [Istilah 2] | [Definisi lengkap] |
-
-[Jika ada perbandingan konsep, metode, atau klasifikasi — WAJIB sajikan dalam Tabel Markdown]
-
-## ❓ Prediksi Soal Ujian & Latihan
-[5 soal latihan yang berpotensi muncul di ujian, WAJIB disertai kunci jawaban singkat masing-masing]
-**1.** [Soal pertama]
-> 💡 **Jawaban:** [Kunci jawaban]
-...
-\`\`\`
-
-Jika **TIPE B — Rapat / Meeting / Bisnis**, gunakan format berikut:
-\`\`\`
-# 🤝 [Judul Rapat / Meeting yang Relevan]
-
-> 💼 *Ringkasan Rapat — ${PRODUCT_IDENTITY.name} AI telah merangkum meeting ini untuk kamu.*
-
-## 📋 Ringkasan Eksekutif
-[1–2 paragraf inti tentang apa yang dibahas, tujuan rapat, dan hasil akhirnya]
-
-## 🏁 Keputusan Utama
-[Daftar poin keputusan penting yang dibuat selama rapat]
-
-## 📊 Perbandingan / Opsi yang Didiskusikan
-[Jika ada perbandingan opsi/strategi — WAJIB gunakan Tabel Markdown:]
-| Aspek | Opsi A | Opsi B |
-|---|---|---|
-| [Aspek 1] | [Keterangan] | [Keterangan] |
-
-## ✅ Action Items (Tindakan Lanjutan)
-[Daftar tugas konkret yang harus dikerjakan setelah rapat ini]
-| Tugas | Penanggung Jawab | Target Selesai |
-|---|---|---|
-| [Tugas 1] | [Nama / Tim] | [Estimasi waktu] |
-
-## ❓ 5 Pertanyaan Strategis untuk Ditindaklanjuti
-[5 pertanyaan penting yang perlu dijawab atau dieksekusi setelah rapat ini]
-\`\`\`
-
-Jika **TIPE C — Ide / Brainstorming / Catatan Suara**, gunakan format berikut:
-\`\`\`
-# 💡 [Judul Ide / Proyek yang Relevan]
-
-> 🚀 *Catatan Ide — ${PRODUCT_IDENTITY.name} AI telah merapikan gagasan-gagasanmu.*
-
-## ✨ Inti Ide
-[1–2 paragraf merangkum inti dari ide atau konsep yang dibicarakan]
-
-## 🗺️ Peta Pikiran Utama
-[Jelaskan cabang-cabang ide utama secara terstruktur]
-
-## ⚖️ Analisis Cepat (Pro vs Kontra)
-| Kelebihan (Pro) | Kekurangan / Risiko (Kontra) |
-|---|---|
-| [Poin pro 1] | [Poin kontra 1] |
-
-## 🚀 5 Langkah Eksekusi Awal
-[5 langkah konkret pertama yang bisa langsung diambil untuk mewujudkan ide ini]
-**1.** [Langkah pertama]
-...
-\`\`\`
-
-**ATURAN PENTING:**
-- Selalu tulis dalam Bahasa Indonesia yang jelas dan mudah dipahami.
-- WAJIB gunakan Tabel Markdown untuk setiap data komparatif, klasifikasi, atau daftar yang memiliki 2+ kolom.
-- Jangan tampilkan nama model AI atau teknologi yang digunakan dalam output.
-- Rangkuman harus terasa premium, padat, dan bernilai tinggi.
-- WAJIB: Hasilkan judul (# 📝 [Judul] / # 🤝 [Judul] / # 💡 [Judul]) yang sangat spesifik, bermakna, dan kontekstual menggambarkan isi transkrip. JANGAN PERNAH menghasilkan judul generik seperti "Rangkuman Kuliah", "Rangkuman Rapat", "Rangkuman Pertemuan", atau "Rangkuman Materi". Contoh judul yang baik: "Normalisasi Database 1NF hingga 3NF" atau "Refleksi Hubungan Interpersonal & Konseling".
-
-
-Berikut adalah transkrip yang perlu dirangkum:
----
-${transcript}
----`;
-
+    const prompt = buildGroundedSummaryPrompt({
+      transcript,
+      quality,
+      glossary,
+      productName: PRODUCT_IDENTITY.name,
+    });
     const llmResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${groqApiKey}`,
+        Authorization: `Bearer ${groqApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: GROQ_LLM_MODEL, // dikelola terpusat di lib/ai.ts
+        model: GROQ_LLM_MODEL,
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
+        temperature: 0.2,
         max_tokens: 4096,
       }),
     });
 
     if (!llmResponse.ok) {
-      const errorText = await llmResponse.text();
-      console.error('Groq LLM Error:', errorText);
+      console.error('Groq summary request failed.', { status: llmResponse.status });
       return NextResponse.json(
-        { error: 'Gagal membuat rangkuman melalui Groq LLM.' },
-        { status: 500 }
+        { error: 'Nalira belum berhasil membuat rangkuman.' },
+        { status: 502 },
       );
     }
 
-    const llmData = await llmResponse.json();
-    const summary = llmData.choices[0]?.message?.content || '';
+    const llmData: unknown = await llmResponse.json();
+    const summary = parseSummaryText(llmData);
+
+    if (!summary) {
+      return NextResponse.json(
+        { error: 'Layanan rangkuman mengembalikan hasil kosong.' },
+        { status: 502 },
+      );
+    }
+
     const completionUsage = parseGroqCompletionUsage(llmData);
 
     await recordAiUsageSafely(createAiUsageEvent({
@@ -241,19 +195,14 @@ ${transcript}
       ...(completionUsage ?? {}),
     }), { bypassed: access.bypassed });
 
-    console.log(`Rangkuman selesai! Proses ${PRODUCT_IDENTITY.name} berhasil.`);
-
-    // 6. Kembalikan transkrip dan rangkuman ke frontend
-    return NextResponse.json({
-      transcript,
-      summary,
-    });
-
+    return NextResponse.json({ transcript, summary, segments, quality });
   } catch (error: unknown) {
-    console.error('API Error:', error);
+    console.error('Capture API failed.', {
+      error: getErrorMessage(error, 'unknown-error'),
+    });
     return NextResponse.json(
-      { error: getErrorMessage(error, 'Terjadi kesalahan sistem.') },
-      { status: 500 }
+      { error: 'Terjadi kesalahan sistem saat memproses audio.' },
+      { status: 500 },
     );
   }
 }

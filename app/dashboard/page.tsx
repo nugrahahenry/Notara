@@ -2295,7 +2295,10 @@ export default function Home() {
         '/api/summarize-transcript',
         {
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: concatenatedTranscript }),
+          body: JSON.stringify({
+            transcript: concatenatedTranscript,
+            durationSec: fileDurationSec,
+          }),
         },
       );
       
