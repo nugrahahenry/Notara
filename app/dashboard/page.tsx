@@ -43,7 +43,7 @@ import { CoursesWorkspace } from '../components/workspace/CoursesWorkspace';
 import { SharedWorkspace } from '../components/workspace/SharedWorkspace';
 import { NotaraWorkspace } from '../components/workspace/NotaraWorkspace';
 import { WorkspaceAmbientHeader } from '../components/workspace/WorkspaceAmbientHeader';
-import { StudyCanvasBoundary } from '../components/workspace/StudyCanvasBoundary';
+import { StudyGuideWorkspace } from '../components/study-guide/StudyGuideWorkspace';
 import type { WorkspaceView } from '../components/workspace/types';
 import {
   getFolders,
@@ -132,6 +132,8 @@ const DEV_BYPASS_USER = {
   aud: 'authenticated',
   created_at: '2026-01-01T00:00:00.000Z',
 } as User;
+
+const USE_INLINE_MATERIAL_TUTOR = true;
 
 const createCaptureTaskId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -4702,10 +4704,12 @@ export default function Home() {
 
             {/* SCREEN 2: SUMMARY DETAIL VIEW */}
             {selectedSummary && !loading && (
-              <StudyCanvasBoundary
+              <StudyGuideWorkspace
                 key={selectedSummary.id}
                 summary={selectedSummary}
                 folder={folders.find(folder => folder.id === selectedSummary.folder_id) ?? null}
+                viewerUserId={user?.id ?? null}
+                sourceAvailable={selectedSummary.id.startsWith('local-') || summaries.some((summary) => summary.id === selectedSummary.id)}
                 folders={folders}
                 activeTab={activeTab}
                 studySeconds={studySeconds}
@@ -4713,12 +4717,6 @@ export default function Home() {
                 hasAudio={Boolean(audioBlob)}
                 onTabChange={setActiveTab}
                 onBack={() => openWorkspace('courses')}
-                onAskMaterial={() => {
-                  setChatScope('summary');
-                  setIsChatPanelOpen(true);
-                  setIsChatOpenMobile(true);
-                  localStorage.setItem('isMaterialTutorPanelOpen', 'true');
-                }}
                 onRenameTitle={handleRenameSummaryTitle}
                 onMoveFolder={handleMoveFolder}
                 onCreateCourse={() => {
@@ -4736,24 +4734,48 @@ export default function Home() {
                 onExportWord={handleExportWord}
                 onDownloadAudio={handleDownloadAudio}
                 onCopy={handleCopy}
-                content={activeTab === 'summary' ? (
+                summaryContent={(
                   <div className="notara-study-summary-content">
                     {renderMarkdown(selectedSummary.summary)}
                   </div>
-                ) : (
+                )}
+                transcriptContent={(
                   <section className="notara-study-transcript" aria-label="Salinan suara">
                     <div><FileText className="h-4 w-4" /><span>Transkrip asli</span></div>
                     <p>{selectedSummary.transcript}</p>
                   </section>
                 )}
-              >
-              </StudyCanvasBoundary>
+                tutor={{
+                  messages: chatMessages,
+                  threads: chatThreads.filter((thread) => thread.summary_id === selectedSummary.id),
+                  activeThreadId,
+                  input: chatInput,
+                  isSending: isSendingChat,
+                  isListening,
+                  voiceNotSupported,
+                  showHistory: showChatHistory,
+                  textareaRef,
+                  onInputChange: setChatInput,
+                  onSend: handleSendChatMessage,
+                  onToggleMic: handleToggleMic,
+                  onToggleHistory: () => setShowChatHistory((value) => !value),
+                  onNewThread: handleCreateNewThread,
+                  onSelectThread: (threadId) => {
+                    setActiveThreadId(threadId);
+                    setShowChatHistory(false);
+                  },
+                  onDeleteThread: (threadId) => void handleDeleteThread(threadId),
+                  onClear: handleClearChat,
+                  renderMessage: renderMarkdown,
+                  formatThreadAge: formatRelativeTime,
+                }}
+              />
             )}
 
           </main>
 
           {/* COLUMN 3: RIGHT CHAT PANEL */}
-          {selectedSummary && (
+          {selectedSummary && !USE_INLINE_MATERIAL_TUTOR && (
             <>
             {isChatOpenMobile && (
               <div 

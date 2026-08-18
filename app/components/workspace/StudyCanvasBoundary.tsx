@@ -3,34 +3,26 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
-  BarChart3,
-  BookOpen,
-  Calculator,
   Check,
   ChevronDown,
-  ChevronUp,
   Clipboard,
   Copy,
   ExternalLink,
   FileAudio,
   FileSignature,
   FileText,
-  FlaskConical,
   Folder as FolderIcon,
   Globe,
   ImageDown,
   Lock,
-  MessageSquareText,
   MoreHorizontal,
-  Quote,
   Share2,
   Trash2,
-  Users,
   X,
 } from 'lucide-react';
 import type { Folder, Summary } from '@/lib/types';
 
-interface StudyCanvasBoundaryProps {
+export interface StudyCanvasBoundaryProps {
   summary: Summary;
   folder: Folder | null;
   folders: Folder[];
@@ -40,7 +32,6 @@ interface StudyCanvasBoundaryProps {
   hasAudio: boolean;
   onTabChange: (tab: 'summary' | 'transcript') => void;
   onBack: () => void;
-  onAskMaterial: () => void;
   onRenameTitle: (title: string) => Promise<boolean>;
   onMoveFolder: (folderId: string | null) => Promise<void>;
   onCreateCourse: () => void;
@@ -53,51 +44,9 @@ interface StudyCanvasBoundaryProps {
   onDownloadAudio: () => void;
   onCopy: () => void;
   content: ReactNode;
+  headerExtension?: ReactNode;
   children?: ReactNode;
 }
-
-const labTools = [
-  { id: 'concept', label: 'Konsep', group: 'Pelajari', icon: BookOpen },
-  { id: 'formula', label: 'Rumus', group: 'Pelajari', icon: Calculator },
-  { id: 'visual', label: 'Visual', group: 'Pelajari', icon: BarChart3 },
-  { id: 'quiz', label: 'Quiz', group: 'Latihan', icon: FlaskConical },
-  { id: 'speaker', label: 'Pembicara', group: 'Konteks', icon: Users },
-] as const;
-
-type LabToolId = (typeof labTools)[number]['id'];
-
-const labCopy: Record<LabToolId, { status: string; title: string; copy: string; evidence: string }> = {
-  concept: {
-    status: 'Foundation',
-    title: 'Konsep penting',
-    copy: 'Nalira belum mengekstrak konsep sebagai data terstruktur. Untuk saat ini, konsep tetap dibaca dari rangkuman sumber.',
-    evidence: 'Belum ada source link atau confidence per konsep.',
-  },
-  formula: {
-    status: 'Perlu kontrak',
-    title: 'Rumus dan notasi',
-    copy: 'Rumus dapat muncul di rangkuman, tetapi evidence, timestamp, koreksi notasi, dan Formula Notes belum tersedia.',
-    evidence: 'Tidak ada formula yang diklaim terverifikasi otomatis.',
-  },
-  visual: {
-    status: 'Belum terhubung',
-    title: 'Visualisasi materi',
-    copy: 'Integrasi deep-link ke Neurova belum memiliki kontrak produksi, sehingga Study Canvas belum membuat visual palsu.',
-    evidence: 'Nalira akan menyerahkan konsep terpilih setelah kontrak konteks dikunci.',
-  },
-  quiz: {
-    status: 'Belum tersedia',
-    title: 'Latihan pemahaman',
-    copy: 'Quiz, penilaian, dan progres belajar belum dibuat dari materi ini.',
-    evidence: 'Tidak ada skor atau progress sintetis yang disimpan.',
-  },
-  speaker: {
-    status: 'Belum dipisahkan',
-    title: 'Konteks pembicara',
-    copy: 'Transkrip Groq saat ini belum membawa diarization atau label dosen/mahasiswa yang dapat dipercaya.',
-    evidence: 'Speaker Context baru diaktifkan setelah pipeline diarization tervalidasi.',
-  },
-};
 
 function formatDuration(seconds: number | null): string {
   if (!seconds || seconds < 1) return 'Belum tersedia';
@@ -118,7 +67,6 @@ export function StudyCanvasBoundary({
   hasAudio,
   onTabChange,
   onBack,
-  onAskMaterial,
   onRenameTitle,
   onMoveFolder,
   onCreateCourse,
@@ -131,17 +79,15 @@ export function StudyCanvasBoundary({
   onDownloadAudio,
   onCopy,
   content,
+  headerExtension,
+  children,
 }: StudyCanvasBoundaryProps) {
-  const [labOpen, setLabOpen] = useState(false);
-  const [dockExpanded, setDockExpanded] = useState(false);
-  const [activeTool, setActiveTool] = useState<LabToolId>('concept');
   const [isRenaming, setIsRenaming] = useState(false);
   const [titleDraft, setTitleDraft] = useState(summary.title);
   const [shareOpen, setShareOpen] = useState(false);
   const [courseOpen, setCourseOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const activeLab = labCopy[activeTool];
 
   const createdAt = useMemo(() => {
     const date = new Date(summary.created_at);
@@ -169,16 +115,11 @@ export function StudyCanvasBoundary({
     window.setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const selectTool = (toolId: LabToolId) => {
-    setActiveTool(toolId);
-    setLabOpen(true);
-  };
 
   return (
     <section
       className="notara-study-canvas-boundary"
-      data-lab-open={labOpen}
-      aria-label={`Study Canvas: ${summary.title}`}
+      aria-label={`Materi: ${summary.title}`}
     >
       <header className="notara-study-toolbar">
         <button type="button" onClick={onBack} className="notara-study-back">
@@ -188,82 +129,83 @@ export function StudyCanvasBoundary({
           <button type="button" role="tab" aria-selected={activeTab === 'summary'} onClick={() => onTabChange('summary')}>Rangkuman</button>
           <button type="button" role="tab" aria-selected={activeTab === 'transcript'} onClick={() => onTabChange('transcript')}>Transkrip</button>
         </div>
-        <button
-          type="button"
-          onClick={() => setLabOpen((value) => !value)}
-          className="notara-secondary-button notara-study-lab-toggle"
-          aria-expanded={labOpen}
-          aria-controls="notara-learning-lab"
-        >
-          <FlaskConical className="h-4 w-4" /> Learning Lab
-        </button>
       </header>
 
       <div className="notara-study-layout">
         <div className="notara-study-stage">
           <article className="notara-editorial-canvas">
             <header className="notara-document-header">
-              <div className="notara-document-kicker">
-                <span>{folder?.name ?? 'Belum dikategorikan'}</span>
-                <span>{activeTab === 'summary' ? 'Rangkuman materi' : 'Transkrip sumber'}</span>
-              </div>
-
-              {isRenaming ? (
-                <div className="notara-title-editor">
-                  <label htmlFor="study-title-input">Judul materi</label>
-                  <div>
-                    <input
-                      id="study-title-input"
-                      value={titleDraft}
-                      onChange={(event) => setTitleDraft(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') void saveTitle();
-                        if (event.key === 'Escape') {
-                          setTitleDraft(summary.title);
-                          setIsRenaming(false);
-                        }
-                      }}
-                      autoFocus
-                    />
-                    <button type="button" onClick={() => void saveTitle()} aria-label="Simpan judul"><Check className="h-4 w-4" /></button>
-                    <button type="button" onClick={() => { setTitleDraft(summary.title); setIsRenaming(false); }} aria-label="Batalkan perubahan judul"><X className="h-4 w-4" /></button>
+              <div className="notara-document-heading-layout">
+                <div className="notara-document-heading-main">
+                  <div className="notara-document-kicker">
+                    <span>{folder?.name ?? 'Tanpa mata kuliah'}</span>
+                    <span>{activeTab === 'summary' ? 'Rangkuman materi' : 'Transkrip sumber'}</span>
                   </div>
-                </div>
-              ) : (
-                <div className="notara-document-title-row">
-                  <h1>{summary.title}</h1>
-                  <button type="button" onClick={() => { setTitleDraft(summary.title); setIsRenaming(true); }} aria-label="Ubah judul materi"><FileSignature className="h-4 w-4" /></button>
-                </div>
-              )}
 
-              <div className="notara-document-meta">
-                <div className="notara-study-course-control">
-                  <button type="button" onClick={() => setCourseOpen((value) => !value)} aria-expanded={courseOpen}>
-                    <FolderIcon className="h-4 w-4" />
-                    <span>{folder?.name ?? 'Belum dikategorikan'}</span>
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                  {courseOpen && (
-                    <div className="notara-study-popover notara-study-course-menu">
-                      <span>Pindahkan ke mata kuliah</span>
-                      <button type="button" data-active={!summary.folder_id} onClick={() => { void onMoveFolder(null); setCourseOpen(false); }}>Belum dikategorikan</button>
-                      {folders.map((item) => (
-                        <button key={item.id} type="button" data-active={item.id === summary.folder_id} onClick={() => { void onMoveFolder(item.id); setCourseOpen(false); }}>
-                          <i style={{ backgroundColor: item.color }} /> {item.icon} {item.name}
-                        </button>
-                      ))}
-                      <button type="button" onClick={() => { setCourseOpen(false); onCreateCourse(); }}>+ Mata kuliah baru</button>
+                  {isRenaming ? (
+                    <div className="notara-title-editor">
+                      <label htmlFor="study-title-input">Judul materi</label>
+                      <div>
+                        <input
+                          id="study-title-input"
+                          value={titleDraft}
+                          onChange={(event) => setTitleDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') void saveTitle();
+                            if (event.key === 'Escape') {
+                              setTitleDraft(summary.title);
+                              setIsRenaming(false);
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button type="button" onClick={() => void saveTitle()} aria-label="Simpan judul"><Check className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => { setTitleDraft(summary.title); setIsRenaming(false); }} aria-label="Batalkan perubahan judul"><X className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="notara-document-title-row">
+                      <h1>{summary.title}</h1>
+                      <button type="button" onClick={() => { setTitleDraft(summary.title); setIsRenaming(true); }} aria-label="Ubah judul materi"><FileSignature className="h-4 w-4" /></button>
                     </div>
                   )}
+
+                  <div className="notara-document-meta">
+                    <div className="notara-study-course-control">
+                      <button type="button" onClick={() => setCourseOpen((value) => !value)} aria-expanded={courseOpen}>
+                        <FolderIcon className="h-4 w-4" />
+                        <span>{folder?.name ?? 'Tanpa mata kuliah'}</span>
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                      {courseOpen && (
+                        <div className="notara-study-popover notara-study-course-menu">
+                          <span>Pindahkan ke mata kuliah</span>
+                          <button type="button" data-active={!summary.folder_id} onClick={() => { void onMoveFolder(null); setCourseOpen(false); }}>Tanpa mata kuliah</button>
+                          {folders.map((item) => (
+                            <button key={item.id} type="button" data-active={item.id === summary.folder_id} onClick={() => { void onMoveFolder(item.id); setCourseOpen(false); }}>
+                              <i style={{ backgroundColor: item.color }} /> {item.icon} {item.name}
+                            </button>
+                          ))}
+                          <button type="button" onClick={() => { setCourseOpen(false); onCreateCourse(); }}>+ Mata kuliah baru</button>
+                        </div>
+                      )}
+                    </div>
+                    <span>{createdAt}</span>
+                    <span>{summary.duration_sec ? `Durasi ${formatDuration(summary.duration_sec)}` : 'Durasi belum tersedia'}</span>
+                    <span>{summary.word_count ? `${new Intl.NumberFormat('id-ID').format(summary.word_count)} kata` : 'Jumlah kata belum tersedia'}</span>
+                    {studySeconds > 0 && <span>Fokus sesi {formatDuration(studySeconds)}</span>}
+                  </div>
                 </div>
-                <span>{createdAt}</span>
-                <span>{summary.duration_sec ? `Durasi ${formatDuration(summary.duration_sec)}` : 'Durasi belum tersedia'}</span>
-                <span>{summary.word_count ? `${new Intl.NumberFormat('id-ID').format(summary.word_count)} kata` : 'Jumlah kata belum tersedia'}</span>
-                {studySeconds > 0 && <span>Fokus sesi {formatDuration(studySeconds)}</span>}
+
+                {headerExtension && (
+                  <div className="notara-document-header-extension">
+                    {headerExtension}
+                  </div>
+                )}
               </div>
 
               <div className="notara-document-actions">
-                <button type="button" onClick={onCopy} className="notara-primary-button">
+                <button type="button" onClick={onCopy} className="notara-secondary-button notara-document-copy-action">
                   {copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
                   {copied ? 'Tersalin' : `Salin ${activeTab === 'summary' ? 'rangkuman' : 'transkrip'}`}
                 </button>
@@ -306,43 +248,9 @@ export function StudyCanvasBoundary({
             </div>
           </article>
 
-          <section className="notara-study-dock" data-expanded={dockExpanded}>
-            <button type="button" onClick={() => setDockExpanded((value) => !value)} className="notara-study-dock-toggle" aria-expanded={dockExpanded}>
-              <span className="notara-study-dock-mark"><MessageSquareText className="h-4 w-4" /></span>
-              <span><strong>Tanya materi ini…</strong><small>Scope: {summary.title}</small></span>
-              <ChevronUp className="h-4 w-4" />
-            </button>
-            {dockExpanded && (
-              <div className="notara-study-dock-expanded">
-                <span><Quote className="h-4 w-4" /> Tutor akan memakai transkrip dari satu materi ini.</span>
-                <p>Percakapan dibuka lewat Tutor Materi existing; jawaban lintas mata kuliah tidak digunakan pada scope ini.</p>
-                <button type="button" onClick={onAskMaterial} className="notara-primary-button">Buka Tutor Materi</button>
-              </div>
-            )}
-          </section>
+          {children}
         </div>
 
-        <aside id="notara-learning-lab" className="notara-learning-lab" data-open={labOpen} aria-label="Learning Lab">
-          <header className="notara-lab-heading">
-            <div><span className="notara-eyebrow">Materi aktif</span><h2>Learning Lab</h2><p>Alat belajar yang terikat ke sumber ini.</p></div>
-            <button type="button" onClick={() => setLabOpen(false)} aria-label="Ciutkan Learning Lab"><X className="h-4 w-4" /></button>
-          </header>
-          <nav className="notara-lab-rail" aria-label="Learning Lab tools">
-            {labTools.map((tool) => {
-              const Icon = tool.icon;
-              return (
-                <button key={tool.id} type="button" onClick={() => selectTool(tool.id)} data-active={activeTool === tool.id} title={tool.label}>
-                  <Icon className="h-4 w-4" /><span>{tool.label}</span><small>{tool.group}</small>
-                </button>
-              );
-            })}
-          </nav>
-          <div className="notara-lab-panel">
-            <div className="notara-lab-panel-head"><div><span className="notara-eyebrow">{activeLab.status}</span><h3>{activeLab.title}</h3></div><span>Belum dihasilkan AI</span></div>
-            <p>{activeLab.copy}</p>
-            <div className="notara-lab-evidence"><strong>Batas saat ini</strong><span>{activeLab.evidence}</span></div>
-          </div>
-        </aside>
       </div>
     </section>
   );

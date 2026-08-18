@@ -4,7 +4,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.6.0.
+Belum ada perubahan setelah kandidat rilis v0.7.0.
+
+## [0.7.0] - 2026-08-18
+### Added
+- Material Review kini menawarkan Guided Learning yang opsional untuk satu materi milik pengguna: pilih tujuan, lihat rute lima langkah, lalu bergerak melalui Orientasi, Fokus, Hubungkan, Recall, dan Cek.
+- Tujuan `Bedakan konsep` memiliki Compare berbasis dua kutipan literal dari rangkuman atau transkrip, termasuk pencarian sumber, penggantian aman, dan catatan perbandingan yang tetap ditulis pengguna.
+- Tanya Materi berpindah ke alur inline pada Material Review dan tetap tersedia dalam sesi Guided tanpa membuat chatbot menguasai ruang baca.
+- Ikon semantik terpusat memberi hook brand-neutral bagi learning path, bukti sumber, konsep, hubungan, recall, dan checkpoint.
+
+### Changed
+- Material Review dipertahankan sebagai dokumen editorial, sedangkan Guided menggunakan hierarki visual perjalanan yang berbeda dan responsif tanpa route baru atau overlay tetap.
+- Placeholder Learning Lab yang belum memiliki kontrak produk dihapus agar antarmuka tidak menjanjikan quiz, mastery, atau alat belajar yang belum tersedia.
+- Target TypeScript dinaikkan ke ES2020 untuk fingerprint sumber UTF-8 deterministik pada Compare.
+
+### Accessibility
+- Perpindahan tahap mengelola fokus, pemilih sumber mendukung Escape dan focus return, status perubahan sumber diumumkan melalui live region, serta layout desktop/mobile tidak memiliki overflow horizontal.
+- Reduced motion dipatuhi dan navigasi langkah mobile tetap dapat digeser tanpa scrollbar dekoratif.
+
+### Quality
+- Empat suite kontrak baru melindungi eligibility milik pengguna, lifecycle draft sementara, urutan rute, kutipan sumber persis, invalidasi sumber, responsive behavior, dan larangan route/storage/network owner tambahan.
+- Checkpoint ini tidak menambah schema, migration, RLS, penyimpanan progres, audio retention, diarization, voice identity, atau persistensi koreksi pembicara.
 
 ## [0.6.0] - 2026-08-18
 ### Added

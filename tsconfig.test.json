@@ -50,6 +50,7 @@
     "app/components/workspace/SharedWorkspace.tsx",
     "app/components/workspace/NotaraWorkspace.tsx",
     "app/components/workspace/WorkspaceAmbientHeader.tsx",
+    "app/components/guided/**/*.ts",
     "app/api/health/route.ts",
     "app/api/version/route.ts"
   ],
