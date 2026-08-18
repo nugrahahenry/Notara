@@ -90,6 +90,10 @@ import {
   mergeCaptureQueue,
 } from '@/lib/capture/policy';
 import {
+  getRecordingBoundaryAction,
+  stopActiveRecorder,
+} from '@/lib/capture/recording';
+import {
   CapturePipelineError,
   requestCaptureJson,
   requestCaptureJsonWithRateLimitRetry,
@@ -239,6 +243,7 @@ export default function Home() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingLimitReachedRef = useRef<boolean>(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -361,6 +366,10 @@ export default function Home() {
   // Subscription & Billing States (Phase 5)
   const [profileTier, setProfileTier] = useState<'free' | 'pro' | 'max'>('free');
   const captureLimits = getCaptureLimits(profileTier);
+  const recordingStoppedAtLimit =
+    audioBlob !== null &&
+    !isRecording &&
+    recordingDuration >= captureLimits.recordingLimitSeconds;
   const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
   const [billingLoading, setBillingLoading] = useState<boolean>(false);
   const [billingError, setBillingError] = useState<string | null>(null);
@@ -1745,6 +1754,7 @@ export default function Home() {
     }
 
     audioChunksRef.current = [];
+    recordingLimitReachedRef.current = false;
     setRecordingDuration(0);
     setAudioBlob(null);
     setAudioUrl(null);
@@ -1772,6 +1782,21 @@ export default function Home() {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
+        setIsRecording(false);
+        setIsPaused(false);
+
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+
+        if (recordingLimitReachedRef.current) {
+          showToast(
+            `Batas ${formatDuration(captureLimits.recordingLimitSeconds)} tercapai. Rekaman dihentikan otomatis dan tersimpan sementara di tab ini.`,
+            'info',
+          );
+          setShowUpgradeModal(true);
+        }
         
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
@@ -1890,19 +1915,16 @@ export default function Home() {
       setRecordingDuration(prev => {
         const nextSec = prev + 1;
         
-        // Notification reminder every 30 minutes (1800 seconds)
-        if (nextSec > 0 && nextSec % 1800 === 0) {
-          triggerReminderNotification();
-        }
-
-        // Limit check: 30 mins (1800s) for Free, 120 mins (7200s) for Pro
         const limit = captureLimits.recordingLimitSeconds;
-        
-        if (nextSec >= limit) {
+        const boundaryAction = getRecordingBoundaryAction(nextSec, limit);
+
+        if (boundaryAction === 'stop' && !recordingLimitReachedRef.current) {
+          recordingLimitReachedRef.current = true;
           setTimeout(() => {
-            pauseRecording();
-            setShowUpgradeModal(true);
+            stopRecording();
           }, 0);
+        } else if (boundaryAction === 'remind') {
+          triggerReminderNotification();
         }
 
         return nextSec;
@@ -1925,11 +1947,13 @@ export default function Home() {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+    if (stopActiveRecorder(mediaRecorderRef.current)) {
       setIsRecording(false);
       setIsPaused(false);
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
     }
   };
 
@@ -5757,9 +5781,13 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white">
-                  Upgrade ke Nalira Pro 🚀
+                  {recordingStoppedAtLimit
+                    ? `Rekaman ${formatDuration(captureLimits.recordingLimitSeconds)} sudah diamankan`
+                    : 'Upgrade ke Nalira Pro'}
                 </h3>
-                <span className="text-[10px] text-zinc-500 font-bold block mt-0.5">DURASI REKAMAN GRATIS TERBATAS</span>
+                <span className="text-[10px] text-zinc-500 font-bold block mt-0.5">
+                  {recordingStoppedAtLimit ? 'REKAMAN SIAP DIUNDUH ATAU DIPROSES' : 'DURASI REKAMAN GRATIS TERBATAS'}
+                </span>
               </div>
             </div>
 
@@ -5767,7 +5795,9 @@ export default function Home() {
 
             <div className="space-y-4">
               <div className="p-3.5 rounded-2xl bg-violet-600/5 border border-violet-500/15 text-xs text-violet-300 leading-relaxed">
-                Perekaman langsung untuk akun gratis dijeda otomatis pada menit ke-**30** per sesi. Upgrade ke Pro untuk merekam materi kuliah/rapat yang panjang tanpa jeda.
+                {recordingStoppedAtLimit
+                  ? 'Rekaman dihentikan otomatis saat mencapai batas sesi dan audionya tersimpan sementara di tab ini. Tutup pesan ini, lalu pilih Unduh audio atau Mulai Reduksi & Rangkum. Jangan muat ulang halaman sebelum salah satu langkah selesai.'
+                  : 'Perekaman langsung akun gratis berhenti otomatis pada menit ke-30 per sesi. Upgrade ke Pro untuk merekam materi kuliah atau rapat lebih panjang.'}
               </div>
 
               <div className="space-y-2.5">
@@ -5810,7 +5840,7 @@ export default function Home() {
                 onClick={() => setShowUpgradeModal(false)}
                 className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200"
               >
-                Kembali
+                {recordingStoppedAtLimit ? 'Lihat rekaman' : 'Kembali'}
               </button>
               <button
                 onClick={() => {

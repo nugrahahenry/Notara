@@ -19,6 +19,7 @@
     "lib/capture/constants.ts",
     "lib/capture/policy.ts",
     "lib/capture/pipeline.ts",
+    "lib/capture/recording.ts",
     "lib/capture/task.ts",
     "lib/chat/thread-state.ts",
     "lib/auth/redirect.ts",

@@ -4,7 +4,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.5.3.
+Belum ada perubahan setelah kandidat rilis v0.5.4.
+
+## [0.5.4] - 2026-08-18
+### Fixed
+- Perekaman langsung sekarang benar-benar berhenti otomatis ketika mencapai batas sesi Free 30 menit atau paket berbayar 120 menit, termasuk ketika callback timer masih membawa state React lama.
+- Penghentian otomatis menyelesaikan blob audio, menghentikan mikrofon dan timer, lalu mempertahankan rekaman sementara agar dapat diunduh atau diproses tanpa mengulang dari awal.
+- Pengingat 30 menit hanya muncul ketika rekaman memang masih boleh berlanjut; akun Free tidak lagi menerima pesan “masih aktif merekam” bersamaan dengan batas berhenti.
+
+### Changed
+- Dialog batas durasi kini menyatakan dengan jujur bahwa rekaman telah dihentikan dan diamankan sementara, serta mengarahkan pengguna ke `Unduh audio` atau `Mulai Reduksi & Rangkum` sebelum memuat ulang tab.
+
+### Quality
+- Test batas rekaman baru memakai kontrak MediaRecorder aktif, dijeda, dan tidak aktif; test juga membedakan pengingat Pro 30 menit dari penghentian Free 30 menit.
 
 ## [0.5.3] - 2026-08-18
 ### Fixed
