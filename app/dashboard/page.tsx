@@ -215,6 +215,22 @@ export default function Home() {
   const [folderName, setFolderName] = useState<string>('');
   const [folderColor, setFolderColor] = useState<string>('#8B5CF6');
   const [folderIcon, setFolderIcon] = useState<string>('📁');
+  const folderNameInputRef = useRef<HTMLInputElement>(null);
+  const folderModalReturnFocusRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const focusFrame = window.requestAnimationFrame(() => {
+      if (showFolderModal) {
+        folderNameInputRef.current?.focus();
+        return;
+      }
+
+      const returnFocus = folderModalReturnFocusRef.current;
+      folderModalReturnFocusRef.current = null;
+      returnFocus?.();
+    });
+    return () => window.cancelAnimationFrame(focusFrame);
+  }, [showFolderModal]);
 
   // Summary Edit States
   const [activeTab, setActiveTab] = useState<'summary' | 'transcript'>('summary');
@@ -4719,11 +4735,12 @@ export default function Home() {
                 onBack={() => openWorkspace('courses')}
                 onRenameTitle={handleRenameSummaryTitle}
                 onMoveFolder={handleMoveFolder}
-                onCreateCourse={() => {
+                onCreateCourse={(returnFocus) => {
                   setEditingFolder(null);
                   setFolderName('');
                   setFolderColor('#8B5CF6');
                   setFolderIcon('📁');
+                  folderModalReturnFocusRef.current = returnFocus;
                   setShowFolderModal(true);
                 }}
                 onTogglePublic={handleTogglePublic}
@@ -5112,15 +5129,22 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setShowFolderModal(false)} />
           
-          <div className="relative w-full max-w-md rounded-3xl bg-[#0F0E17] border border-white/[0.05] p-6 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+          <div
+            className="relative w-full max-w-md rounded-3xl bg-[#0F0E17] border border-white/[0.05] p-6 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="folder-modal-heading"
+          >
             
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-extrabold text-white">
+              <h3 id="folder-modal-heading" className="text-base font-extrabold text-white">
                 {editingFolder ? 'Edit Mata Kuliah' : 'Tambah Mata Kuliah Baru'}
               </h3>
               <button 
+                type="button"
                 onClick={() => setShowFolderModal(false)}
                 className="text-zinc-500 hover:text-white p-1 rounded hover:bg-white/5"
+                aria-label="Tutup dialog mata kuliah"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -5128,8 +5152,10 @@ export default function Home() {
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-400">Nama Mata Kuliah</label>
+                <label htmlFor="folder-name-input" className="text-xs font-bold text-zinc-400">Nama Mata Kuliah</label>
                 <input 
+                  ref={folderNameInputRef}
+                  id="folder-name-input"
                   type="text"
                   value={folderName}
                   onChange={(e) => setFolderName(e.target.value)}

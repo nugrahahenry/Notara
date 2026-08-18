@@ -13,28 +13,24 @@ interface GuidedEntryCardProps {
 
 const blockedCopy: Record<
   Exclude<GuidedSourceEligibility['status'], 'eligible-owned' | 'unavailable'>,
-  { eyebrow: string; title: string; description: string; icon: typeof ShieldAlert }
+  { title: string; description: string; icon: typeof ShieldAlert }
 > = {
   'fork-required': {
-    eyebrow: 'Perlu salinan pribadi',
     title: 'Buat salinan untuk mulai',
     description: 'Belajar terpandu hanya tersedia pada materi milikmu. Buat salinan melalui alur berbagi, lalu buka salinan tersebut.',
     icon: Copy,
   },
   'ineligible-local': {
-    eyebrow: 'Materi sementara',
     title: 'Simpan materi terlebih dahulu',
     description: 'Belajar terpandu tersedia setelah materi tersimpan sebagai hasil yang dapat dibuka kembali.',
     icon: ShieldAlert,
   },
   'ineligible-incomplete': {
-    eyebrow: 'Belum siap',
     title: 'Tunggu rangkuman dan transkrip lengkap',
     description: 'Rute belajar memerlukan satu materi yang sudah selesai diproses.',
     icon: ShieldAlert,
   },
   'unknown-denied': {
-    eyebrow: 'Akses belum dapat dipastikan',
     title: 'Belajar terpandu belum tersedia',
     description: 'Nalira tidak membuat sesi dari sumber yang kepemilikannya belum dapat diverifikasi.',
     icon: ShieldAlert,
@@ -57,7 +53,6 @@ export function GuidedEntryCard({
           <Icon className="h-4 w-4" />
         </span>
         <div>
-          <span className="notara-guided-label">{copy.eyebrow}</span>
           <strong>{copy.title}</strong>
           <p>{copy.description}</p>
         </div>
@@ -71,8 +66,7 @@ export function GuidedEntryCard({
         <SemanticIcon name="learning-path" size={20} />
       </span>
       <div className="notara-guided-entry-copy">
-        <span className="notara-guided-label">Lanjut belajar</span>
-        <strong id="guided-entry-title">Belajar lebih terarah</strong>
+        <strong id="guided-entry-title">Lanjut dengan belajar terpandu</strong>
         <p>Pilih tujuan, lihat rute, lalu lanjutkan satu langkah pada satu waktu.</p>
       </div>
       <div className="notara-guided-entry-continue">

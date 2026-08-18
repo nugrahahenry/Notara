@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -34,7 +34,7 @@ export interface StudyCanvasBoundaryProps {
   onBack: () => void;
   onRenameTitle: (title: string) => Promise<boolean>;
   onMoveFolder: (folderId: string | null) => Promise<void>;
-  onCreateCourse: () => void;
+  onCreateCourse: (returnFocus: () => void) => void;
   onTogglePublic: () => Promise<void>;
   onCopyPublicLink: () => Promise<void>;
   onCreateShareCard: () => void;
@@ -88,6 +88,9 @@ export function StudyCanvasBoundary({
   const [courseOpen, setCourseOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const courseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const actionsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const sharePanelRef = useRef<HTMLElement | null>(null);
 
   const createdAt = useMemo(() => {
     const date = new Date(summary.created_at);
@@ -115,11 +118,49 @@ export function StudyCanvasBoundary({
     window.setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const returnFocusToCourseButton = () => {
+    window.requestAnimationFrame(() => courseButtonRef.current?.focus());
+  };
+
+  const moveToFolder = (folderId: string | null) => {
+    setCourseOpen(false);
+    returnFocusToCourseButton();
+    void onMoveFolder(folderId);
+  };
+
+  const openSharePanel = () => {
+    setActionsOpen(false);
+    setShareOpen(true);
+    window.requestAnimationFrame(() => sharePanelRef.current?.focus());
+  };
+
+  const closeSharePanel = () => {
+    setShareOpen(false);
+    window.requestAnimationFrame(() => actionsButtonRef.current?.focus());
+  };
+
+  const handleBoundaryKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Escape') return;
+    if (courseOpen) {
+      event.preventDefault();
+      setCourseOpen(false);
+      courseButtonRef.current?.focus();
+      return;
+    }
+    if (actionsOpen || shareOpen) {
+      event.preventDefault();
+      setActionsOpen(false);
+      setShareOpen(false);
+      actionsButtonRef.current?.focus();
+    }
+  };
+
 
   return (
     <section
       className="notara-study-canvas-boundary"
       aria-label={`Materi: ${summary.title}`}
+      onKeyDown={handleBoundaryKeyDown}
     >
       <header className="notara-study-toolbar">
         <button type="button" onClick={onBack} className="notara-study-back">
@@ -137,9 +178,20 @@ export function StudyCanvasBoundary({
             <header className="notara-document-header">
               <div className="notara-document-heading-layout">
                 <div className="notara-document-heading-main">
-                  <div className="notara-document-kicker">
-                    <span>{folder?.name ?? 'Tanpa mata kuliah'}</span>
-                    <span>{activeTab === 'summary' ? 'Rangkuman materi' : 'Transkrip sumber'}</span>
+                  <div className="notara-document-context">
+                    <div>
+                      <span>{folder?.name ?? 'Tanpa mata kuliah'}</span>
+                      <span>{activeTab === 'summary' ? 'Rangkuman materi' : 'Transkrip sumber'}</span>
+                    </div>
+                    {!isRenaming && (
+                      <button
+                        type="button"
+                        className="notara-title-edit-action"
+                        onClick={() => { setTitleDraft(summary.title); setIsRenaming(true); }}
+                      >
+                        <FileSignature className="h-4 w-4" /> Ubah judul
+                      </button>
+                    )}
                   </div>
 
                   {isRenaming ? (
@@ -166,27 +218,43 @@ export function StudyCanvasBoundary({
                   ) : (
                     <div className="notara-document-title-row">
                       <h1>{summary.title}</h1>
-                      <button type="button" onClick={() => { setTitleDraft(summary.title); setIsRenaming(true); }} aria-label="Ubah judul materi"><FileSignature className="h-4 w-4" /></button>
                     </div>
                   )}
 
                   <div className="notara-document-meta">
                     <div className="notara-study-course-control">
-                      <button type="button" onClick={() => setCourseOpen((value) => !value)} aria-expanded={courseOpen}>
+                      <button
+                        ref={courseButtonRef}
+                        type="button"
+                        onClick={() => {
+                          setActionsOpen(false);
+                          setCourseOpen((value) => !value);
+                        }}
+                        aria-expanded={courseOpen}
+                        aria-controls="study-course-menu"
+                      >
                         <FolderIcon className="h-4 w-4" />
                         <span>{folder?.name ?? 'Tanpa mata kuliah'}</span>
                         <ChevronDown className="h-3.5 w-3.5" />
                       </button>
                       {courseOpen && (
-                        <div className="notara-study-popover notara-study-course-menu">
+                        <div id="study-course-menu" className="notara-study-popover notara-study-course-menu">
                           <span>Pindahkan ke mata kuliah</span>
-                          <button type="button" data-active={!summary.folder_id} onClick={() => { void onMoveFolder(null); setCourseOpen(false); }}>Tanpa mata kuliah</button>
+                          <button type="button" data-active={!summary.folder_id} onClick={() => moveToFolder(null)}>Tanpa mata kuliah</button>
                           {folders.map((item) => (
-                            <button key={item.id} type="button" data-active={item.id === summary.folder_id} onClick={() => { void onMoveFolder(item.id); setCourseOpen(false); }}>
+                            <button key={item.id} type="button" data-active={item.id === summary.folder_id} onClick={() => moveToFolder(item.id)}>
                               <i style={{ backgroundColor: item.color }} /> {item.icon} {item.name}
                             </button>
                           ))}
-                          <button type="button" onClick={() => { setCourseOpen(false); onCreateCourse(); }}>+ Mata kuliah baru</button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCourseOpen(false);
+                              onCreateCourse(returnFocusToCourseButton);
+                            }}
+                          >
+                            + Mata kuliah baru
+                          </button>
                         </div>
                       )}
                     </div>
@@ -213,19 +281,30 @@ export function StudyCanvasBoundary({
                 <button type="button" onClick={onExportWord} className="notara-secondary-button"><FileSignature className="h-4 w-4" /> Word</button>
                 {hasAudio && <button type="button" onClick={onDownloadAudio} className="notara-secondary-button"><FileAudio className="h-4 w-4" /> Audio</button>}
                 <div className="notara-study-action-menu">
-                  <button type="button" onClick={() => setActionsOpen((value) => !value)} className="notara-icon-button" aria-label="Tindakan materi lainnya" aria-expanded={actionsOpen}><MoreHorizontal className="h-4 w-4" /></button>
+                  <button
+                    ref={actionsButtonRef}
+                    type="button"
+                    onClick={() => {
+                      setCourseOpen(false);
+                      setActionsOpen((value) => !value);
+                    }}
+                    className="notara-icon-button"
+                    aria-label="Tindakan materi lainnya"
+                    aria-expanded={actionsOpen}
+                    aria-controls="study-more-menu"
+                  ><MoreHorizontal className="h-4 w-4" /></button>
                   {actionsOpen && (
-                    <div className="notara-study-popover notara-study-more-menu">
-                      <button type="button" onClick={() => { setActionsOpen(false); setShareOpen(true); }}><Share2 className="h-4 w-4" /> Kelola link berbagi</button>
-                      <button type="button" onClick={() => { setActionsOpen(false); onCreateShareCard(); }}><ImageDown className="h-4 w-4" /> Buat kartu sosial</button>
-                      <button type="button" onClick={() => { setActionsOpen(false); onDelete(); }} data-danger><Trash2 className="h-4 w-4" /> Hapus materi</button>
+                    <div id="study-more-menu" className="notara-study-popover notara-study-more-menu">
+                      <button type="button" onClick={openSharePanel}><Share2 className="h-4 w-4" /> Kelola link berbagi</button>
+                      <button type="button" onClick={() => { setActionsOpen(false); actionsButtonRef.current?.focus(); onCreateShareCard(); }}><ImageDown className="h-4 w-4" /> Buat kartu sosial</button>
+                      <button type="button" onClick={() => { setActionsOpen(false); actionsButtonRef.current?.focus(); onDelete(); }} data-danger><Trash2 className="h-4 w-4" /> Hapus materi</button>
                     </div>
                   )}
                 </div>
               </div>
 
               {shareOpen && (
-                <section className="notara-study-share" aria-label="Pengaturan link berbagi">
+                <section ref={sharePanelRef} className="notara-study-share" aria-label="Pengaturan link berbagi" tabIndex={-1}>
                   <div>
                     <span>{summary.is_public ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}</span>
                     <div><strong>{summary.is_public ? 'Link publik aktif' : 'Materi masih privat'}</strong><small>{summary.is_public ? 'Siapa pun yang memiliki link dapat membaca rangkuman.' : 'Hanya kamu yang dapat membuka materi ini.'}</small></div>
@@ -238,7 +317,7 @@ export function StudyCanvasBoundary({
                       <a href={`/s/${summary.public_slug}`} target="_blank" rel="noopener noreferrer" aria-label="Buka halaman publik"><ExternalLink className="h-4 w-4" /></a>
                     </div>
                   )}
-                  <button type="button" onClick={() => setShareOpen(false)} className="notara-study-share-close" aria-label="Tutup pengaturan berbagi"><X className="h-4 w-4" /></button>
+                  <button type="button" onClick={closeSharePanel} className="notara-study-share-close" aria-label="Tutup pengaturan berbagi"><X className="h-4 w-4" /></button>
                 </section>
               )}
             </header>

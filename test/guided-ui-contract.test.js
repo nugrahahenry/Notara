@@ -89,3 +89,46 @@ test('Guided mobile layout stacks without fixed overlays and keeps the Tutor in 
   assert.match(guidedCss, /\.notara-guided-rail\s*\{[^}]*display:\s*grid/s);
 });
 
+test('Material Review preserves reading width for long titles and compact mobile metadata', () => {
+  const canvas = read('app/components/workspace/StudyCanvasBoundary.tsx');
+  const css = read('app/globals.css');
+  assert.match(canvas, /notara-document-context/);
+  assert.match(canvas, /notara-title-edit-action/);
+  assert.doesNotMatch(canvas, /notara-document-title-row[\s\S]{0,260}aria-label="Ubah judul materi"/);
+  assert.match(css, /\.notara-document-heading-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+  assert.match(css, /\.notara-document-title-row h1\s*\{[^}]*max-width:\s*920px[^}]*font-size:\s*clamp\(30px,\s*3\.2vw,\s*43px\)/s);
+  assert.match(css, /@media \(max-width:\s*767px\)[\s\S]*\.notara-document-meta\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
+});
+
+test('Guided transitions and material menus preserve intentional keyboard focus', () => {
+  const workspace = read('app/components/study-guide/StudyGuideWorkspace.tsx');
+  const canvas = read('app/components/workspace/StudyCanvasBoundary.tsx');
+  const tutor = read('app/components/study-guide/InlineMaterialTutor.tsx');
+  const dashboard = read('app/dashboard/page.tsx');
+  assert.match(workspace, /focus\(\{ preventScroll: true \}\)/);
+  assert.match(workspace, /closest\('\.notara-guided-workspace'\)/);
+  assert.match(workspace, /scrollIntoView/);
+  assert.match(canvas, /event\.key !== 'Escape'/);
+  assert.match(canvas, /courseButtonRef\.current\?\.focus\(\)/);
+  assert.match(canvas, /actionsButtonRef\.current\?\.focus\(\)/);
+  assert.doesNotMatch(canvas, /role="menu(?:item)?"|aria-haspopup="menu"/);
+  assert.match(canvas, /sharePanelRef\.current\?\.focus\(\)/);
+  assert.match(canvas, /onCreateCourse\(returnFocusToCourseButton\)/);
+  assert.match(dashboard, /folderModalReturnFocusRef\.current = returnFocus/);
+  assert.match(dashboard, /folderNameInputRef\.current\?\.focus\(\)/);
+  assert.match(dashboard, /role="dialog"[\s\S]{0,180}aria-modal="true"/);
+  assert.match(tutor, /showHistory \? 'Tutup riwayat percakapan' : 'Buka riwayat percakapan'/);
+});
+
+test('Guided headings carry their own hierarchy without generic kicker labels', () => {
+  const source = [
+    read('app/components/guided/GuidedEntryCard.tsx'),
+    read('app/components/guided/GuidedFoundationWorkspace.tsx'),
+    read('app/components/guided/compare/CompareSourceBrowser.tsx'),
+    read('app/components/study-guide/InlineMaterialTutor.tsx'),
+    read('app/components/study-guide/StudyGuideWorkspace.tsx'),
+  ].join('\n');
+  const css = read('app/globals.css');
+  assert.doesNotMatch(source, /notara-guided-label|notara-eyebrow/);
+  assert.doesNotMatch(css, /\.notara-guided-label\s*\{/);
+});

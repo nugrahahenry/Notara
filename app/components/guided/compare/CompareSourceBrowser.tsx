@@ -107,7 +107,6 @@ export function CompareSourceBrowser({
     >
       <header>
         <div>
-          <span className="notara-guided-label">Sumber materi</span>
           <h3
             id={`compare-source-browser-heading-${slot}`}
             ref={selectorHeadingRef}

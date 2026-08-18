@@ -95,7 +95,16 @@ export function StudyGuideWorkspace({
     previousStageRef.current = guidedState.stage;
     const focusFrame = window.requestAnimationFrame(() => {
       if (guidedState.stage === 'review') entryButtonRef.current?.focus();
-      else guidedHeadingRef.current?.focus();
+      else {
+        const heading = guidedHeadingRef.current;
+        heading?.focus({ preventScroll: true });
+        const workspace = heading?.closest('.notara-guided-workspace');
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        workspace?.scrollIntoView({
+          block: 'start',
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        });
+      }
     });
     return () => window.cancelAnimationFrame(focusFrame);
   }, [guidedState.stage]);
@@ -111,7 +120,6 @@ export function StudyGuideWorkspace({
         data-ownership={ownership}
         aria-labelledby="guided-source-unavailable-heading"
       >
-        <span className="notara-guided-label">Materi tidak tersedia</span>
         <h1 id="guided-source-unavailable-heading" ref={unavailableHeadingRef} tabIndex={-1}>
           Materi ini tidak lagi tersedia
         </h1>

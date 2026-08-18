@@ -95,7 +95,6 @@ export function InlineMaterialTutor({
             <SemanticIcon name="ask-nalira" size={20} />
           </span>
           <div>
-            <span className="notara-guided-label">Hanya materi ini</span>
             <h2 id={headingId}>Tanya Materi</h2>
             <p title={materialTitle}>Cakupan: {materialTitle}</p>
           </div>
@@ -104,7 +103,14 @@ export function InlineMaterialTutor({
           <button type="button" onClick={onNewThread} className="notara-icon-button" aria-label="Mulai percakapan baru" title="Percakapan baru">
             <Plus className="h-4 w-4" />
           </button>
-          <button type="button" onClick={onToggleHistory} className="notara-icon-button" aria-expanded={showHistory} aria-label="Buka riwayat percakapan" title="Riwayat">
+          <button
+            type="button"
+            onClick={onToggleHistory}
+            className="notara-icon-button"
+            aria-expanded={showHistory}
+            aria-label={showHistory ? 'Tutup riwayat percakapan' : 'Buka riwayat percakapan'}
+            title={showHistory ? 'Tutup riwayat' : 'Buka riwayat'}
+          >
             {showHistory ? <ArrowLeft className="h-4 w-4" /> : <History className="h-4 w-4" />}
           </button>
           {visibleMessages.length > 0 && !showHistory && (

@@ -229,7 +229,6 @@ export function GuidedFoundationWorkspace({
 
         <div className="notara-guided-stage-shell">
           <header className="notara-guided-stage-heading">
-            <span className="notara-guided-label">Mulai dari tujuanmu</span>
             <h1 id="guided-objective-heading" ref={headingRef} tabIndex={-1}>Apa tujuan belajarmu?</h1>
             <p>Pilih satu tujuan untuk <strong>{materialTitle}</strong>. Nalira tidak akan mengubah tujuanmu secara diam-diam.</p>
           </header>
@@ -324,7 +323,6 @@ export function GuidedFoundationWorkspace({
 
         <div className="notara-guided-stage-shell">
           <header className="notara-guided-stage-heading">
-            <span className="notara-guided-label">Rute belajar</span>
             <h1 id="guided-route-heading" ref={headingRef} tabIndex={-1}>Lima langkah untuk tujuanmu</h1>
             <p>Lihat urutan sesi sebelum mulai. Kamu tetap dapat kembali dan mengubah tujuan.</p>
           </header>
@@ -409,7 +407,6 @@ export function GuidedFoundationWorkspace({
         <div className="notara-guided-session-primary">
           <header className="notara-guided-session-heading">
             <div>
-              <span className="notara-guided-label">Sesi belajar · {courseName}</span>
               <h1 id="guided-session-heading" ref={headingRef} tabIndex={-1}>{materialTitle}</h1>
               <span className="notara-guided-session-objective">Tujuan: {getGuidedObjectiveLabel(route.objective)}</span>
             </div>

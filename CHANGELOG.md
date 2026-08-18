@@ -4,7 +4,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.7.0.
+Belum ada perubahan setelah kandidat rilis v0.7.1.
+
+## [0.7.1] - 2026-08-19
+### Fixed
+- Judul materi panjang kini memakai lebar baca yang sehat tanpa mendorong aksi edit ke ruang judul atau menenggelamkan pintu masuk Guided Learning pada layar kecil.
+- Perpindahan tahap Guided mempertahankan toolbar dalam viewport sehingga pengguna tidak lagi dilempar ke heading dengan konteks navigasi yang hilang.
+- Tombol riwayat Tanya Materi sekarang menjelaskan aksi buka atau tutup sesuai keadaan aktual.
+
+### Changed
+- Metadata dokumen, aksi ubah judul, dan pemilih mata kuliah dirapikan menjadi satu konteks editorial yang lebih ringkas; layout mobile memakai dua kolom dengan mata kuliah selebar baris.
+- Label kecil berulang di Objective, Rute, Sesi, Compare, dan Tanya Materi dihapus agar hierarchy berasal dari judul dan isi, bukan dari eyebrow generik.
+- Kartu masuk Guided memakai ajakan yang langsung menjelaskan manfaat tanpa mengulang nama fitur sebagai label dekoratif.
+
+### Accessibility
+- Popover mata kuliah dan tindakan memakai pola disclosure dengan tombol biasa, mendukung Escape, dan mengembalikan fokus ke pemicu atau panel lanjutan yang tepat.
+- Fokus tahap Guided tetap terlihat dengan penanda yang tenang tanpa kotak outline besar; reduced-motion tetap menentukan perilaku perpindahan viewport.
+
+### Quality
+- Kontrak UI baru menjaga perilaku judul panjang, metadata mobile, focus return, label riwayat dinamis, dan larangan kicker generik pada alur Guided.
+- Browser QA desktop dan 390 px mobile lulus tanpa overflow horizontal atau error konsol; checkpoint tidak mengubah API, autentikasi, database, RLS, billing, atau deployment.
 
 ## [0.7.0] - 2026-08-18
 ### Added
