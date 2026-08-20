@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: kandidat lokal Nalira v0.8.1. App Shell, Guided Learning, pipeline AI, dan persistensi evidence transkrip sudah lolos QA lokal; migration evidence belum diterapkan ke production. Terakhir diverifikasi: 20 Agustus 2026.
+> Status: kandidat lokal Nalira v0.9.0 di atas production v0.8.1. Pipeline AI dan migration evidence sudah aktif serta lolos smoke test production; Transcript Evidence Review v0.9.0 masih menunggu review, commit, dan deployment. Terakhir diverifikasi: 20 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -14,7 +14,7 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - App Shell responsif dengan tema System/Light/Dark, sidebar desktop/mobile, Home, Mata Kuliah, Dibagikan, Tanya Nalira, dan Capture sebagai workspace yang jelas.
 - Antrean Capture maksimal tiga file secara sekuensial, dengan preview metadata, validasi, progress yang hanya muncul saat benar-benar terukur, kegagalan per item, serta retry dari awal tanpa menghapus hasil item lain.
 - Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform; rangkuman dibuat sekali dari transkrip gabungan.
-- Saat material disimpan, Nalira v0.8.0 dapat menyimpan processing run dan segmen bertimestamp secara privat serta idempoten. Timestamp antarchunk tetap mengacu ke posisi rekaman asal.
+- Saat material disimpan, Nalira menyimpan processing run dan segmen bertimestamp secara privat serta idempoten. Timestamp antarchunk tetap mengacu ke posisi rekaman asal, dan pemilik dapat meninjau status kualitas, alasan peringatan, serta segmen bertanda waktu melalui pagination.
 - Folder/mata kuliah, pencarian, pengelolaan rangkuman, ekspor Word, dan riwayat chat.
 - Chat streaming dengan scope satu rangkuman, satu folder, atau koleksi pengguna.
 - Study Canvas, Study Dock, serta slot Learning Lab untuk konsep, rumus, visual, quiz, dan pembicara sudah memiliki fondasi UI; kemampuan analisis Learning Lab belum tersedia.
@@ -96,8 +96,8 @@ npm run build
 ## Database dan deployment
 
 - Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`. Hardening billing berada di `supabase/migrations/20260813125948_harden_billing_security.sql`.
-- Evidence transkrip v0.8.0 berada di `supabase/migrations/20260818181455_persist_transcript_evidence.sql`. Terapkan hanya ke project Supabase yang benar setelah source v0.8.0 direview, verifikasi RLS/grant/RPC, lalu deploy source dan jalankan smoke test Capture. Migration ini belum diterapkan ke production pada checkpoint lokal ini.
-- Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, saat ini `https://notara-hengs.vercel.app`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://notara-hengs.vercel.app/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
+- Evidence transkrip berada di `supabase/migrations/20260818181455_persist_transcript_evidence.sql` dan sudah aktif di project Supabase production. RLS owner-only, grant authenticated, RPC persistence, serta satu Capture nyata telah diverifikasi; perubahan berikutnya tetap harus diuji pada project yang benar.
+- Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, saat ini `https://nalira-hengs.vercel.app`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://nalira-hengs.vercel.app/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
 - Jangan menjalankan `supabase/schema.sql` secara utuh pada project live; ia historis dan memiliki urutan/policy yang tidak aman untuk dipakai sebagai migrasi canonical.
 - Deploy di Vercel setelah environment variable tersedia pada target environment. Perubahan migrasi, RLS, atau billing harus diverifikasi dulu di lingkungan yang aman.
 - Di Midtrans Dashboard, arahkan Payment Notification URL ke `<NEXT_PUBLIC_SITE_URL>/api/webhooks/billing`. URL harus memakai HTTPS publik, tidak boleh localhost, dan tidak boleh membutuhkan login atau custom authorization header. Untuk Snap, atur Finish Redirect URL ke `<NEXT_PUBLIC_SITE_URL>/dashboard`.
@@ -105,7 +105,7 @@ npm run build
 ## Keterbatasan yang diketahui
 
 - `app/dashboard/page.tsx` masih menjadi orchestrator besar. Shell, tema, workspace, dan capture sudah memiliki batas komponen stabil, tetapi ekstraksi logic berikutnya tetap harus bertahap agar flow lama tidak regresi.
-- Segmen timestamp kini memiliki jalur persistensi privat, tetapi navigasi timestamp dan tampilan evidence belum diekspos di UI.
+- Timestamp di UI menunjukkan posisi segmen pada rekaman asal, tetapi audio tidak disimpan sehingga belum ada playback atau seek setelah reload.
 - Speaker diarization, identitas/peran pembicara, koreksi label pembicara, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
@@ -115,8 +115,8 @@ npm run build
 
 ## Roadmap terdekat
 
-1. Review dan commit kandidat keamanan v0.8.1 secara manual.
-2. Dengan persetujuan rollout terpisah, terapkan migration evidence ke project Supabase yang benar, verifikasi isolasi owner/anonymous, deploy source, lalu uji satu Capture nyata end-to-end.
+1. Review Transcript Evidence Review v0.9.0 pada desktop dan mobile, lalu commit dan deploy secara manual setelah acceptance lulus.
+2. Jalankan smoke test owner lama, materi tanpa evidence, filter bagian kurang jelas, serta akses public/share setelah deployment.
 3. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
 4. Riset provider diarization sebelum membangun Speaker Context; lanjutkan retrieval/provenance, progress belajar, Formula Notes, dan Neurova setelah kontrak masing-masing dikunci.
 

@@ -10,7 +10,7 @@ import {
   getBillingPlanByAmount,
 } from '@/lib/billing/plans';
 import { 
-  FileText, Sparkles,
+  Sparkles,
   Check, Loader2, AlertCircle, Trash2, BookOpen,
   Plus, FolderPlus, Folder, Edit3, X,
   Calendar, Menu, MessageSquare, Send, Search, LogOut,
@@ -44,6 +44,7 @@ import { SharedWorkspace } from '../components/workspace/SharedWorkspace';
 import { NotaraWorkspace } from '../components/workspace/NotaraWorkspace';
 import { WorkspaceAmbientHeader } from '../components/workspace/WorkspaceAmbientHeader';
 import { StudyGuideWorkspace } from '../components/study-guide/StudyGuideWorkspace';
+import { TranscriptEvidenceReview } from '../components/transcript/TranscriptEvidenceReview';
 import type { WorkspaceView } from '../components/workspace/types';
 import {
   getFolders,
@@ -4836,10 +4837,15 @@ export default function Home() {
                   </div>
                 )}
                 transcriptContent={(
-                  <section className="notara-study-transcript" aria-label="Salinan suara">
-                    <div><FileText className="h-4 w-4" /><span>Transkrip asli</span></div>
-                    <p>{selectedSummary.transcript}</p>
-                  </section>
+                  <TranscriptEvidenceReview
+                    summaryId={selectedSummary.id}
+                    aggregateTranscript={selectedSummary.transcript}
+                    evidenceEnabled={Boolean(
+                      user?.id
+                      && selectedSummary.user_id === user.id
+                      && !selectedSummary.id.startsWith('local-')
+                    )}
+                  />
                 )}
                 tutor={{
                   messages: chatMessages,

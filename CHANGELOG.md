@@ -4,7 +4,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.8.1.
+Belum ada perubahan setelah kandidat rilis v0.9.0.
+
+## [0.9.0] - 2026-08-20
+### Added
+- Tab Transkrip di Study Canvas kini menampilkan evidence privat bertanda waktu untuk materi milik pengguna, termasuk status kualitas, alasan peringatan, dan metadata cakupan rekaman.
+- Filter `Bagian kurang jelas` menemukan segmen dengan keyakinan transkripsi rendah atau kemungkinan ucapan samar di seluruh evidence, bukan hanya pada halaman aktif.
+- Daftar evidence memakai pagination deterministik 50 segmen, fallback jujur untuk materi lama, serta state loading, kosong, error, dan retry.
+
+### Security
+- Pembacaan tetap memakai sesi Supabase pengguna dan RLS owner-only yang sudah aktif; summary lokal, public share, dan materi yang bukan milik viewer tidak memuat evidence privat.
+- UI tidak menyimpan atau memutar audio, tidak menebak pembicara, dan tidak menawarkan perubahan transkrip yang belum memiliki kontrak persistence.
+
+### Accessibility
+- Filter memakai pressed state semantik, status halaman diumumkan secara live, pagination dapat dipakai dengan keyboard, dan seluruh kontrol utama mempertahankan target sentuh minimal 44 px pada mobile.
+
+### Quality
+- Normalizer defensif, ambang review, timecode kuliah panjang, ownership gate, query filter, urutan, count, dan pagination dilindungi focused tests.
+- Checkpoint ini tidak membuat migration, endpoint, commit, push, merge, atau deployment baru.
 
 ## [0.8.1] - 2026-08-20
 ### Changed
