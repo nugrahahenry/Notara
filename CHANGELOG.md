@@ -4,7 +4,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.8.0.
+Belum ada perubahan setelah kandidat rilis v0.8.1.
+
+## [0.8.1] - 2026-08-20
+### Changed
+- Next.js dan `eslint-config-next` dinaikkan secara exact dari 16.2.11 ke 16.3.1; dependency transitif Sharp, PostCSS, Nano ID, JS-YAML, dan Brace Expansion ikut berpindah ke versi yang telah memperbaiki advisory terkait.
+
+### Security
+- Audit dependency turun dari empat high pada runtime dan enam high secara keseluruhan menjadi nol vulnerability pada runtime maupun seluruh dependency tree.
+- Perbaikan toolchain dilakukan tanpa `--force`, tanpa override dependency, dan tanpa perubahan API, database, RLS, autentikasi, billing, atau perilaku Capture.
+
+### Quality
+- Seluruh 255 test, lint, clean TypeScript check, dan production build lulus pada Next.js 16.3.1.
+- Checkpoint ini belum menerapkan migration Supabase, commit, push, merge, atau deployment production.
 
 ## [0.8.0] - 2026-08-19
 ### Added

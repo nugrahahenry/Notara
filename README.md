@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: kandidat lokal Nalira v0.8.0. App Shell, Guided Learning, dan pipeline AI berjalan; persistensi evidence transkrip sudah lolos QA lokal tetapi migration v0.8.0 belum diterapkan ke production. Terakhir diverifikasi: 19 Agustus 2026.
+> Status: kandidat lokal Nalira v0.8.1. App Shell, Guided Learning, pipeline AI, dan persistensi evidence transkrip sudah lolos QA lokal; migration evidence belum diterapkan ke production. Terakhir diverifikasi: 20 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -45,7 +45,7 @@ Audio bersifat *transcribe-and-discard*: implementasi saat ini tidak mengunggah 
 
 | Lapisan | Teknologi |
 | --- | --- |
-| Aplikasi | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| Aplikasi | Next.js 16.3.1, React 19, TypeScript, Tailwind CSS 4 |
 | Auth dan data | Supabase Auth, PostgreSQL, Row Level Security |
 | Transkripsi | Groq `whisper-large-v3` dengan `language=id` |
 | Rangkuman dan chat | Groq `openai/gpt-oss-120b` |
@@ -110,15 +110,14 @@ npm run build
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
 - Endpoint API AI sudah memvalidasi sesi dan memakai rate limit per pengguna; kuota harian/berdasarkan tier, sinyal IP, dan kontrol penyalahgunaan multi-akun belum tersedia.
-- Audit dependency setelah patch Next.js Active LTS 16.2.11 masih melaporkan empat advisory high pada dependency runtime transitif. Jangan deploy v0.8.0 sebelum risiko ini ditutup atau diterima secara eksplisit dalam checkpoint dependency terpisah; jangan memakai `npm audit fix --force` tanpa review.
+- Audit dependency v0.8.1 bersih pada runtime dan seluruh tree. Pertahankan versi Next.js serta konfigurasi lint secara exact dan tetap review setiap perubahan dependency sebelum deployment.
 - Hardening billing sudah siap di source, tetapi belum aktif di production sampai secret server tersedia di Vercel, migration privilege/RLS diterapkan ke project yang benar, dan smoke test webhook serta checkout lulus.
 
 ## Roadmap terdekat
 
-1. Review dan commit kandidat v0.8.0 secara manual.
-2. Jalankan checkpoint dependency terpisah untuk mengevaluasi Next.js 16.3.1 dan menutup/menyetujui empat advisory runtime tanpa upgrade paksa.
-3. Setelah gate dependency lulus dan dengan persetujuan rollout terpisah, terapkan migration evidence ke project Supabase yang benar, verifikasi isolasi owner/anonymous, deploy source, lalu uji satu Capture nyata end-to-end.
-4. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
-5. Riset provider diarization sebelum membangun Speaker Context; lanjutkan retrieval/provenance, progress belajar, Formula Notes, dan Neurova setelah kontrak masing-masing dikunci.
+1. Review dan commit kandidat keamanan v0.8.1 secara manual.
+2. Dengan persetujuan rollout terpisah, terapkan migration evidence ke project Supabase yang benar, verifikasi isolasi owner/anonymous, deploy source, lalu uji satu Capture nyata end-to-end.
+3. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
+4. Riset provider diarization sebelum membangun Speaker Context; lanjutkan retrieval/provenance, progress belajar, Formula Notes, dan Neurova setelah kontrak masing-masing dikunci.
 
 Catatan produk, desain, dan prototype internal sengaja disimpan terpisah dari repository publik.
