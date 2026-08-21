@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: kandidat lokal Nalira v0.9.0 di atas production v0.8.1. Pipeline AI dan migration evidence sudah aktif serta lolos smoke test production; Transcript Evidence Review v0.9.0 masih menunggu review, commit, dan deployment. Terakhir diverifikasi: 20 Agustus 2026.
+> Status: kandidat lokal Nalira v0.10.0 di atas baseline `main` v0.9.0. Audio Source Focus sudah lolos test, build, serta QA desktop/mobile; commit, push, dan deployment tetap menunggu review manual. Terakhir diverifikasi: 21 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -10,7 +10,8 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 ## Yang tersedia saat ini
 
 - Login email/password dan Google melalui Supabase Auth, onboarding, profil, serta MFA di dashboard.
-- Rekam dari browser atau unggah audio/video, lalu transkripsi Bahasa Indonesia dan rangkuman terstruktur.
+- Rekam satu sumber fokus dari mikrofon kelas atau audio tab Chrome untuk Zoom/Meet, atau unggah audio/video; setelah itu Nalira membuat transkripsi Bahasa Indonesia dan rangkuman terstruktur.
+- Tes sumber 10 detik membantu memastikan sinyal yang benar terdengar sebelum rekaman panjang. Audio tab dan mikrofon tidak dicampur; pilihan tab hanya menyimpan track audio, bukan video yang dibagikan Chrome.
 - App Shell responsif dengan tema System/Light/Dark, sidebar desktop/mobile, Home, Mata Kuliah, Dibagikan, Tanya Nalira, dan Capture sebagai workspace yang jelas.
 - Antrean Capture maksimal tiga file secara sekuensial, dengan preview metadata, validasi, progress yang hanya muncul saat benar-benar terukur, kegagalan per item, serta retry dari awal tanpa menghapus hasil item lain.
 - Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform; rangkuman dibuat sekali dari transkrip gabungan.
@@ -26,7 +27,9 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 
 ```text
 Browser
-  ├─ rekam / unggah
+  ├─ pilih satu sumber rekaman: mikrofon kelas atau audio tab Chrome
+  ├─ tes sinyal 10 detik (opsional) → gunakan kembali stream yang sama
+  ├─ rekam audio / unggah berkas
   ├─ berkas ≤ 20 MB: /api/summarize → transkripsi + rangkuman dalam satu request
   └─ berkas > 20 MB: decode → 16 kHz mono → chunk ±2 menit (≤ 4 MB/request)
                          └─ /api/summarize (per chunk) → Groq Whisper
@@ -106,6 +109,7 @@ npm run build
 
 - `app/dashboard/page.tsx` masih menjadi orchestrator besar. Shell, tema, workspace, dan capture sudah memiliki batas komponen stabil, tetapi ekstraksi logic berikutnya tetap harus bertahap agar flow lama tidak regresi.
 - Timestamp di UI menunjukkan posisi segmen pada rekaman asal, tetapi audio tidak disimpan sehingga belum ada playback atau seek setelah reload.
+- Audio Source Focus memisahkan sumber pada batas capture, bukan orang di dalam rekaman. Mode mikrofon tidak dapat menghapus satu suara dekat secara selektif, sedangkan mode tab membutuhkan Chrome, pilihan tab browser, dan opsi berbagi audio tab yang aktif.
 - Speaker diarization, identitas/peran pembicara, koreksi label pembicara, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
@@ -115,9 +119,9 @@ npm run build
 
 ## Roadmap terdekat
 
-1. Review Transcript Evidence Review v0.9.0 pada desktop dan mobile, lalu commit dan deploy secara manual setelah acceptance lulus.
-2. Jalankan smoke test owner lama, materi tanpa evidence, filter bagian kurang jelas, serta akses public/share setelah deployment.
-3. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
-4. Riset provider diarization sebelum membangun Speaker Context; lanjutkan retrieval/provenance, progress belajar, Formula Notes, dan Neurova setelah kontrak masing-masing dikunci.
+1. Henry menjalankan acceptance izin nyata untuk `Mikrofon kelas` dan `Tab Zoom / Meet`, lalu merekam sampel singkat sebelum commit Nalira v0.10.0.
+2. Setelah acceptance lulus, commit dan push manual; deployment tetap menjadi langkah terpisah milik Henry.
+3. Lanjutkan Speaker Context sebagai checkpoint terpisah: diarization tidak boleh dianggap selesai hanya karena sumber capture sudah benar.
+4. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
 
 Catatan produk, desain, dan prototype internal sengaja disimpan terpisah dari repository publik.

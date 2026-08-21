@@ -345,6 +345,12 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
     audioBlob: null,
     audioUrl: null,
     formattedDuration: '00:00',
+    recordingSource: 'microphone',
+    sourceCheckStatus: 'idle',
+    sourceCheckRemainingSeconds: null,
+    sourceError: null,
+    onRecordingSourceChange: noop,
+    onTestSource: noop,
     onStart: noop,
     onPause: noop,
     onResume: noop,
@@ -371,6 +377,11 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   }));
 
   assert.match(recording, /notara-recording-visual/);
+  assert.match(recording, /Pilih yang ingin didengar Nalira/);
+  assert.match(recording, /Mikrofon kelas/);
+  assert.match(recording, /Tab Zoom \/ Meet/);
+  assert.match(recording, /Tes 10 detik/);
+  assert.equal((recording.match(/type="radio"/g) || []).length, 2);
   assert.match(processing, /notara-processing-visual/);
   assert.match(tabs, /role="tablist"/);
   assert.equal((tabs.match(/role="tab"/g) || []).length, 2);

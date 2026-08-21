@@ -96,6 +96,20 @@ import {
   stopActiveRecorder,
 } from '@/lib/capture/recording';
 import {
+  RECORDING_SOURCE_TEST_SECONDS,
+  RecordingSourceCaptureError,
+  getBrowserTabCaptureOptions,
+  getMicrophoneCaptureConstraints,
+  getPreferredRecordingMimeType,
+  getRecordingFileExtension,
+  getRecordingSourceErrorMessage,
+  getRecordingSourceErrorPresentation,
+  getRecordingSourceFileStem,
+  validateBrowserTabCapture,
+  type RecordingSourceCheckStatus,
+  type RecordingSourceKind,
+} from '@/lib/capture/source';
+import {
   CapturePipelineError,
   requestCaptureJson,
   requestCaptureJsonWithRateLimitRetry,
@@ -169,6 +183,13 @@ interface AggregateSummaryResponse {
   processing: TranscriptProcessingMetadata & {
     summaryModel: string;
   };
+}
+
+interface PreparedRecordingSource {
+  kind: RecordingSourceKind;
+  captureStream: MediaStream;
+  audioStream: MediaStream;
+  intentionalStop: boolean;
 }
 
 const createCaptureTaskId = () => {
@@ -285,6 +306,11 @@ export default function Home() {
   const [recordingDuration, setRecordingDuration] = useState<number>(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [recordingSource, setRecordingSource] = useState<RecordingSourceKind>('microphone');
+  const [capturedRecordingSource, setCapturedRecordingSource] = useState<RecordingSourceKind>('microphone');
+  const [sourceCheckStatus, setSourceCheckStatus] = useState<RecordingSourceCheckStatus>('idle');
+  const [sourceCheckRemainingSeconds, setSourceCheckRemainingSeconds] = useState<number | null>(null);
+  const [sourceError, setSourceError] = useState<string | null>(null);
 
   // Chunking States for Large Files
   const [chunkTotal, setChunkTotal] = useState<number>(0);
@@ -302,6 +328,9 @@ export default function Home() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const preparedRecordingSourceRef = useRef<PreparedRecordingSource | null>(null);
+  const sourceCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const sourceSignalDetectedRef = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
   
   // Custom refs for deletion explosion effect
@@ -1307,6 +1336,12 @@ export default function Home() {
   // Recording cleanup
   useEffect(() => {
     return () => {
+      if (preparedRecordingSourceRef.current) {
+        preparedRecordingSourceRef.current.intentionalStop = true;
+        preparedRecordingSourceRef.current.captureStream
+          .getTracks()
+          .forEach(track => track.stop());
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -1315,6 +1350,12 @@ export default function Home() {
       }
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
+      }
+      if (sourceCheckTimerRef.current) {
+        clearInterval(sourceCheckTimerRef.current);
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        void audioContextRef.current.close();
       }
     };
   }, []);
@@ -1789,6 +1830,157 @@ export default function Home() {
     return () => document.removeEventListener('keydown', handleSearchFocusTrap);
   }, [showSearchModal]);
 
+  const clearSourceCheckTimer = () => {
+    if (sourceCheckTimerRef.current) {
+      clearInterval(sourceCheckTimerRef.current);
+      sourceCheckTimerRef.current = null;
+    }
+    setSourceCheckRemainingSeconds(null);
+  };
+
+  const teardownVisualizer = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    analyserRef.current = null;
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      void audioContextRef.current.close();
+    }
+    audioContextRef.current = null;
+  };
+
+  const releasePreparedRecordingSource = (resetCheckState = true) => {
+    clearSourceCheckTimer();
+    const prepared = preparedRecordingSourceRef.current;
+    if (prepared) {
+      prepared.intentionalStop = true;
+      prepared.captureStream.getTracks().forEach(track => track.stop());
+      preparedRecordingSourceRef.current = null;
+    }
+    streamRef.current = null;
+    teardownVisualizer();
+    sourceSignalDetectedRef.current = false;
+    if (resetCheckState) {
+      setSourceCheckStatus('idle');
+    }
+  };
+
+  const isPreparedRecordingSourceLive = (
+    prepared: PreparedRecordingSource,
+    kind: RecordingSourceKind,
+  ) => prepared.kind === kind && prepared.audioStream
+    .getAudioTracks()
+    .some(track => track.readyState === 'live');
+
+  const requestPreparedRecordingSource = async (
+    kind: RecordingSourceKind,
+  ): Promise<PreparedRecordingSource> => {
+    const existing = preparedRecordingSourceRef.current;
+    if (existing && isPreparedRecordingSourceLive(existing, kind)) {
+      return existing;
+    }
+    if (existing) {
+      releasePreparedRecordingSource(false);
+    }
+
+    let captureStream: MediaStream;
+    if (kind === 'browser-tab') {
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        throw new RecordingSourceCaptureError('display-capture-unsupported');
+      }
+
+      captureStream = await navigator.mediaDevices.getDisplayMedia(
+        getBrowserTabCaptureOptions(),
+      );
+      const validationError = validateBrowserTabCapture({
+        audioTrackCount: captureStream.getAudioTracks().length,
+        displaySurface: captureStream.getVideoTracks()[0]?.getSettings().displaySurface,
+      });
+      if (validationError) {
+        captureStream.getTracks().forEach(track => track.stop());
+        throw new RecordingSourceCaptureError(validationError);
+      }
+    } else {
+      captureStream = await navigator.mediaDevices.getUserMedia(
+        getMicrophoneCaptureConstraints(),
+      );
+    }
+
+    const audioStream = kind === 'browser-tab'
+      ? new MediaStream(captureStream.getAudioTracks())
+      : captureStream;
+    const prepared: PreparedRecordingSource = {
+      kind,
+      captureStream,
+      audioStream,
+      intentionalStop: false,
+    };
+
+    const handleSourceEnded = () => {
+      if (
+        prepared.intentionalStop ||
+        preparedRecordingSourceRef.current !== prepared
+      ) {
+        return;
+      }
+
+      preparedRecordingSourceRef.current = null;
+      streamRef.current = null;
+      clearSourceCheckTimer();
+      teardownVisualizer();
+      setSourceCheckStatus('idle');
+      setSourceError(getRecordingSourceErrorMessage('source-ended', kind));
+      stopActiveRecorder(mediaRecorderRef.current);
+    };
+
+    captureStream.getTracks().forEach(track => {
+      track.addEventListener('ended', handleSourceEnded, { once: true });
+    });
+    preparedRecordingSourceRef.current = prepared;
+    streamRef.current = captureStream;
+    return prepared;
+  };
+
+  const handleRecordingSourceChange = (nextSource: RecordingSourceKind) => {
+    if (isRecording || audioBlob) return;
+    releasePreparedRecordingSource();
+    setRecordingSource(nextSource);
+    setCapturedRecordingSource(nextSource);
+    setSourceError(null);
+  };
+
+  const testRecordingSource = async () => {
+    if (isRecording || audioBlob) return;
+
+    clearSourceCheckTimer();
+    setSourceError(null);
+    setSourceCheckStatus('checking');
+    setSourceCheckRemainingSeconds(RECORDING_SOURCE_TEST_SECONDS);
+    sourceSignalDetectedRef.current = false;
+
+    try {
+      const prepared = await requestPreparedRecordingSource(recordingSource);
+      setupVisualizer(prepared.audioStream);
+      let remaining = RECORDING_SOURCE_TEST_SECONDS;
+      sourceCheckTimerRef.current = setInterval(() => {
+        remaining -= 1;
+        setSourceCheckRemainingSeconds(Math.max(0, remaining));
+        if (remaining <= 0) {
+          clearSourceCheckTimer();
+          setSourceCheckStatus(sourceSignalDetectedRef.current ? 'ready' : 'silent');
+        }
+      }, 1000);
+    } catch (captureError: unknown) {
+      const presentation = getRecordingSourceErrorPresentation(
+        captureError,
+        recordingSource,
+      );
+      releasePreparedRecordingSource();
+      setSourceError(presentation.message);
+    }
+  };
+
   // Recording triggers
   const startRecording = async () => {
     // Check monthly limit for Free tier
@@ -1814,17 +2006,22 @@ export default function Home() {
     setAudioBlob(null);
     setAudioUrl(null);
     setError(null);
-    
-    // Request notification permission early (Sprint 8)
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    setSourceError(null);
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      clearSourceCheckTimer();
+      const prepared = await requestPreparedRecordingSource(recordingSource);
+      const mimeType = getPreferredRecordingMimeType(MediaRecorder.isTypeSupported.bind(MediaRecorder));
+      if (!mimeType) {
+        throw new RecordingSourceCaptureError('recorder-unsupported');
+      }
+
+      streamRef.current = prepared.captureStream;
+      setCapturedRecordingSource(recordingSource);
+      setSourceCheckStatus('ready');
+      setupVisualizer(prepared.audioStream);
+
+      const mediaRecorder = new MediaRecorder(prepared.audioStream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       
       mediaRecorder.ondataavailable = (event) => {
@@ -1834,7 +2031,9 @@ export default function Home() {
       };
       
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(audioChunksRef.current, {
+          type: mediaRecorder.mimeType || mimeType,
+        });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
         setIsRecording(false);
@@ -1853,30 +2052,38 @@ export default function Home() {
           setShowUpgradeModal(true);
         }
         
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
-        }
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
+        releasePreparedRecordingSource();
       };
       
       mediaRecorder.start(250);
       setIsRecording(true);
       setIsPaused(false);
+
+      // Display capture must be the first permission request in the click
+      // handler. Asking for notifications earlier can consume the transient
+      // user activation that Chrome requires for getDisplayMedia().
+      if ('Notification' in window && Notification.permission === 'default') {
+        void Notification.requestPermission().catch(() => {
+          console.warn('[capture] notification permission unavailable');
+        });
+      }
       
       startTimerInterval();
       
-      setupVisualizer(stream);
-      
-    } catch (err: unknown) {
-      console.error('Error starting recording:', err);
-      setError('Gagal mengakses mikrofon. Pastikan Anda memberikan izin akses mikrofon.');
+    } catch (captureError: unknown) {
+      const presentation = getRecordingSourceErrorPresentation(
+        captureError,
+        recordingSource,
+      );
+      console.warn(`[capture] source start failed: ${presentation.code}`);
+      releasePreparedRecordingSource();
+      setSourceError(presentation.message);
     }
   };
 
   const setupVisualizer = (stream: MediaStream) => {
     try {
+      teardownVisualizer();
       const browserWindow = window as BrowserWindow;
       const AudioContextClass = browserWindow.AudioContext || browserWindow.webkitAudioContext;
       if (!AudioContextClass) return;
@@ -1891,8 +2098,8 @@ export default function Home() {
       
       source.connect(analyser);
       drawWaveform();
-    } catch (e) {
-      console.warn('Failed to setup Web Audio Visualizer:', e);
+    } catch {
+      console.warn('[capture] visualizer unavailable');
     }
   };
 
@@ -1913,6 +2120,15 @@ export default function Home() {
       animationFrameRef.current = requestAnimationFrame(draw);
       
       analyser.getByteTimeDomainData(dataArray);
+      if (!sourceSignalDetectedRef.current) {
+        let peakDelta = 0;
+        for (const sample of dataArray) {
+          peakDelta = Math.max(peakDelta, Math.abs(sample - 128));
+        }
+        if (peakDelta >= 5) {
+          sourceSignalDetectedRef.current = true;
+        }
+      }
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -2584,7 +2800,8 @@ export default function Home() {
       setCurrentQueueIndex(firstTaskIndex);
       await startProcessing(firstTask.reference, firstTask.name, firstTaskIndex, firstTask.id);
     } else if (audioBlob) {
-      const name = `rekaman-${new Date().toISOString().slice(0, 10)}.webm`;
+      const fileExtension = getRecordingFileExtension(audioBlob.type);
+      const name = `${getRecordingSourceFileStem(capturedRecordingSource)}-${new Date().toISOString().slice(0, 10)}.${fileExtension}`;
       const recordingFile = new File([audioBlob], name, {
         type: audioBlob.type || 'audio/webm',
       });
@@ -2860,7 +3077,8 @@ export default function Home() {
       const link = document.createElement('a');
       link.href = url;
       const dateStr = new Date().toISOString().slice(0, 10);
-      link.download = `Rekaman_Nalira_${dateStr}.webm`;
+      const fileExtension = getRecordingFileExtension(audioBlob.type);
+      link.download = `${getRecordingSourceFileStem(capturedRecordingSource)}-${dateStr}.${fileExtension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -3652,6 +3870,9 @@ export default function Home() {
   // getReadingTime helper removed in favor of Fokus Aktif timer & Word Count
 
   const openWorkspace = (view: WorkspaceView) => {
+    if (view !== 'capture' && !isRecording) {
+      releasePreparedRecordingSource();
+    }
     setWorkspaceView(view);
     setSelectedSummary(null);
     setSidebarOpen(false);
@@ -3661,6 +3882,10 @@ export default function Home() {
 
   const openCaptureWorkspace = (recording: boolean) => {
     openWorkspace('capture');
+    if (!recording) {
+      releasePreparedRecordingSource();
+      setSourceError(null);
+    }
     setIsRecordingMode(recording);
     clearFile();
   };
@@ -4625,7 +4850,10 @@ export default function Home() {
                   {/* Upload vs Recording Selector Toggle */}
                   <CaptureSourceTabs
                     isRecordingMode={isRecordingMode}
+                    disabled={isRecording || loading}
                     onSelectUpload={() => {
+                        releasePreparedRecordingSource();
+                        setSourceError(null);
                         setIsRecordingMode(false);
                         clearFile();
                       }}
@@ -4663,15 +4891,23 @@ export default function Home() {
                       audioBlob={audioBlob}
                       audioUrl={audioUrl}
                       formattedDuration={formatDuration(recordingDuration)}
+                      recordingSource={recordingSource}
+                      sourceCheckStatus={sourceCheckStatus}
+                      sourceCheckRemainingSeconds={sourceCheckRemainingSeconds}
+                      sourceError={sourceError}
+                      onRecordingSourceChange={handleRecordingSourceChange}
+                      onTestSource={testRecordingSource}
                       onStart={startRecording}
                       onPause={pauseRecording}
                       onResume={resumeRecording}
                       onStop={stopRecording}
                       onDownload={handleDownloadAudio}
                       onReset={() => {
+                        releasePreparedRecordingSource();
                         setAudioBlob(null);
                         setAudioUrl(null);
                         setRecordingDuration(0);
+                        setSourceError(null);
                         clearFile();
                       }}
                     />

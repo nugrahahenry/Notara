@@ -3,6 +3,11 @@
 import type { RefObject } from 'react';
 import { Check, FileAudio } from 'lucide-react';
 import { RecordingVisual, type RecordingVisualState } from '../brand/ProductArtwork';
+import type {
+  RecordingSourceCheckStatus,
+  RecordingSourceKind,
+} from '../../../lib/capture/source';
+import { RecordingSourcePicker } from './RecordingSourcePicker';
 
 interface RecordingPanelProps {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -11,6 +16,12 @@ interface RecordingPanelProps {
   audioBlob: Blob | null;
   audioUrl: string | null;
   formattedDuration: string;
+  recordingSource: RecordingSourceKind;
+  sourceCheckStatus: RecordingSourceCheckStatus;
+  sourceCheckRemainingSeconds: number | null;
+  sourceError: string | null;
+  onRecordingSourceChange: (source: RecordingSourceKind) => void;
+  onTestSource: () => void;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -26,6 +37,12 @@ export function RecordingPanel({
   audioBlob,
   audioUrl,
   formattedDuration,
+  recordingSource,
+  sourceCheckStatus,
+  sourceCheckRemainingSeconds,
+  sourceError,
+  onRecordingSourceChange,
+  onTestSource,
   onStart,
   onPause,
   onResume,
@@ -36,6 +53,11 @@ export function RecordingPanel({
   const visualState: RecordingVisualState = isRecording
     ? isPaused ? 'paused' : 'recording'
     : audioBlob ? 'ready' : 'idle';
+  const sourceLabel = recordingSource === 'browser-tab' ? 'audio tab' : 'mikrofon kelas';
+  const sourceAlreadyConnected = sourceCheckStatus === 'ready' || sourceCheckStatus === 'silent';
+  const startLabel = recordingSource === 'browser-tab'
+    ? sourceAlreadyConnected ? 'Mulai merekam kelas online' : 'Pilih tab dan mulai'
+    : 'Mulai merekam kelas';
 
   return (
     <section
@@ -44,17 +66,27 @@ export function RecordingPanel({
     >
       <h2 id="recording-panel-title" className="sr-only">Perekam suara Nalira</h2>
 
+      <RecordingSourcePicker
+        source={recordingSource}
+        checkStatus={sourceCheckStatus}
+        checkRemainingSeconds={sourceCheckRemainingSeconds}
+        error={sourceError}
+        disabled={isRecording || Boolean(audioBlob)}
+        onSourceChange={onRecordingSourceChange}
+        onTestSource={onTestSource}
+      />
+
       <div className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-tool)]">
         <RecordingVisual state={visualState} canvasRef={canvasRef} />
 
         {!isRecording && !audioBlob && (
-          <p className="notara-recording-status">Siap merekam suara</p>
+          <p className="notara-recording-status">Siap merekam {sourceLabel}</p>
         )}
 
         {audioBlob && !isRecording && (
           <p className="notara-recording-status notara-recording-status--ready">
             <Check className="h-4 w-4" aria-hidden="true" />
-            Rekaman tersimpan sementara di browser
+            Rekaman {sourceLabel} tersimpan sementara di browser
           </p>
         )}
       </div>
@@ -66,7 +98,7 @@ export function RecordingPanel({
         {isRecording && !isPaused && (
           <span className="mt-1.5 flex items-center gap-1.5 text-xs font-bold text-[var(--danger-accent)]">
             <span className="h-2 w-2 rounded-full bg-[var(--danger-accent)]" aria-hidden="true" />
-            Sedang merekam
+            Sedang merekam {sourceLabel}
           </span>
         )}
         {isPaused && (
@@ -90,7 +122,7 @@ export function RecordingPanel({
             className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--action-primary)] px-6 py-3 text-xs font-bold tracking-wide text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)]"
           >
             <span className="h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden="true" />
-            Mulai merekam
+            {startLabel}
           </button>
         ) : isRecording ? (
           <>

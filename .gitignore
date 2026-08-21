@@ -21,6 +21,9 @@
 /build
 /graphify-out/
 /app/graphify-out/
+/.impeccable/
+/AGENTS.md
+/CLAUDE.md
 
 # misc
 .DS_Store

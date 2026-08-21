@@ -4,7 +4,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.9.0.
+Belum ada perubahan setelah kandidat rilis v0.10.0.
+
+## [0.10.0] - 2026-08-21
+### Added
+- Capture rekaman kini meminta pengguna memilih satu sumber fokus: `Mikrofon kelas` untuk perkuliahan di ruangan atau `Tab Zoom / Meet` untuk kelas online di tab Chrome.
+- Tes sumber 10 detik memeriksa izin dan sinyal audio sebelum rekaman panjang, lalu mempertahankan stream yang sama agar pengguna tidak perlu memberi izin dua kali.
+- Rekaman kelas dan kelas online memakai nama berkas yang berbeda serta format Opus yang benar-benar didukung browser aktif.
+
+### Changed
+- Jalur tab hanya merekam track audio; track video yang diwajibkan browser tidak dimasukkan ke hasil rekaman dan dihentikan saat sumber dilepas.
+- Nalira menolak pilihan jendela atau seluruh layar ketika mode tab dipilih, serta memberi langkah pemulihan khusus untuk izin ditolak, tab tanpa audio, sumber terputus, dan browser yang belum mendukung.
+- Permintaan izin notifikasi dipindahkan setelah perekam dimulai agar tidak mengambil aktivasi pengguna yang dibutuhkan Chrome untuk membuka pemilih tab.
+
+### Accessibility
+- Pemilih sumber memakai fieldset, legend, dan radio native; status tes diumumkan secara live, error memakai alert, serta kartu dan tombol tes mempertahankan target sentuh minimal 44 px.
+- Layout sumber menumpuk pada layar 390 px tanpa overflow horizontal dan tetap dapat dipakai dengan keyboard.
+
+### Quality
+- Kontrak constraint, validasi tab, pemetaan error privat, pemilihan MIME, penamaan berkas, dan surface UI dilindungi focused tests.
+- Checkpoint ini tidak menambah endpoint, migration, penyimpanan audio, speaker diarization, commit, push, merge, atau deployment.
 
 ## [0.9.0] - 2026-08-20
 ### Added
