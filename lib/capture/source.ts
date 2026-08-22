@@ -2,6 +2,7 @@ export type RecordingSourceKind = 'microphone' | 'browser-tab';
 
 export type RecordingSourceCheckStatus =
   | 'idle'
+  | 'requesting'
   | 'checking'
   | 'ready'
   | 'silent';
@@ -34,6 +35,12 @@ export interface BrowserTabDisplayMediaOptions extends DisplayMediaStreamOptions
 }
 
 export const RECORDING_SOURCE_TEST_SECONDS = 10;
+
+export function isRecordingSourceCheckBusy(
+  status: RecordingSourceCheckStatus,
+): boolean {
+  return status === 'requesting' || status === 'checking';
+}
 
 export function getMicrophoneCaptureConstraints(): MediaStreamConstraints {
   return {

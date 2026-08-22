@@ -105,6 +105,7 @@ import {
   getRecordingSourceErrorMessage,
   getRecordingSourceErrorPresentation,
   getRecordingSourceFileStem,
+  isRecordingSourceCheckBusy,
   validateBrowserTabCapture,
   type RecordingSourceCheckStatus,
   type RecordingSourceKind,
@@ -329,6 +330,7 @@ export default function Home() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const preparedRecordingSourceRef = useRef<PreparedRecordingSource | null>(null);
+  const sourceRequestTokenRef = useRef<number>(0);
   const sourceCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
   const sourceSignalDetectedRef = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
@@ -1336,6 +1338,7 @@ export default function Home() {
   // Recording cleanup
   useEffect(() => {
     return () => {
+      sourceRequestTokenRef.current += 1;
       if (preparedRecordingSourceRef.current) {
         preparedRecordingSourceRef.current.intentionalStop = true;
         preparedRecordingSourceRef.current.captureStream
@@ -1850,13 +1853,28 @@ export default function Home() {
     audioContextRef.current = null;
   };
 
-  const releasePreparedRecordingSource = (resetCheckState = true) => {
+  const discardPreparedRecordingSource = (prepared: PreparedRecordingSource) => {
+    prepared.intentionalStop = true;
+    prepared.captureStream.getTracks().forEach(track => track.stop());
+    if (preparedRecordingSourceRef.current === prepared) {
+      preparedRecordingSourceRef.current = null;
+    }
+    if (streamRef.current === prepared.captureStream) {
+      streamRef.current = null;
+    }
+  };
+
+  const releasePreparedRecordingSource = (
+    resetCheckState = true,
+    invalidatePendingRequest = true,
+  ) => {
+    if (invalidatePendingRequest) {
+      sourceRequestTokenRef.current += 1;
+    }
     clearSourceCheckTimer();
     const prepared = preparedRecordingSourceRef.current;
     if (prepared) {
-      prepared.intentionalStop = true;
-      prepared.captureStream.getTracks().forEach(track => track.stop());
-      preparedRecordingSourceRef.current = null;
+      discardPreparedRecordingSource(prepared);
     }
     streamRef.current = null;
     teardownVisualizer();
@@ -1875,13 +1893,14 @@ export default function Home() {
 
   const requestPreparedRecordingSource = async (
     kind: RecordingSourceKind,
-  ): Promise<PreparedRecordingSource> => {
+    requestToken: number,
+  ): Promise<PreparedRecordingSource | null> => {
     const existing = preparedRecordingSourceRef.current;
     if (existing && isPreparedRecordingSourceLive(existing, kind)) {
-      return existing;
+      return sourceRequestTokenRef.current === requestToken ? existing : null;
     }
     if (existing) {
-      releasePreparedRecordingSource(false);
+      releasePreparedRecordingSource(false, false);
     }
 
     let captureStream: MediaStream;
@@ -1907,6 +1926,11 @@ export default function Home() {
       );
     }
 
+    if (sourceRequestTokenRef.current !== requestToken) {
+      captureStream.getTracks().forEach(track => track.stop());
+      return null;
+    }
+
     const audioStream = kind === 'browser-tab'
       ? new MediaStream(captureStream.getAudioTracks())
       : captureStream;
@@ -1927,6 +1951,7 @@ export default function Home() {
 
       preparedRecordingSourceRef.current = null;
       streamRef.current = null;
+      sourceRequestTokenRef.current += 1;
       clearSourceCheckTimer();
       teardownVisualizer();
       setSourceCheckStatus('idle');
@@ -1951,16 +1976,24 @@ export default function Home() {
   };
 
   const testRecordingSource = async () => {
-    if (isRecording || audioBlob) return;
+    if (isRecording || audioBlob || isRecordingSourceCheckBusy(sourceCheckStatus)) return;
 
     clearSourceCheckTimer();
     setSourceError(null);
-    setSourceCheckStatus('checking');
-    setSourceCheckRemainingSeconds(RECORDING_SOURCE_TEST_SECONDS);
+    setSourceCheckStatus('requesting');
+    setSourceCheckRemainingSeconds(null);
     sourceSignalDetectedRef.current = false;
+    const requestToken = sourceRequestTokenRef.current + 1;
+    sourceRequestTokenRef.current = requestToken;
 
     try {
-      const prepared = await requestPreparedRecordingSource(recordingSource);
+      const prepared = await requestPreparedRecordingSource(recordingSource, requestToken);
+      if (!prepared || sourceRequestTokenRef.current !== requestToken) {
+        if (prepared) discardPreparedRecordingSource(prepared);
+        return;
+      }
+      setSourceCheckStatus('checking');
+      setSourceCheckRemainingSeconds(RECORDING_SOURCE_TEST_SECONDS);
       setupVisualizer(prepared.audioStream);
       let remaining = RECORDING_SOURCE_TEST_SECONDS;
       sourceCheckTimerRef.current = setInterval(() => {
@@ -1972,6 +2005,7 @@ export default function Home() {
         }
       }, 1000);
     } catch (captureError: unknown) {
+      if (sourceRequestTokenRef.current !== requestToken) return;
       const presentation = getRecordingSourceErrorPresentation(
         captureError,
         recordingSource,
@@ -1983,6 +2017,8 @@ export default function Home() {
 
   // Recording triggers
   const startRecording = async () => {
+    if (isRecordingSourceCheckBusy(sourceCheckStatus)) return;
+
     // Check monthly limit for Free tier
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -2007,10 +2043,18 @@ export default function Home() {
     setAudioUrl(null);
     setError(null);
     setSourceError(null);
+    setSourceCheckStatus('requesting');
+    setSourceCheckRemainingSeconds(null);
+    const requestToken = sourceRequestTokenRef.current + 1;
+    sourceRequestTokenRef.current = requestToken;
     
     try {
       clearSourceCheckTimer();
-      const prepared = await requestPreparedRecordingSource(recordingSource);
+      const prepared = await requestPreparedRecordingSource(recordingSource, requestToken);
+      if (!prepared || sourceRequestTokenRef.current !== requestToken) {
+        if (prepared) discardPreparedRecordingSource(prepared);
+        return;
+      }
       const mimeType = getPreferredRecordingMimeType(MediaRecorder.isTypeSupported.bind(MediaRecorder));
       if (!mimeType) {
         throw new RecordingSourceCaptureError('recorder-unsupported');
@@ -2071,6 +2115,7 @@ export default function Home() {
       startTimerInterval();
       
     } catch (captureError: unknown) {
+      if (sourceRequestTokenRef.current !== requestToken) return;
       const presentation = getRecordingSourceErrorPresentation(
         captureError,
         recordingSource,
@@ -4850,7 +4895,7 @@ export default function Home() {
                   {/* Upload vs Recording Selector Toggle */}
                   <CaptureSourceTabs
                     isRecordingMode={isRecordingMode}
-                    disabled={isRecording || loading}
+                    disabled={isRecording || loading || isRecordingSourceCheckBusy(sourceCheckStatus)}
                     onSelectUpload={() => {
                         releasePreparedRecordingSource();
                         setSourceError(null);

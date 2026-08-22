@@ -4,7 +4,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.10.0.
+Belum ada perubahan setelah kandidat rilis v0.10.1.
+
+## [0.10.1] - 2026-08-22
+### Fixed
+- Tes sumber kini menampilkan status menunggu izin yang jujur dan baru memulai hitung mundur 10 detik setelah Chrome benar-benar memberikan stream audio.
+- Pemilih sumber, tab Upload/Rekam, dan tombol mulai dikunci selama permintaan izin berlangsung agar pengguna tidak dapat memicu dua dialog atau dua stream yang saling berlomba.
+- Permintaan sumber yang dibatalkan karena navigasi atau pergantian mode tidak dapat menimpa stream terbaru ketika dialog izin lama baru diselesaikan belakangan.
+
+### Quality
+- Acceptance nyata di Chrome Henry membuktikan izin, deteksi sinyal, perekaman, penghentian, dan preview untuk `Mikrofon kelas`.
+- Guard `Tab Zoom / Meet` terbukti menolak pilihan Window/Entire Screen. Acceptance sinyal tab bersuara ditunda sampai sesi kelas online nyata tersedia.
+- Shared busy-state dan copy izin dilindungi test; seluruh 259 test, lint, TypeScript, serta production build lulus.
+- Checkpoint ini tidak mengubah endpoint, database, RLS, format audio, limit akun, atau penyimpanan audio permanen.
 
 ## [0.10.0] - 2026-08-21
 ### Added

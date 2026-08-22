@@ -382,6 +382,31 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   assert.match(recording, /Tab Zoom \/ Meet/);
   assert.match(recording, /Tes 10 detik/);
   assert.equal((recording.match(/type="radio"/g) || []).length, 2);
+
+  const requestingRecording = renderToStaticMarkup(React.createElement(recordingModule.RecordingPanel, {
+    canvasRef: { current: null },
+    isRecording: false,
+    isPaused: false,
+    audioBlob: null,
+    audioUrl: null,
+    formattedDuration: '00:00',
+    recordingSource: 'microphone',
+    sourceCheckStatus: 'requesting',
+    sourceCheckRemainingSeconds: null,
+    sourceError: null,
+    onRecordingSourceChange: noop,
+    onTestSource: noop,
+    onStart: noop,
+    onPause: noop,
+    onResume: noop,
+    onStop: noop,
+    onDownload: noop,
+    onReset: noop,
+  }));
+  assert.match(requestingRecording, /Menunggu izin mikrofon dari Chrome/);
+  assert.match(requestingRecording, /Menunggu izin/);
+  assert.match(requestingRecording, /disabled=""/);
+  assert.match(requestingRecording, /disabled:cursor-wait/);
   assert.match(processing, /notara-processing-visual/);
   assert.match(tabs, /role="tablist"/);
   assert.equal((tabs.match(/role="tab"/g) || []).length, 2);

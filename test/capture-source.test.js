@@ -10,6 +10,7 @@ const {
   getRecordingFileExtension,
   getRecordingSourceErrorPresentation,
   getRecordingSourceFileStem,
+  isRecordingSourceCheckBusy,
   validateBrowserTabCapture,
 } = require('../build/lib/capture/source.js');
 
@@ -34,6 +35,14 @@ test('tab source requests tab-oriented capture without system audio', () => {
     preferCurrentTab: false,
   });
   assert.equal(RECORDING_SOURCE_TEST_SECONDS, 10);
+});
+
+test('permission and signal checks expose one shared busy state', () => {
+  assert.equal(isRecordingSourceCheckBusy('idle'), false);
+  assert.equal(isRecordingSourceCheckBusy('requesting'), true);
+  assert.equal(isRecordingSourceCheckBusy('checking'), true);
+  assert.equal(isRecordingSourceCheckBusy('ready'), false);
+  assert.equal(isRecordingSourceCheckBusy('silent'), false);
 });
 
 test('tab validation rejects windows, screens, and captures without audio', () => {

@@ -5,6 +5,7 @@ import type {
   RecordingSourceCheckStatus,
   RecordingSourceKind,
 } from '../../../lib/capture/source';
+import { isRecordingSourceCheckBusy } from '../../../lib/capture/source';
 
 interface RecordingSourcePickerProps {
   source: RecordingSourceKind;
@@ -39,7 +40,13 @@ const SOURCE_OPTIONS: Array<{
 function getStatusCopy(
   status: RecordingSourceCheckStatus,
   remainingSeconds: number | null,
+  source: RecordingSourceKind,
 ): string {
+  if (status === 'requesting') {
+    return source === 'browser-tab'
+      ? 'Menunggu Chrome membuka pemilih tab. Pilih tab kelas dan aktifkan audio tab.'
+      : 'Menunggu izin mikrofon dari Chrome. Izinkan akses untuk memulai tes.';
+  }
   if (status === 'checking') {
     return `Mendengarkan sumber selama ${remainingSeconds ?? 10} detik…`;
   }
@@ -61,12 +68,13 @@ export function RecordingSourcePicker({
   onSourceChange,
   onTestSource,
 }: RecordingSourcePickerProps) {
-  const isChecking = checkStatus === 'checking';
+  const isRequesting = checkStatus === 'requesting';
+  const isBusy = isRecordingSourceCheckBusy(checkStatus);
   const isReady = checkStatus === 'ready';
   const hasWarning = checkStatus === 'silent';
 
   return (
-    <fieldset className="w-full" disabled={disabled}>
+    <fieldset className="w-full" disabled={disabled || isBusy}>
       <legend className="text-sm font-bold text-[var(--text-primary)]">
         Pilih yang ingin didengar Nalira
       </legend>
@@ -145,18 +153,22 @@ export function RecordingSourcePicker({
             }`} aria-hidden="true" />
           )}
           <p className="text-xs leading-5 text-[var(--text-secondary)]">
-            {error ?? getStatusCopy(checkStatus, checkRemainingSeconds)}
+            {error ?? getStatusCopy(checkStatus, checkRemainingSeconds, source)}
           </p>
         </div>
 
         <button
           type="button"
           onClick={onTestSource}
-          disabled={disabled || isChecking}
+          disabled={disabled || isBusy}
           className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-2.5 text-xs font-bold text-[var(--text-primary)] transition-colors hover:border-[var(--action-primary)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${isChecking ? 'animate-spin' : ''}`} aria-hidden="true" />
-          {isChecking ? 'Menguji sumber' : isReady || hasWarning ? 'Tes ulang' : 'Tes 10 detik'}
+          <RefreshCw className={`h-3.5 w-3.5 ${isBusy ? 'animate-spin' : ''}`} aria-hidden="true" />
+          {isRequesting
+            ? 'Menunggu izin'
+            : checkStatus === 'checking'
+              ? 'Menguji sumber'
+              : isReady || hasWarning ? 'Tes ulang' : 'Tes 10 detik'}
         </button>
       </div>
     </fieldset>

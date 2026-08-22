@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: kandidat lokal Nalira v0.10.0 di atas baseline `main` v0.9.0. Audio Source Focus sudah lolos test, build, serta QA desktop/mobile; commit, push, dan deployment tetap menunggu review manual. Terakhir diverifikasi: 21 Agustus 2026.
+> Status: kandidat lokal Nalira v0.10.1 di atas baseline `main` v0.10.0. Audio Source Focus sudah committed dan pushed; patch izin sumber sudah lolos acceptance mikrofon nyata, guard pemilihan tab, seluruh 259 test, lint, TypeScript, dan production build. Acceptance sinyal tab bersuara ditunda sampai kelas online nyata tersedia. Terakhir diverifikasi: 22 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -119,7 +119,7 @@ npm run build
 
 ## Roadmap terdekat
 
-1. Henry menjalankan acceptance izin nyata untuk `Mikrofon kelas` dan `Tab Zoom / Meet`, lalu merekam sampel singkat sebelum commit Nalira v0.10.0.
+1. Saat kelas online berikutnya tersedia, lakukan acceptance `Tab Zoom / Meet` dengan memilih satu tab Chrome yang sedang mengeluarkan suara dan mengaktifkan audio tab.
 2. Setelah acceptance lulus, commit dan push manual; deployment tetap menjadi langkah terpisah milik Henry.
 3. Lanjutkan Speaker Context sebagai checkpoint terpisah: diarization tidak boleh dianggap selesai hanya karena sumber capture sudah benar.
 4. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.

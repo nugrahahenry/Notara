@@ -7,6 +7,7 @@ import type {
   RecordingSourceCheckStatus,
   RecordingSourceKind,
 } from '../../../lib/capture/source';
+import { isRecordingSourceCheckBusy } from '../../../lib/capture/source';
 import { RecordingSourcePicker } from './RecordingSourcePicker';
 
 interface RecordingPanelProps {
@@ -54,6 +55,7 @@ export function RecordingPanel({
     ? isPaused ? 'paused' : 'recording'
     : audioBlob ? 'ready' : 'idle';
   const sourceLabel = recordingSource === 'browser-tab' ? 'audio tab' : 'mikrofon kelas';
+  const sourceCheckBusy = isRecordingSourceCheckBusy(sourceCheckStatus);
   const sourceAlreadyConnected = sourceCheckStatus === 'ready' || sourceCheckStatus === 'silent';
   const startLabel = recordingSource === 'browser-tab'
     ? sourceAlreadyConnected ? 'Mulai merekam kelas online' : 'Pilih tab dan mulai'
@@ -119,7 +121,8 @@ export function RecordingPanel({
           <button
             type="button"
             onClick={onStart}
-            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--action-primary)] px-6 py-3 text-xs font-bold tracking-wide text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)]"
+            disabled={sourceCheckBusy}
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-[var(--action-primary)] px-6 py-3 text-xs font-bold tracking-wide text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)] disabled:cursor-wait disabled:opacity-60"
           >
             <span className="h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden="true" />
             {startLabel}
