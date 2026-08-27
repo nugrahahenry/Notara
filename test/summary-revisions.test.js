@@ -503,7 +503,21 @@ test('error copy keeps the active summary truthful across conflicts and provider
   assert.match(getSummaryRevisionErrorCopy(409).title, /konteks sudah berubah/i);
   assert.match(getSummaryRevisionErrorCopy(502).detail, /versi aktif tetap aman/i);
   assert.match(getSummaryRevisionErrorCopy(503).title, /belum tersedia/i);
+  assert.match(
+    getSummaryRevisionErrorCopy(null, 'summary_regeneration_plan_timeout').detail,
+    /tidak ada request groq/i,
+  );
   assert.match(getSummaryRevisionErrorCopy(null).detail, /cek request yang sama lagi/i);
+});
+
+test('hierarchical plan reads stop waiting without starting provider work', () => {
+  const reader = read('lib/summary/revision-reader.ts');
+
+  assert.match(reader, /SUMMARY_REGENERATION_PLAN_TIMEOUT_MS = 15_000/);
+  assert.match(reader, /PLAN_TIMEOUT_REASON = 'summary-regeneration-plan-timeout'/);
+  assert.match(reader, /controller\.abort\(PLAN_TIMEOUT_REASON\)/);
+  assert.match(reader, /summary_regeneration_plan_timeout/);
+  assert.match(reader, /removeEventListener\('abort', forwardCallerAbort\)/);
 });
 
 test('generation and apply routes preserve owner boundaries, idempotency, and explicit activation', () => {
@@ -562,7 +576,10 @@ test('revision studio keeps candidates private until an explicit user action app
   assert.match(panel, /Ulangi tahap \(\+1 request\)/);
   assert.match(panel, /Konfirmasi 1 request tambahan/);
   assert.match(panel, /Batal retry/);
-  assert.match(panel, /setRetryConfirmationStageId\(null\);\s*setNotice\(null\);/);
+  assert.match(panel, /Perbarui status/);
+  assert.match(panel, /retryConfirmationButtonRef\.current\?\.focus\(\)/);
+  assert.match(panel, /retryButtonRef\.current\?\.focus\(\)/);
+  assert.match(panel, /handleCancelRetryConfirmation/);
   assert.match(panel, /Dijeda aman\. Progres tersimpan/);
   assert.match(panel, /role="progressbar"/);
   assert.match(panel, /aria-valuemax=\{hierarchicalProgress\.stageCount\}/);

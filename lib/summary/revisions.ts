@@ -569,6 +569,12 @@ export function getSummaryRevisionErrorCopy(
   if (status === 503) {
     return { title: 'Layanan preview belum tersedia', detail: 'Versi aktif tetap aman. Coba lagi setelah layanan AI kembali tersedia.' };
   }
+  if (code === 'summary_regeneration_plan_timeout') {
+    return {
+      title: 'Pemeriksaan status terlalu lama',
+      detail: 'Tidak ada request Groq yang dikirim. Progres tetap aman; pilih Perbarui status untuk mencoba lagi.',
+    };
+  }
   if (status === null) {
     return { title: 'Koneksi terputus', detail: 'Versi aktif tetap aman. Periksa koneksi lalu cek request yang sama lagi.' };
   }

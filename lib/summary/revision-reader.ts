@@ -35,6 +35,9 @@ const REVISION_FIELDS = [
   'accepted_at',
 ].join(',');
 
+const SUMMARY_REGENERATION_PLAN_TIMEOUT_MS = 15_000;
+const PLAN_TIMEOUT_REASON = 'summary-regeneration-plan-timeout';
+
 export interface GeneratedSummaryRevision {
   candidate: SummaryRevision;
   activeRevisionId: string;
@@ -96,11 +99,34 @@ export async function readSummaryRegenerationPlan(
   summaryId: string,
   signal?: AbortSignal,
 ): Promise<SummaryRegenerationPlanView> {
-  const { body } = await postRevisionRequest(
-    '/api/summary-revisions/plan',
-    { summaryId },
-    signal,
+  const controller = new AbortController();
+  const forwardCallerAbort = () => controller.abort(signal?.reason);
+  if (signal?.aborted) forwardCallerAbort();
+  else signal?.addEventListener('abort', forwardCallerAbort, { once: true });
+  const timeout = setTimeout(
+    () => controller.abort(PLAN_TIMEOUT_REASON),
+    SUMMARY_REGENERATION_PLAN_TIMEOUT_MS,
   );
+  let body: Record<string, unknown>;
+  try {
+    ({ body } = await postRevisionRequest(
+      '/api/summary-revisions/plan',
+      { summaryId },
+      controller.signal,
+    ));
+  } catch (error) {
+    if (controller.signal.reason === PLAN_TIMEOUT_REASON) {
+      throw new SummaryRevisionRequestError(
+        'summary-regeneration-plan-timeout',
+        null,
+        'summary_regeneration_plan_timeout',
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', forwardCallerAbort);
+  }
   const mode = body.mode;
   const planVersion = typeof body.planVersion === 'string' ? body.planVersion : '';
   const planDigest = typeof body.planDigest === 'string' ? body.planDigest : '';

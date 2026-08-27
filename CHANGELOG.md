@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.14.3.
+Belum ada perubahan setelah Nalira v0.14.4.
+
+## [0.14.4] - 2026-08-28
+### Fixed
+- Workflow hierarkis yang sudah aktif kini menawarkan **Perbarui status**, bukan tombol yang menyiratkan pembuatan rangkuman baru. Pemeriksaan ini hanya membaca progres tersimpan dan tidak mengirim request Groq.
+- Konfirmasi retry memindahkan fokus keyboard ke aksi pengiriman. Pembatalan mengembalikan fokus ke tombol retry sekaligus membersihkan notifikasi, sehingga alur tetap jelas bagi pengguna keyboard dan pembaca layar.
+- Pembacaan plan/status berhenti setelah 15 detik. Timeout menjelaskan bahwa tidak ada request Groq yang dikirim dan menawarkan pemulihan melalui **Perbarui status**, tanpa spinner yang menggantung tanpa batas.
+
+### Quality
+- Batch lima checkpoint mencakup pembatalan retry, semantics refresh, focus handoff, timeout recovery, serta regression/metadata/QA terpadu. Runner resmi bertambah menjadi 284 test dan seluruhnya lulus sebelum gerbang akhir.
+- Seluruh 284 test, ESLint, TypeScript, production build, `git diff --check`, scan literal secret, dan detector Impeccable lulus.
 
 ## [0.14.3] - 2026-08-28
 ### Fixed

@@ -107,6 +107,8 @@ export function SummaryRevisionPanel({
   const hierarchicalBusyRef = useRef(false);
   const hierarchicalPausedRef = useRef(true);
   const hierarchicalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryButtonRef = useRef<HTMLButtonElement | null>(null);
+  const retryConfirmationButtonRef = useRef<HTMLButtonElement | null>(null);
   const runHierarchicalStepRef = useRef<((
     progress: HierarchicalSummaryProgress,
     retryStageId?: string | null,
@@ -119,6 +121,16 @@ export function SummaryRevisionPanel({
       if (hierarchicalTimerRef.current) clearTimeout(hierarchicalTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (retryConfirmationStageId) retryConfirmationButtonRef.current?.focus();
+  }, [retryConfirmationStageId]);
+
+  const handleCancelRetryConfirmation = () => {
+    setRetryConfirmationStageId(null);
+    setNotice(null);
+    requestAnimationFrame(() => retryButtonRef.current?.focus());
+  };
 
   const setPausedState = useCallback((value: boolean) => {
     hierarchicalPausedRef.current = value;
@@ -342,8 +354,10 @@ export function SummaryRevisionPanel({
     setIsPlanning(true);
     setNotice({
       tone: 'info',
-      title: 'Menghitung kebutuhan preview',
-      detail: 'Nalira memeriksa seluruh evidence secara privat tanpa mengirimkannya ke provider.',
+      title: hierarchicalProgress ? 'Memperbarui status preview' : 'Menghitung kebutuhan preview',
+      detail: hierarchicalProgress
+        ? 'Nalira memeriksa progres tersimpan tanpa mengirim request Groq.'
+        : 'Nalira memeriksa seluruh evidence secara privat tanpa mengirimkannya ke provider.',
     });
     try {
       const plan = await readSummaryRegenerationPlan(summaryId);
@@ -533,6 +547,8 @@ export function SummaryRevisionPanel({
           >
             {isGenerating || isPlanning ? (
               <LoaderCircle className={styles.spinner} size={16} aria-hidden="true" />
+            ) : hierarchicalProgress ? (
+              <RefreshCw size={16} aria-hidden="true" />
             ) : pendingClientRequestId ? (
               <RefreshCw size={16} aria-hidden="true" />
             ) : (
@@ -542,11 +558,13 @@ export function SummaryRevisionPanel({
               ? 'Menghitung tahap…'
               : isGenerating
                 ? 'Membuat preview…'
-                : pendingClientRequestId
-                  ? 'Cek preview'
-                  : initialSummaryPending
-                    ? 'Buat rangkuman final'
-                    : 'Buat preview baru'}
+                : hierarchicalProgress
+                  ? 'Perbarui status'
+                  : pendingClientRequestId
+                    ? 'Cek preview'
+                    : initialSummaryPending
+                      ? 'Buat rangkuman final'
+                      : 'Buat preview baru'}
           </button>
         </div>
       </div>
@@ -604,6 +622,7 @@ export function SummaryRevisionPanel({
                     type="button"
                     className={styles.primaryButton}
                     disabled={busy}
+                    ref={retryConfirmationButtonRef}
                     onClick={() => {
                       const stageId = hierarchicalProgress.failedStageId;
                       setRetryConfirmationStageId(null);
@@ -618,10 +637,7 @@ export function SummaryRevisionPanel({
                     type="button"
                     className={styles.secondaryButton}
                     disabled={busy}
-                    onClick={() => {
-                      setRetryConfirmationStageId(null);
-                      setNotice(null);
-                    }}
+                    onClick={handleCancelRetryConfirmation}
                   >
                     Batal retry
                   </button>
@@ -631,6 +647,7 @@ export function SummaryRevisionPanel({
                   type="button"
                   className={styles.primaryButton}
                   disabled={busy}
+                  ref={retryButtonRef}
                   onClick={() => {
                     setPausedState(true);
                     setRetryConfirmationStageId(hierarchicalProgress.failedStageId);

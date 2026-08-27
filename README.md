@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Nalira v0.14.3 memperbaiki state pembatalan konfirmasi retry pada rangkuman hierarkis. Production yang terverifikasi masih v0.14.2 pada commit `2971548`; acceptance rekaman panjang tersimpan aman dan workflow `AI1` tetap dijeda pada 1/6 tanpa retry tambahan. Terakhir diverifikasi lokal: 28 Agustus 2026.
+> Status: Nalira v0.14.4 mengeraskan pemulihan rangkuman hierarkis melalui aksi pembaruan status yang jujur, focus handoff, pembatalan lengkap, dan timeout 15 detik tanpa provider call. Production yang terverifikasi masih v0.14.2 pada commit `2971548`; workflow `AI1` tetap dijeda aman pada 1/6 tanpa retry tambahan. Terakhir diverifikasi lokal: 28 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
