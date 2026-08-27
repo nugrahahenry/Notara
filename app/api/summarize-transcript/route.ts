@@ -12,17 +12,17 @@ import {
   parseGroqProviderRequestId,
 } from '../../../lib/ai/usage';
 import { recordAiUsageSafely } from '../../../lib/ai/usage-recorder';
-import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 import {
   analyzeTranscriptQuality,
   normalizeTranscriptSegments,
   normalizeTranscriptGlossary,
 } from '../../../lib/transcript/contract';
-import { buildGroundedSummaryPrompt } from '../../../lib/transcript/summary-prompt';
+import { createInitialSummaryPlan } from '../../../lib/transcript/initial-summary';
 
 const MAX_TRANSCRIPT_CHARACTERS = 300_000;
 const MAX_TRANSCRIPT_SEGMENT_CHARACTERS = 500_000;
 const MAX_SUMMARIZE_BODY_BYTES = 2_000_000;
+const MAX_INITIAL_SUMMARY_OUTPUT_TOKENS = 1_536;
 
 interface SummarizeTranscriptPayload {
   transcript?: unknown;
@@ -122,12 +122,20 @@ export async function POST(request: NextRequest) {
       segments,
     });
     const glossary = normalizeTranscriptGlossary(payload.glossary);
-    const prompt = buildGroundedSummaryPrompt({
-      transcript,
-      quality,
-      glossary,
-      productName: PRODUCT_IDENTITY.name,
-    });
+    const initialPlan = createInitialSummaryPlan({ transcript, quality, glossary });
+
+    if (initialPlan.mode === 'deferred') {
+      return NextResponse.json(
+        {
+          code: 'summary_requires_hierarchy',
+          error: 'Transkrip panjang ini perlu disimpan lalu dirangkum bertahap.',
+          quality,
+        },
+        { status: 413 },
+      );
+    }
+
+    const prompt = initialPlan.prompt;
 
     const llmResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -139,12 +147,22 @@ export async function POST(request: NextRequest) {
         model: GROQ_LLM_MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
-        max_tokens: 4096,
+        max_tokens: MAX_INITIAL_SUMMARY_OUTPUT_TOKENS,
       }),
     });
 
     if (!llmResponse.ok) {
       console.error('Groq summary request failed.', { status: llmResponse.status });
+      if (llmResponse.status === 413) {
+        return NextResponse.json(
+          {
+            code: 'summary_requires_hierarchy',
+            error: 'Transkrip panjang ini perlu disimpan lalu dirangkum bertahap.',
+            quality,
+          },
+          { status: 413 },
+        );
+      }
       return NextResponse.json(
         { error: 'Nalira belum berhasil membuat rangkuman.' },
         { status: 502 },

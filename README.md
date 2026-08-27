@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Nalira v0.14.0 menambahkan source lokal untuk preview rangkuman kelas panjang yang bertahap, grounded, resumable, dan tetap privat. Migration production, deploy, serta provider acceptance belum dijalankan; production terakhir yang terverifikasi tetap v0.13.1. Terakhir diverifikasi lokal: 27 Agustus 2026.
+> Status: Nalira v0.14.1 memperbaiki impor rekaman panjang agar transkrip dan timestamp disimpan lebih dulu sebelum rangkuman hierarkis dibuat. Production yang terverifikasi masih v0.14.0; migration hierarkis sudah aktif dan v0.14.1 menunggu push/deploy. Terakhir diverifikasi lokal: 27 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -14,7 +14,7 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - Tes sumber 10 detik membantu memastikan sinyal yang benar terdengar sebelum rekaman panjang. Audio tab dan mikrofon tidak dicampur; pilihan tab hanya menyimpan track audio, bukan video yang dibagikan Chrome.
 - App Shell responsif dengan tema System/Light/Dark, sidebar desktop/mobile, Home, Mata Kuliah, Dibagikan, Tanya Nalira, dan Capture sebagai workspace yang jelas.
 - Antrean Capture maksimal tiga file secara sekuensial, dengan preview metadata, validasi, progress yang hanya muncul saat benar-benar terukur, kegagalan per item, serta retry dari awal tanpa menghapus hasil item lain.
-- Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform; rangkuman dibuat sekali dari transkrip gabungan.
+- Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform. Prompt kecil dirangkum sekali; prompt panjang disimpan bersama timestamp lalu dialihkan ke workflow hierarkis tanpa memotong isi atau mengulang transkripsi.
 - Saat material disimpan, Nalira menyimpan processing run dan segmen bertimestamp secara privat serta idempoten. Timestamp antarchunk tetap mengacu ke posisi rekaman asal, dan pemilik dapat meninjau status kualitas, alasan peringatan, serta segmen bertanda waktu melalui pagination.
 - Pemilik dapat meminta usulan konteks berbasis teks untuk maksimal satu halaman transkrip, memprioritaskan usulan yang meragukan, membuka satu editor pada satu waktu, mengubah atau mengabaikannya, lalu menyimpan keputusan append-only per segmen. Usulan ini tidak mengenali suara.
 - Keputusan tersimpan dapat digunakan untuk membuat preview rangkuman privat. Materi pendek tetap memakai jalur single-call v0.13.1; source v0.14.0 menghitung seluruh evidence lebih dulu dan, bila perlu, menawarkan maksimal 24 tahap berurutan tanpa sampling. Jumlah request, destination, pacing, progress, pause/resume, dan retry eksplisit terlihat sebelum/dalam proses. Preview tidak mengubah Guided, Tanya Materi, copy, ekspor, share, atau public link sampai pemilik memilih “Gunakan versi ini”.
@@ -35,9 +35,11 @@ Browser
   ├─ berkas ≤ 20 MB: /api/summarize → transkripsi + rangkuman dalam satu request
   └─ berkas > 20 MB: decode → 16 kHz mono → chunk ±2 menit (≤ 4 MB/request)
                          └─ /api/summarize (per chunk) → Groq Whisper
-                                  └─ transkrip + segmen gabungan → /api/summarize-transcript → Groq LLM
-                                                                                 └─ simpan summary
-                                                                                       └─ RPC evidence → Supabase Postgres
+                                  └─ transkrip + segmen gabungan → preflight ukuran prompt
+                                       ├─ ≤ 18.000 karakter → /api/summarize-transcript → Groq LLM
+                                       │                                               └─ simpan summary + RPC evidence
+                                       └─ > 18.000 karakter → simpan transkrip + RPC evidence
+                                                                 └─ plan/start/generate-step hierarkis setelah konfirmasi
 
 Pemilik → review halaman transkrip → /api/transcript-context/suggest
                                       ├─ baca ulang segmen owner-only via RLS → Groq LLM
@@ -117,7 +119,7 @@ npm run build
 - Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`. Hardening billing berada di `supabase/migrations/20260813125948_harden_billing_security.sql`.
 - Evidence transkrip berada di `supabase/migrations/20260818181455_persist_transcript_evidence.sql` dan sudah aktif di project Supabase production. RLS owner-only, grant authenticated, RPC persistence, serta satu Capture nyata telah diverifikasi; perubahan berikutnya tetap harus diuji pada project yang benar.
 - Review konteks transkrip berada di `supabase/migrations/20260826204521_add_review_first_transcript_context.sql` dan sudah aktif di project Supabase production. Privilege, RLS, isolasi pemilik, RPC append-only, constraint usage, serta satu keputusan nyata telah diverifikasi.
-- Preview rangkuman panjang berada di `supabase/migrations/20260827203244_add_hierarchical_summary_workflow.sql`. Migration ini lulus PostgreSQL 18 fresh/upgrade smoke secara lokal, termasuk resumability melewati timeout single-call 10 menit dan lazy expiry plus output scrub setelah 24 jam, tetapi **belum** diterapkan ke Supabase production.
+- Preview rangkuman panjang berada di `supabase/migrations/20260827203244_add_hierarchical_summary_workflow.sql`. Migration ini lulus PostgreSQL 18 fresh/upgrade smoke dan sudah diterapkan satu kali ke Supabase production; audit RLS, privilege, tenant boundary, timeout, dan output scrub lulus 18/18.
 - Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, saat ini `https://nalira-hengs.vercel.app`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://nalira-hengs.vercel.app/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
 - Jangan menjalankan `supabase/schema.sql` secara utuh pada project live; ia historis dan memiliki urutan/policy yang tidak aman untuk dipakai sebagai migrasi canonical.
 - Deploy di Vercel setelah environment variable tersedia pada target environment. Perubahan migrasi, RLS, atau billing harus diverifikasi dulu di lingkungan yang aman.
@@ -137,8 +139,8 @@ npm run build
 
 ## Roadmap terdekat
 
-1. Setelah approval terpisah, terapkan migration v0.14.0 ke Supabase production lalu deploy source yang sama; audit privilege/RLS sebelum satu pun provider call panjang.
-2. Lakukan satu acceptance terukur pada materi panjang dengan jumlah tahap yang diungkap UI. Jangan menjalankan real multi-call test tanpa konfirmasi baru atas materi, destination Groq, dan maksimum call.
+1. Push dan deploy source v0.14.1, lalu pastikan satu upload panjang berhenti pada dialog penyimpanan transkrip—bukan Groq 413—tanpa mengulang transkripsi.
+2. Setelah materi panjang tersimpan, lakukan satu acceptance terukur dengan jumlah tahap yang diungkap UI. Jangan menjalankan real multi-call test tanpa konfirmasi baru atas materi, destination Groq, dan maksimum call.
 3. Saat kelas online berikutnya tersedia, lakukan acceptance `Tab Zoom / Meet` dengan memilih satu tab Chrome yang sedang mengeluarkan suara dan mengaktifkan audio tab.
 4. Selesaikan acceptance preview → gunakan → pulihkan pada satu materi nyata sebelum memperluas regenerasi ke transkrip kelas panjang atau menghubungkannya ke workstream Learning System/Brand.
 

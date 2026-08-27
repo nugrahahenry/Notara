@@ -38,6 +38,7 @@
     "lib/transcript/context-reader.ts",
     "lib/transcript/evidence.ts",
     "lib/transcript/persistence.ts",
+    "lib/transcript/initial-summary.ts",
     "lib/transcript/summary-prompt.ts",
     "lib/transcript/context-summary-prompt.ts",
     "lib/transcript/hierarchical-summary-prompt.ts",

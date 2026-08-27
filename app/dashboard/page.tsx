@@ -135,15 +135,21 @@ import { shouldLoadChatThreadHistory } from '@/lib/chat/thread-state';
 import type { BrowserWindow, SpeechRecognitionLike } from '@/lib/browser';
 import { getErrorMessage } from '@/lib/api/boundary';
 import { getPostAuthExperience } from '@/lib/auth/post-auth-experience';
-import type {
-  TranscriptQualityReport,
-  TranscriptSegment,
+import {
+  analyzeTranscriptQuality,
+  type TranscriptQualityReport,
+  type TranscriptSegment,
 } from '@/lib/transcript/contract';
 import {
-  offsetTranscriptSegments,
-  type TranscriptEvidenceInput,
-  type TranscriptProcessingMetadata,
+  createInitialSummaryPlan,
+  DEFERRED_INITIAL_SUMMARY_CONTENT,
+  titleFromCaptureName,
+} from '@/lib/transcript/initial-summary';
+import type {
+  TranscriptEvidenceInput,
+  TranscriptProcessingMetadata,
 } from '@/lib/transcript/persistence';
+import { offsetTranscriptSegments } from '@/lib/transcript/persistence';
 
 // Dipakai hanya oleh `next dev` saat Supabase tidak tersedia. Guard NODE_ENV
 // membuat flag ini mati otomatis pada build/deploy production, sekalipun ada
@@ -389,6 +395,7 @@ export default function Home() {
     transcript: string;
     summary: string;
     word_count: number;
+    requiresHierarchicalSummary: boolean;
     evidence: TranscriptEvidenceInput;
   } | null>(null);
   const [showSaveFolderModal, setShowSaveFolderModal] = useState<boolean>(false);
@@ -2448,9 +2455,11 @@ export default function Home() {
 
         showToast(
           evidenceStored
-            ? `Rangkuman "${newSummary.title}" dan bukti waktunya berhasil disimpan!`
-            : `Rangkuman "${newSummary.title}" tersimpan, tetapi bukti waktunya belum tersimpan.`,
-          evidenceStored ? 'success' : 'info',
+            ? pendingSummary.requiresHierarchicalSummary
+              ? `Transkrip "${newSummary.title}" tersimpan. Lanjutkan dengan Buat rangkuman final.`
+              : `Rangkuman "${newSummary.title}" dan bukti waktunya berhasil disimpan!`
+            : `Materi "${newSummary.title}" tersimpan, tetapi bukti waktunya belum tersimpan.`,
+          pendingSummary.requiresHierarchicalSummary || !evidenceStored ? 'info' : 'success',
         );
         
         await completeSavedCaptureTask(captureTaskId);
@@ -2621,27 +2630,6 @@ export default function Home() {
         });
       }
       
-      addThinkingLog('📝 Semua bagian selesai! Nalira sedang merangkum keseluruhan isi...');
-      setChunkProgress('Semua bagian selesai! Nalira sedang menyusun rangkuman final...');
-      setCaptureTaskStage(taskId, 'summarizing', {
-        progress: { kind: 'indeterminate' },
-      });
-
-      const summarizeData = await requestCaptureJson<AggregateSummaryResponse>(
-        '/api/summarize-transcript',
-        {
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transcript: concatenatedTranscript,
-            durationSec: fileDurationSec,
-            segments: concatenatedSegments,
-          }),
-        },
-      );
-      
-      const title = extractTitleFromSummary(summarizeData.summary);
-      const targetFolderId = chosenSaveFolderId !== 'null' ? chosenSaveFolderId : (activeFolderId !== 'all' && activeFolderId !== 'uncategorized' && activeFolderId !== 'recent' ? activeFolderId : 'null');
-
       if (!transcriptionModel) {
         throw new CapturePipelineError({
           code: 'invalid-response',
@@ -2649,6 +2637,59 @@ export default function Home() {
           retryable: true,
         });
       }
+
+      const aggregateQuality = analyzeTranscriptQuality({
+        transcript: concatenatedTranscript,
+        durationSec: fileDurationSec,
+        segments: concatenatedSegments,
+      });
+      const initialSummaryPlan = createInitialSummaryPlan({
+        transcript: concatenatedTranscript,
+        quality: aggregateQuality,
+      });
+
+      addThinkingLog('📝 Semua bagian selesai! Nalira sedang menyiapkan hasil belajar...');
+      setChunkProgress('Semua bagian selesai! Nalira sedang menyiapkan hasil akhir...');
+      setCaptureTaskStage(taskId, 'summarizing', {
+        progress: { kind: 'indeterminate' },
+      });
+
+      let summary = DEFERRED_INITIAL_SUMMARY_CONTENT;
+      let summaryQuality = aggregateQuality;
+      let summaryModel: string | null = null;
+      let requiresHierarchicalSummary = initialSummaryPlan.mode === 'deferred';
+
+      if (!requiresHierarchicalSummary) {
+        try {
+          const summarizeData = await requestCaptureJson<AggregateSummaryResponse>(
+            '/api/summarize-transcript',
+            {
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                transcript: concatenatedTranscript,
+                durationSec: fileDurationSec,
+                segments: concatenatedSegments,
+              }),
+            },
+          );
+          summary = summarizeData.summary;
+          summaryQuality = summarizeData.quality;
+          summaryModel = summarizeData.processing.summaryModel;
+        } catch (error) {
+          if (!(error instanceof CapturePipelineError) || error.status !== 413) throw error;
+          requiresHierarchicalSummary = true;
+        }
+      }
+
+      if (requiresHierarchicalSummary) {
+        addThinkingLog('✅ Transkrip lengkap siap disimpan. Rangkuman panjang akan dibuat bertahap setelah jumlah tahap ditampilkan.');
+        setChunkProgress('Transkrip lengkap siap disimpan sebelum rangkuman bertahap dibuat.');
+      }
+
+      const title = requiresHierarchicalSummary
+        ? titleFromCaptureName(fileName)
+        : extractTitleFromSummary(summary);
+      const targetFolderId = chosenSaveFolderId !== 'null' ? chosenSaveFolderId : (activeFolderId !== 'all' && activeFolderId !== 'uncategorized' && activeFolderId !== 'recent' ? activeFolderId : 'null');
       
       setPendingSummary({
         captureTaskId: taskId,
@@ -2656,14 +2697,15 @@ export default function Home() {
         file_name: fileName,
         duration_sec: fileDurationSec || null,
         transcript: concatenatedTranscript,
-        summary: summarizeData.summary,
+        summary,
         word_count: concatenatedTranscript.split(/\s+/).length,
+        requiresHierarchicalSummary,
         evidence: {
           clientRequestId: taskId,
-          provider: summarizeData.processing.provider,
+          provider: 'groq',
           transcriptionModel,
-          summaryModel: summarizeData.processing.summaryModel,
-          quality: summarizeData.quality,
+          summaryModel,
+          quality: summaryQuality,
           segments: concatenatedSegments,
         },
       });
@@ -2805,6 +2847,7 @@ export default function Home() {
         transcript: data.transcript,
         summary: data.summary,
         word_count: data.transcript.split(/\s+/).length,
+        requiresHierarchicalSummary: false,
         evidence: {
           clientRequestId: taskId,
           provider: data.processing.provider,
@@ -6041,20 +6084,31 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white">
-                  Simpan Rangkuman Baru
+                  {pendingSummary.requiresHierarchicalSummary
+                    ? 'Simpan Transkrip Panjang'
+                    : 'Simpan Rangkuman Baru'}
                 </h3>
                 <p className="text-[10px] text-zinc-500 mt-0.5 truncate max-w-[280px]" title={pendingSummary.title}>
-                  Konfigurasikan judul dan folder tujuan rangkuman Anda.
+                  {pendingSummary.requiresHierarchicalSummary
+                    ? 'Transkrip lengkap siap diamankan sebelum dirangkum bertahap.'
+                    : 'Konfigurasikan judul dan folder tujuan rangkuman Anda.'}
                 </p>
               </div>
             </div>
 
             <hr className="border-white/5" />
 
+            {pendingSummary.requiresHierarchicalSummary && (
+              <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-[11px] leading-relaxed text-violet-100">
+                Materi ini terlalu panjang untuk satu request. Nalira tidak memotong isi: simpan bukti waktunya dulu,
+                lalu periksa jumlah tahap sebelum memilih <strong>Buat rangkuman final</strong>.
+              </div>
+            )}
+
             {/* Editable Title Input */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-zinc-400">
-                Judul Rangkuman:
+                {pendingSummary.requiresHierarchicalSummary ? 'Judul Materi:' : 'Judul Rangkuman:'}
               </label>
               <input
                 type="text"
@@ -6216,7 +6270,7 @@ export default function Home() {
                 onClick={() => handleSavePendingSummary(chosenSaveFolderId === 'null' ? null : chosenSaveFolderId)}
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/20 transition-all duration-200"
               >
-                Simpan Rangkuman
+                {pendingSummary.requiresHierarchicalSummary ? 'Simpan Transkrip' : 'Simpan Rangkuman'}
               </button>
             </div>
           </div>

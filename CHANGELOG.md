@@ -4,7 +4,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.14.0.
+Belum ada perubahan setelah Nalira v0.14.1.
+
+## [0.14.1] - 2026-08-27
+### Fixed
+- Impor rekaman panjang tidak lagi mengirim seluruh transkrip ke endpoint rangkuman satu-shot. Nalira menghitung ukuran prompt lebih dulu dan mengalihkan materi di atas batas 18.000 karakter ke jalur hierarkis sebelum request Groq dibuat.
+- Hasil transkripsi panjang kini dapat disimpan bersama timestamp sebagai materi privat dengan status “Transkrip siap dirangkum”, sehingga kegagalan rangkuman tidak memaksa pengguna mengulang transkripsi dari awal.
+- Respons Groq 413 yang tidak terduga dipertahankan sebagai sinyal rangkuman bertahap, bukan disamarkan menjadi kegagalan server 502. Output jalur satu-shot juga dibatasi 1.536 token agar tetap sesuai anggaran paket gratis.
+
+### Changed
+- Dialog penyimpanan membedakan rangkuman siap pakai dari transkrip panjang yang masih menunggu rangkuman final. Material Review kemudian menawarkan “Buat rangkuman final” dan tetap mengungkap jumlah tahap, tujuan Groq, pacing, pause/resume, serta preview privat sebelum apply.
+
+### Security
+- Batas prompt diperiksa sebelum transmisi provider. Transcript tetap diperlakukan sebagai data tidak tepercaya, tidak ditulis ke log, dan hanya evidence owner yang disimpan melalui RPC/RLS yang sudah ada; tidak ada migration, secret, provider, atau akses publik baru.
+
+### Quality
+- Acceptance nyata `AI1.m4a` berdurasi 54:15 membuktikan seluruh 28 bagian transkripsi selesai sebelum jalur lama gagal pada `POST /api/summarize-transcript` karena Groq 413. Fix melindungi kasus tersebut tanpa memotong materi.
+- Seluruh 283 test, ESLint, TypeScript, dan production build lulus setelah perbaikan.
 
 ## [0.14.0] - 2026-08-27
 ### Added

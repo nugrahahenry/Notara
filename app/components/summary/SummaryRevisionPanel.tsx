@@ -36,6 +36,7 @@ import {
   type HierarchicalSummaryProgress,
   type SummaryRevision,
 } from '@/lib/summary/revisions';
+import { isDeferredInitialSummary } from '@/lib/transcript/initial-summary';
 import styles from './SummaryRevisionPanel.module.css';
 
 interface SummaryRevisionPanelProps {
@@ -483,6 +484,7 @@ export function SummaryRevisionPanel({
   );
   const candidateIsActive = Boolean(candidate && candidate.id === activeRevisionId);
   const busy = isGenerating || isPlanning || applyingRevisionId !== null;
+  const initialSummaryPending = isDeferredInitialSummary(currentSummary);
 
   return (
     <section className={styles.panel} aria-labelledby={`summary-revision-title-${summaryId}`}>
@@ -495,9 +497,13 @@ export function SummaryRevisionPanel({
             <LockKeyhole size={13} aria-hidden="true" />
             Preview privat
           </div>
-          <h2 id={`summary-revision-title-${summaryId}`}>Perbarui dari keputusan konteks</h2>
+          <h2 id={`summary-revision-title-${summaryId}`}>
+            {initialSummaryPending ? 'Buat rangkuman final' : 'Perbarui dari keputusan konteks'}
+          </h2>
           <p>
-            Buat versi baru dari label dosen, diskusi, dan bagian yang perlu diprioritaskan—tanpa menimpa rangkuman aktif.
+            {initialSummaryPending
+              ? 'Susun seluruh transkrip bertahap sebagai preview privat sebelum menjadikannya rangkuman aktif.'
+              : 'Buat versi baru dari label dosen, diskusi, dan bagian yang perlu diprioritaskan—tanpa menimpa rangkuman aktif.'}
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -525,7 +531,15 @@ export function SummaryRevisionPanel({
             ) : (
               <GitCompareArrows size={16} aria-hidden="true" />
             )}
-            {isPlanning ? 'Menghitung tahap…' : isGenerating ? 'Membuat preview…' : pendingClientRequestId ? 'Cek preview' : 'Buat preview baru'}
+            {isPlanning
+              ? 'Menghitung tahap…'
+              : isGenerating
+                ? 'Membuat preview…'
+                : pendingClientRequestId
+                  ? 'Cek preview'
+                  : initialSummaryPending
+                    ? 'Buat rangkuman final'
+                    : 'Buat preview baru'}
           </button>
         </div>
       </div>
