@@ -34,6 +34,7 @@
     "lib/transcript/contract.ts",
     "lib/transcript/context.ts",
     "lib/transcript/context-prompt.ts",
+    "lib/transcript/context-review.ts",
     "lib/transcript/context-reader.ts",
     "lib/transcript/evidence.ts",
     "lib/transcript/persistence.ts",

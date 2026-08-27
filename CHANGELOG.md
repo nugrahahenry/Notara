@@ -4,7 +4,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat lokal v0.11.1.
+Belum ada perubahan setelah kandidat lokal v0.12.0.
+
+## [0.12.0] - 2026-08-27
+### Added
+- Usulan konteks ditampilkan sebagai antrean ringkas dengan satu editor terbuka pada satu waktu, sehingga halaman 50 segmen tidak berubah menjadi puluhan formulir panjang.
+- Mode `Cek lebih dulu` mengumpulkan usulan berkeyakinan rendah, konteks belum diketahui, serta bagian yang diusulkan untuk dikurangi prioritasnya tanpa menyimpan keputusan otomatis.
+- Ringkasan halaman memperlihatkan jumlah usulan, prioritas review, dan keputusan yang sudah tersimpan.
+
+### Changed
+- Error analisis kini membedakan koneksi, sesi, akses materi, halaman terlalu panjang, rate limit, serta hasil provider yang tidak lengkap dan selalu memberi langkah pemulihan yang relevan.
+- Analisis ulang tidak menghapus usulan atau pilihan yang sudah tampil ketika request berikutnya gagal; request juga dibatalkan ketika pengguna meninggalkan halaman.
+
+### Accessibility
+- Toggle editor memakai `aria-expanded` dan target editor yang tetap ada secara semantik, status analisis diumumkan secara live, serta seluruh kontrol review mempertahankan target sentuh minimal 44 px pada desktop dan mobile.
+
+### Quality
+- Helper prioritas dan pemetaan error dilindungi test, sementara kontrak lama untuk identitas netral, kontrol eksplisit, serta persistence append-only tetap dipertahankan.
+- Seluruh 266 test, lint tanpa warning, TypeScript, production build, `git diff --check`, dan detector Impeccable lulus.
+- QA terautentikasi di Chrome Henry membuka materi Fintech nyata tanpa menjalankan analisis AI baru: editor keputusan tersimpan lulus pada desktop dan viewport 390×844, seluruh kontrol tetap berada di dalam viewport dengan target sentuh 44 px, tidak ada overflow horizontal, serta log warning/error browser kosong.
 
 ## [0.11.1] - 2026-08-27
 ### Fixed

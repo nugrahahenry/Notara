@@ -112,6 +112,31 @@ test('context suggestions are bounded, allowlisted, and fail neutral', () => {
   );
 });
 
+test('context review prioritizes uncertain suggestions and maps recoverable errors', () => {
+  const {
+    getTranscriptContextAnalysisErrorCopy,
+    transcriptContextNeedsPriorityReview,
+  } = require('../build/lib/transcript/context-review.js');
+
+  const base = {
+    segmentId: 7,
+    proposedContext: 'lecturer_explanation',
+    proposedTreatment: 'include',
+    confidence: 'high',
+    reason: 'Penjelasan konsep utama.',
+  };
+
+  assert.equal(transcriptContextNeedsPriorityReview(base), false);
+  assert.equal(transcriptContextNeedsPriorityReview({ ...base, confidence: 'low' }), true);
+  assert.equal(transcriptContextNeedsPriorityReview({ ...base, proposedContext: 'unknown' }), true);
+  assert.equal(transcriptContextNeedsPriorityReview({ ...base, proposedTreatment: 'deprioritize' }), true);
+
+  assert.match(getTranscriptContextAnalysisErrorCopy(429, true).title, /batas analisis/i);
+  assert.match(getTranscriptContextAnalysisErrorCopy(502, true).detail, /semua bagian/i);
+  assert.match(getTranscriptContextAnalysisErrorCopy(null, false).title, /koneksi/i);
+  assert.match(getTranscriptContextAnalysisErrorCopy(401, true).detail, /masuk lagi/i);
+});
+
 test('context prompt treats transcript as untrusted evidence and forbids identity claims', () => {
   const { buildTranscriptContextPrompt } = require('../build/lib/transcript/context-prompt.js');
   const prompt = buildTranscriptContextPrompt([
@@ -181,8 +206,12 @@ test('Transcript Evidence keeps context review inline, explicit, and reversible'
   assert.match(contextReview, /Belum mengubah rangkuman/i);
   assert.match(contextReview, /Simpan keputusan/);
   assert.match(contextReview, /Abaikan usulan/);
-  assert.match(contextReview, /setSuggestions\(new Map\(\)\)/);
+  assert.doesNotMatch(contextReview, /setSuggestions\(new Map\(\)\)/);
   assert.match(contextReview, /controlsBusy = savingSegmentId !== null \|\| analysisState === 'loading'/);
+  assert.match(contextReview, /Cek lebih dulu/);
+  assert.match(contextReview, /aria-expanded/);
+  assert.match(contextReview, /analysisAbortRef/);
+  assert.match(contextReview, /Usulan sebelumnya tetap tersedia/);
   assert.match(contextReview, /lecturer_explanation/);
   assert.match(contextReview, /student_question/);
   assert.match(contextReview, /side_conversation/);

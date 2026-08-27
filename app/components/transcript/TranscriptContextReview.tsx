@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Check,
+  ChevronDown,
   LoaderCircle,
   Sparkles,
   X,
@@ -17,6 +18,11 @@ import {
   type TranscriptContextSuggestion,
   type TranscriptSummaryTreatment,
 } from '@/lib/transcript/context';
+import {
+  getTranscriptContextAnalysisErrorCopy,
+  transcriptContextNeedsPriorityReview,
+  type TranscriptContextAnalysisErrorCopy,
+} from '@/lib/transcript/context-review';
 import { saveTranscriptContextDecision } from '@/lib/transcript/context-reader';
 import {
   formatTranscriptTimecode,
@@ -31,10 +37,17 @@ interface TranscriptContextReviewProps {
 }
 
 type AnalysisState = 'idle' | 'loading' | 'ready' | 'error';
+type ReviewMode = 'all' | 'priority';
 
 interface DraftDecision {
   contextLabel: TranscriptContextLabel;
   summaryTreatment: TranscriptSummaryTreatment;
+}
+
+class ContextAnalysisRequestError extends Error {
+  constructor(readonly status: number | null) {
+    super('context-analysis-request-failed');
+  }
 }
 
 const CONTEXT_OPTIONS: Array<{ value: TranscriptContextLabel; label: string }> = [
@@ -135,6 +148,7 @@ export function TranscriptContextReview({
   contextAvailable,
 }: TranscriptContextReviewProps) {
   const [analysisState, setAnalysisState] = useState<AnalysisState>('idle');
+  const [analysisError, setAnalysisError] = useState<TranscriptContextAnalysisErrorCopy | null>(null);
   const [suggestions, setSuggestions] = useState<Map<number, TranscriptContextSuggestion>>(new Map());
   const [annotations, setAnnotations] = useState<Map<number, TranscriptContextAnnotation>>(() => new Map(
     segments.flatMap((segment) => (
@@ -145,8 +159,25 @@ export function TranscriptContextReview({
   const [savingSegmentId, setSavingSegmentId] = useState<number | null>(null);
   const [saveErrorSegmentId, setSaveErrorSegmentId] = useState<number | null>(null);
   const [savedSegmentId, setSavedSegmentId] = useState<number | null>(null);
+  const [reviewMode, setReviewMode] = useState<ReviewMode>('all');
+  const [expandedSegmentId, setExpandedSegmentId] = useState<number | null>(null);
+  const analysisAbortRef = useRef<AbortController | null>(null);
 
   const segmentIds = useMemo(() => segments.map((segment) => segment.id), [segments]);
+  const prioritySegmentIds = useMemo(() => new Set(
+    Array.from(suggestions.values())
+      .filter(transcriptContextNeedsPriorityReview)
+      .map((suggestion) => suggestion.segmentId),
+  ), [suggestions]);
+  const visibleSegments = useMemo(() => (
+    reviewMode === 'priority'
+      ? segments.filter((segment) => prioritySegmentIds.has(segment.id))
+      : segments
+  ), [prioritySegmentIds, reviewMode, segments]);
+
+  useEffect(() => () => {
+    analysisAbortRef.current?.abort();
+  }, []);
 
   const analyzePage = async () => {
     if (
@@ -155,9 +186,10 @@ export function TranscriptContextReview({
       || savingSegmentId !== null
       || segmentIds.length === 0
     ) return;
+    const controller = new AbortController();
+    analysisAbortRef.current = controller;
     setAnalysisState('loading');
-    setSuggestions(new Map());
-    setDrafts(new Map());
+    setAnalysisError(null);
     setSaveErrorSegmentId(null);
     setSavedSegmentId(null);
 
@@ -166,12 +198,19 @@ export function TranscriptContextReview({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ summaryId, segmentIds }),
+        signal: controller.signal,
       });
-      const body: unknown = await response.json();
-      if (!response.ok) throw new Error('analysis-failed');
+      if (!response.ok) throw new ContextAnalysisRequestError(response.status);
+
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        throw new ContextAnalysisRequestError(502);
+      }
 
       const parsed = readSuggestions(body, new Set(segmentIds));
-      if (!parsed) throw new Error('invalid-analysis-response');
+      if (!parsed) throw new ContextAnalysisRequestError(502);
 
       const nextSuggestions = new Map(parsed.map((suggestion) => [suggestion.segmentId, suggestion]));
       setSuggestions(nextSuggestions);
@@ -179,9 +218,19 @@ export function TranscriptContextReview({
         segment.id,
         draftFrom(annotations.get(segment.id) ?? null, nextSuggestions.get(segment.id)),
       ])));
+      setReviewMode('all');
+      setExpandedSegmentId(null);
       setAnalysisState('ready');
-    } catch {
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const status = error instanceof ContextAnalysisRequestError ? error.status : null;
+      setAnalysisError(getTranscriptContextAnalysisErrorCopy(
+        status,
+        typeof navigator === 'undefined' || navigator.onLine,
+      ));
       setAnalysisState('error');
+    } finally {
+      if (analysisAbortRef.current === controller) analysisAbortRef.current = null;
     }
   };
 
@@ -214,6 +263,7 @@ export function TranscriptContextReview({
     });
     setSavedSegmentId(null);
     setSaveErrorSegmentId(null);
+    if (expandedSegmentId === segmentId) setExpandedSegmentId(null);
   };
 
   const saveDecision = async (segmentId: number) => {
@@ -239,6 +289,7 @@ export function TranscriptContextReview({
         contextLabel: saved.contextLabel,
         summaryTreatment: saved.summaryTreatment,
       }));
+      setExpandedSegmentId(null);
       setSavedSegmentId(segmentId);
     } catch {
       setSaveErrorSegmentId(segmentId);
@@ -259,20 +310,50 @@ export function TranscriptContextReview({
             Nalira memberi usulan berdasarkan teks, bukan pengenal suara. Kamu tetap menentukan
             bagian yang penting. Belum mengubah rangkuman saat ini.
           </p>
-          {!contextAvailable && (
-            <p className="notara-context-availability" role="status">
-              Kontrol konteks belum tersedia di environment ini. Transkrip tetap aman dibaca.
-            </p>
-          )}
-          {analysisState === 'error' && (
-            <p className="notara-context-error" role="alert">
-              <AlertCircle className="h-4 w-4" aria-hidden="true" /> Analisis belum berhasil. Coba lagi tanpa kehilangan transkrip.
-            </p>
-          )}
-          {analysisState === 'ready' && (
-            <p className="notara-context-ready" role="status">
-              <Check className="h-4 w-4" aria-hidden="true" /> Usulan siap ditinjau. Belum ada keputusan yang disimpan otomatis.
-            </p>
+          <div id="transcript-context-status" aria-live="polite">
+            {!contextAvailable && (
+              <p className="notara-context-availability">
+                Kontrol konteks belum tersedia di environment ini. Transkrip tetap aman dibaca.
+              </p>
+            )}
+            {analysisState === 'loading' && (
+              <p className="notara-context-loading">
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> Membaca {segments.length} bagian tanpa menyimpan keputusan…
+              </p>
+            )}
+            {analysisState === 'error' && analysisError && (
+              <div className="notara-context-error" role="alert">
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                <span>
+                  <strong>{analysisError.title}</strong>
+                  <small>{analysisError.detail}</small>
+                  {suggestions.size > 0 && <small>Usulan sebelumnya tetap tersedia.</small>}
+                </span>
+              </div>
+            )}
+            {analysisState === 'ready' && (
+              <p className="notara-context-ready">
+                <Check className="h-4 w-4" aria-hidden="true" /> {suggestions.size} usulan siap · {prioritySegmentIds.size} perlu dicek lebih dulu · {annotations.size} keputusan tersimpan.
+              </p>
+            )}
+          </div>
+          {suggestions.size > 0 && (
+            <div className="notara-context-review-overview">
+              <div role="group" aria-label="Tampilan review usulan konteks">
+                <button type="button" aria-pressed={reviewMode === 'all'} onClick={() => setReviewMode('all')}>
+                  Semua usulan <span>{suggestions.size}</span>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={reviewMode === 'priority'}
+                  disabled={prioritySegmentIds.size === 0}
+                  onClick={() => setReviewMode('priority')}
+                >
+                  Cek lebih dulu <span>{prioritySegmentIds.size}</span>
+                </button>
+              </div>
+              <small>Berisi usulan berkeyakinan rendah, belum diketahui, atau yang akan dikurangi prioritasnya.</small>
+            </div>
           )}
         </div>
         <button
@@ -284,21 +365,37 @@ export function TranscriptContextReview({
             || analysisState === 'loading'
             || savingSegmentId !== null
           }
+          aria-describedby="transcript-context-status"
           onClick={() => void analyzePage()}
         >
           {analysisState === 'loading'
             ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
             : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-          {analysisState === 'loading' ? 'Menganalisis…' : 'Analisis konteks halaman'}
+          {analysisState === 'loading'
+            ? 'Menganalisis…'
+            : analysisState === 'error'
+              ? 'Coba analisis lagi'
+              : suggestions.size > 0
+                ? 'Analisis ulang halaman'
+                : 'Analisis konteks halaman'}
         </button>
       </section>
 
-      <ol className="notara-transcript-segment-list" start={listStart}>
-        {segments.map((segment) => {
+      {reviewMode === 'priority' && visibleSegments.length === 0 ? (
+        <section className="notara-context-review-empty" role="status">
+          <Check className="h-5 w-5" aria-hidden="true" />
+          <strong>Tidak ada usulan prioritas yang tersisa</strong>
+          <p>Kamu tetap bisa membuka semua bagian atau menjalankan analisis ulang.</p>
+          <button type="button" onClick={() => setReviewMode('all')}>Lihat semua usulan</button>
+        </section>
+      ) : (
+        <ol className="notara-transcript-segment-list" start={listStart}>
+        {visibleSegments.map((segment) => {
           const suggestion = suggestions.get(segment.id);
           const annotation = annotations.get(segment.id) ?? null;
           const draft = drafts.get(segment.id) ?? draftFrom(annotation, suggestion);
           const showDecision = Boolean(suggestion || annotation);
+          const isExpanded = expandedSegmentId === segment.id;
           const isSaving = savingSegmentId === segment.id;
           const controlsBusy = savingSegmentId !== null || analysisState === 'loading';
           const decisionChanged = !annotation
@@ -320,68 +417,92 @@ export function TranscriptContextReview({
                 )}
 
                 {showDecision && (
-                  <section className="notara-context-decision" aria-label={`Konteks bagian ${segment.ordinal + 1}`}>
+                  <section
+                    className="notara-context-decision"
+                    data-expanded={isExpanded}
+                    data-priority={suggestion ? transcriptContextNeedsPriorityReview(suggestion) : false}
+                    aria-label={`Konteks bagian ${segment.ordinal + 1}`}
+                  >
                     <div className="notara-context-decision-summary">
-                      <strong>{suggestion ? 'Usulan Nalira' : 'Keputusan tersimpan'}</strong>
-                      {suggestion && <span data-confidence={suggestion.confidence}>{CONFIDENCE_COPY[suggestion.confidence]}</span>}
-                      {annotation && !suggestion && <span>Versi {annotation.version}</span>}
-                    </div>
-                    {suggestion && <p>{suggestion.reason}</p>}
-                    {annotation && !suggestion && (
-                      <p>{contextLabel(annotation.contextLabel)} · {annotation.summaryTreatment === 'include' ? 'Tetap diutamakan' : 'Prioritas dikurangi'}</p>
-                    )}
-
-                    <div className="notara-context-fields">
-                      <label>
-                        <span>Fungsi bagian</span>
-                        <select
-                          disabled={controlsBusy}
-                          value={draft.contextLabel}
-                          onChange={(event) => updateDraft(segment.id, {
-                            contextLabel: event.target.value as TranscriptContextLabel,
-                          })}
-                        >
-                          {CONTEXT_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>Perlakuan belajar</span>
-                        <select
-                          disabled={controlsBusy}
-                          value={draft.summaryTreatment}
-                          onChange={(event) => updateDraft(segment.id, {
-                            summaryTreatment: event.target.value as TranscriptSummaryTreatment,
-                          })}
-                        >
-                          {TREATMENT_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    <div className="notara-context-actions">
+                      <div>
+                        <strong>{suggestion ? 'Usulan Nalira' : 'Keputusan tersimpan'}</strong>
+                        {suggestion && <span data-confidence={suggestion.confidence}>{CONFIDENCE_COPY[suggestion.confidence]}</span>}
+                        {annotation && !suggestion && <span>Versi {annotation.version}</span>}
+                      </div>
                       <button
+                        className="notara-context-decision-toggle"
                         type="button"
-                        disabled={controlsBusy || !decisionChanged}
-                        onClick={() => void saveDecision(segment.id)}
+                        aria-expanded={isExpanded}
+                        aria-controls={`context-editor-${segment.id}`}
+                        disabled={controlsBusy}
+                        onClick={() => setExpandedSegmentId(isExpanded ? null : segment.id)}
                       >
-                        {isSaving
-                          ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-                          : <Check className="h-4 w-4" aria-hidden="true" />}
-                        {isSaving ? 'Menyimpan…' : decisionChanged ? 'Simpan keputusan' : 'Sudah tersimpan'}
+                        {isExpanded ? 'Tutup' : suggestion ? 'Tinjau usulan' : 'Ubah keputusan'}
+                        <ChevronDown className="h-4 w-4" aria-hidden="true" />
                       </button>
-                      {suggestion && (
-                        <button type="button" disabled={controlsBusy} onClick={() => ignoreSuggestion(segment.id)}>
-                          <X className="h-4 w-4" aria-hidden="true" /> Abaikan usulan
-                        </button>
-                      )}
-                      <span aria-live="polite">
-                        {savedSegmentId === segment.id && 'Keputusan tersimpan sebagai versi baru.'}
-                        {saveErrorSegmentId === segment.id && 'Belum tersimpan. Coba lagi.'}
-                      </span>
+                    </div>
+                    <p className="notara-context-decision-result">
+                      {contextLabel(draft.contextLabel)} · {draft.summaryTreatment === 'include' ? 'Tetap diutamakan' : 'Prioritas dikurangi'}
+                    </p>
+                    {suggestion && <p className="notara-context-decision-reason">{suggestion.reason}</p>}
+
+                    <div
+                      className="notara-context-editor"
+                      id={`context-editor-${segment.id}`}
+                      hidden={!isExpanded}
+                    >
+                        <div className="notara-context-fields">
+                          <label>
+                            <span>Fungsi bagian</span>
+                            <select
+                              disabled={controlsBusy}
+                              value={draft.contextLabel}
+                              onChange={(event) => updateDraft(segment.id, {
+                                contextLabel: event.target.value as TranscriptContextLabel,
+                              })}
+                            >
+                              {CONTEXT_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            <span>Perlakuan belajar</span>
+                            <select
+                              disabled={controlsBusy}
+                              value={draft.summaryTreatment}
+                              onChange={(event) => updateDraft(segment.id, {
+                                summaryTreatment: event.target.value as TranscriptSummaryTreatment,
+                              })}
+                            >
+                              {TREATMENT_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+
+                        <div className="notara-context-actions">
+                          <button
+                            type="button"
+                            disabled={controlsBusy || !decisionChanged}
+                            onClick={() => void saveDecision(segment.id)}
+                          >
+                            {isSaving
+                              ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                              : <Check className="h-4 w-4" aria-hidden="true" />}
+                            {isSaving ? 'Menyimpan…' : decisionChanged ? 'Simpan keputusan' : 'Sudah tersimpan'}
+                          </button>
+                          {suggestion && (
+                            <button type="button" disabled={controlsBusy} onClick={() => ignoreSuggestion(segment.id)}>
+                              <X className="h-4 w-4" aria-hidden="true" /> Abaikan usulan
+                            </button>
+                          )}
+                          <span aria-live="polite">
+                            {savedSegmentId === segment.id && 'Keputusan tersimpan sebagai versi baru.'}
+                            {saveErrorSegmentId === segment.id && 'Perubahan belum tersimpan. Pilihanmu tetap ada; coba lagi.'}
+                          </span>
+                        </div>
                     </div>
                   </section>
                 )}
@@ -389,7 +510,8 @@ export function TranscriptContextReview({
             </li>
           );
         })}
-      </ol>
+        </ol>
+      )}
     </>
   );
 }
