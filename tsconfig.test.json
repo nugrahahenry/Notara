@@ -39,6 +39,8 @@
     "lib/transcript/evidence.ts",
     "lib/transcript/persistence.ts",
     "lib/transcript/summary-prompt.ts",
+    "lib/transcript/context-summary-prompt.ts",
+    "lib/summary/revisions.ts",
     "lib/auth/errors.ts",
     "lib/midtrans.ts",
     "lib/billing/plans.ts",

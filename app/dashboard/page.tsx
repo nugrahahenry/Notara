@@ -44,7 +44,9 @@ import { SharedWorkspace } from '../components/workspace/SharedWorkspace';
 import { NotaraWorkspace } from '../components/workspace/NotaraWorkspace';
 import { WorkspaceAmbientHeader } from '../components/workspace/WorkspaceAmbientHeader';
 import { StudyGuideWorkspace } from '../components/study-guide/StudyGuideWorkspace';
+import { SummaryRevisionPanel } from '../components/summary/SummaryRevisionPanel';
 import { TranscriptEvidenceReview } from '../components/transcript/TranscriptEvidenceReview';
+import type { AppliedSummaryRevision } from '@/lib/summary/revisions';
 import type { WorkspaceView } from '../components/workspace/types';
 import {
   getFolders,
@@ -3971,6 +3973,29 @@ export default function Home() {
     }
   };
 
+  const handleSummaryRevisionApplied = useCallback((revision: AppliedSummaryRevision) => {
+    setSummaries((previous) => previous.map((summary) => (
+      summary.id === revision.summaryId
+        ? {
+          ...summary,
+          summary: revision.summaryContent,
+          active_revision_id: revision.activeRevisionId,
+          revision_epoch: revision.revisionEpoch,
+        }
+        : summary
+    )));
+    setSelectedSummary((previous) => (
+      previous?.id === revision.summaryId
+        ? {
+          ...previous,
+          summary: revision.summaryContent,
+          active_revision_id: revision.activeRevisionId,
+          revision_epoch: revision.revisionEpoch,
+        }
+        : previous
+    ));
+  }, []);
+
   return (
     <>
       {/* ─── ONBOARDING SURVEY MODAL (First-time users) ─── */}
@@ -5082,7 +5107,7 @@ export default function Home() {
             {/* SCREEN 2: SUMMARY DETAIL VIEW */}
             {selectedSummary && !loading && (
               <StudyGuideWorkspace
-                key={selectedSummary.id}
+                key={`${selectedSummary.id}:${selectedSummary.revision_epoch ?? 0}`}
                 summary={selectedSummary}
                 folder={folders.find(folder => folder.id === selectedSummary.folder_id) ?? null}
                 viewerUserId={user?.id ?? null}
@@ -5113,9 +5138,24 @@ export default function Home() {
                 onDownloadAudio={handleDownloadAudio}
                 onCopy={handleCopy}
                 summaryContent={(
-                  <div className="notara-study-summary-content">
-                    {renderMarkdown(selectedSummary.summary)}
-                  </div>
+                  <>
+                    <div className="notara-study-summary-content">
+                      {renderMarkdown(selectedSummary.summary)}
+                    </div>
+                    <SummaryRevisionPanel
+                      summaryId={selectedSummary.id}
+                      currentSummary={selectedSummary.summary}
+                      activeRevisionId={selectedSummary.active_revision_id}
+                      revisionEpoch={selectedSummary.revision_epoch}
+                      enabled={Boolean(
+                        user?.id
+                        && selectedSummary.user_id === user.id
+                        && !selectedSummary.id.startsWith('local-')
+                      )}
+                      renderSummary={renderMarkdown}
+                      onApplied={handleSummaryRevisionApplied}
+                    />
+                  </>
                 )}
                 transcriptContent={(
                   <TranscriptEvidenceReview

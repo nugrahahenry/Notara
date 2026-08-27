@@ -4,7 +4,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat lokal v0.12.1.
+Belum ada perubahan setelah kandidat lokal v0.13.0.
+
+## [0.13.0] - 2026-08-27
+### Added
+- Keputusan konteks tersimpan kini dapat menghasilkan candidate rangkuman privat melalui aksi eksplisit. Browser hanya mengirim ID materi dan idempotency key; server membaca ulang transkrip bertimestamp serta keputusan owner dari Supabase.
+- Material Review menampilkan revision studio inline untuk membandingkan rangkuman aktif dan preview penuh, menggunakan candidate secara eksplisit, melihat maksimal 25 versi, serta memulihkan versi accepted dengan konfirmasi.
+- Rangkuman legacy memperoleh baseline revision secara lazy. Candidate, provenance terbatas, request generation, active pointer, dan monotonic revision epoch disimpan melalui migration baru tanpa menyalin audio, transkrip, nama, atau voiceprint.
+
+### Security
+- Candidate bersifat owner-only di balik RLS; akses anonymous/public/group tidak ditambahkan, direct mutation dicabut, dan semua perubahan memakai RPC authenticated dengan `auth.uid()`, empty `search_path`, composite tenant foreign key, serta summary-scoped advisory lock.
+- Apply menolak parent, epoch, atau snapshot keputusan konteks yang stale. `summaries.summary` tetap menjadi satu-satunya konten canonical untuk Guided, Tanya Materi, copy, ekspor, share card, public link, dan pembaca grup sampai pengguna menekan “Gunakan versi ini”.
+- Regenerasi dibatasi lima reservasi per sepuluh menit, maksimal 5.000 segmen/300.000 karakter sumber, output 100.000 karakter, 45 detik, satu provider call tanpa automatic retry, dan idempotent re-check setelah koneksi terputus.
+
+### Accessibility
+- Status generation/apply diumumkan melalui live region, kontrol async memiliki busy/disabled state, target sentuh utama minimal 44 px, perbandingan dua kolom berubah menjadi susunan vertikal di layar sempit, dan restore memakai konfirmasi inline tanpa modal.
+
+### Quality
+- Seluruh 274 test lulus. Migration PostgreSQL 18 dijalankan pada database sementara dan smoke test membuktikan reserve, candidate tanpa overwrite, apply atomik, restore, RLS dua owner, serta privilege mutation; database uji kemudian dihentikan dan dihapus.
+- Full ESLint, TypeScript, dan production build lulus. Impeccable detector menemukan satu side-accent baru yang langsung diganti dengan border netral; temuan lain berasal dari dashboard legacy di luar scope revision studio.
+- Checkpoint lokal ini tidak menerapkan migration production, deploy, push, atau menjalankan Groq dengan materi pengguna.
 
 ## [0.12.1] - 2026-08-27
 ### Fixed

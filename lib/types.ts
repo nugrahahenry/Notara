@@ -24,6 +24,8 @@ export interface Summary {
   is_public?: boolean;       // Status publik share link
   public_slug?: string | null; // Slug unik untuk share link (8 karakter alphanumeric)
   user_id?: string;          // UUID owner (dari auth.users) — wajib saat insert, opsional saat baca
+  active_revision_id?: string | null; // Versi rangkuman aktif; null pada row legacy sebelum snapshot pertama
+  revision_epoch?: number;   // Naik hanya saat konten rangkuman aktif berubah
 }
 
 export interface ChatThread {

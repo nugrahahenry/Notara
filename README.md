@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Nalira v0.11.0 terakhir terverifikasi aktif di production pada commit `53969c7`; migration, RLS, autentikasi, penyimpanan keputusan, dan usage metering sudah diverifikasi. Kandidat lokal v0.12.1 menggabungkan perbaikan respons terpotong, antrean review konteks yang lebih ringkas, serta pengunci operasi agar analisis ulang dan penyimpanan keputusan tidak saling menimpa. Terakhir diverifikasi: 27 Agustus 2026.
+> Status: Nalira v0.11.0 terakhir terverifikasi aktif di production pada commit `53969c7`; migration, RLS, autentikasi, penyimpanan keputusan, dan usage metering sudah diverifikasi. Kandidat lokal v0.13.0 menambahkan preview rangkuman privat berbasis keputusan konteks, explicit apply, riwayat, dan restore. Migration v0.13.0 belum diterapkan ke production dan source belum dipush/deploy. Terakhir diverifikasi: 27 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -16,7 +16,8 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - Antrean Capture maksimal tiga file secara sekuensial, dengan preview metadata, validasi, progress yang hanya muncul saat benar-benar terukur, kegagalan per item, serta retry dari awal tanpa menghapus hasil item lain.
 - Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform; rangkuman dibuat sekali dari transkrip gabungan.
 - Saat material disimpan, Nalira menyimpan processing run dan segmen bertimestamp secara privat serta idempoten. Timestamp antarchunk tetap mengacu ke posisi rekaman asal, dan pemilik dapat meninjau status kualitas, alasan peringatan, serta segmen bertanda waktu melalui pagination.
-- Pemilik dapat meminta usulan konteks berbasis teks untuk maksimal satu halaman transkrip, memprioritaskan usulan yang meragukan, membuka satu editor pada satu waktu, mengubah atau mengabaikannya, lalu menyimpan keputusan append-only per segmen. Usulan ini tidak mengenali suara dan belum mengubah rangkuman.
+- Pemilik dapat meminta usulan konteks berbasis teks untuk maksimal satu halaman transkrip, memprioritaskan usulan yang meragukan, membuka satu editor pada satu waktu, mengubah atau mengabaikannya, lalu menyimpan keputusan append-only per segmen. Usulan ini tidak mengenali suara.
+- Dalam kandidat lokal v0.13.0, keputusan tersimpan dapat digunakan untuk membuat preview rangkuman privat. Preview tidak mengubah Guided, Tanya Materi, copy, ekspor, share, atau public link sampai pemilik memilih “Gunakan versi ini”; versi accepted sebelumnya tetap dapat dipulihkan.
 - Folder/mata kuliah, pencarian, pengelolaan rangkuman, ekspor Word, dan riwayat chat.
 - Chat streaming dengan scope satu rangkuman, satu folder, atau koleksi pengguna.
 - Study Canvas, Study Dock, serta slot Learning Lab untuk konsep, rumus, visual, quiz, dan pembicara sudah memiliki fondasi UI; kemampuan analisis Learning Lab belum tersedia.
@@ -41,6 +42,11 @@ Browser
 Pemilik → review halaman transkrip → /api/transcript-context/suggest
                                       ├─ baca ulang segmen owner-only via RLS → Groq LLM
                                       └─ keputusan eksplisit pengguna → RPC append-only → Supabase Postgres
+
+Pemilik → buat preview rangkuman → /api/summary-revisions/generate
+                                   ├─ reserve idempotent + baca ulang evidence/keputusan owner-only
+                                   └─ candidate privat → bandingkan → explicit apply/restore RPC
+                                                                      └─ summaries.summary tetap canonical
 
 Chat dashboard → /api/chat → Groq LLM streaming (SSE)
 Auth, data, RLS, share, dan grup → Supabase
