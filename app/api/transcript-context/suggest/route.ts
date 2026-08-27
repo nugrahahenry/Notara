@@ -22,6 +22,7 @@ import { normalizeTranscriptEvidenceSegment } from '@/lib/transcript/evidence';
 const MAX_CONTEXT_BODY_BYTES = 4_096;
 const MAX_CONTEXT_TRANSCRIPT_CHARACTERS = 20_000;
 const CONTEXT_REQUEST_TIMEOUT_MS = 30_000;
+const MAX_CONTEXT_OUTPUT_TOKENS = 4_096;
 
 function parseCompletionContent(value: unknown): unknown {
   if (!value || typeof value !== 'object') return null;
@@ -39,6 +40,18 @@ function parseCompletionContent(value: unknown): unknown {
   } catch {
     return null;
   }
+}
+
+function completionWasTruncated(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const choices = (value as { choices?: unknown }).choices;
+  if (!Array.isArray(choices) || choices.length === 0) return false;
+  const choice = choices[0];
+  return Boolean(
+    choice
+    && typeof choice === 'object'
+    && (choice as { finish_reason?: unknown }).finish_reason === 'length'
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -135,7 +148,7 @@ export async function POST(request: NextRequest) {
         model: GROQ_LLM_MODEL,
         messages: [{ role: 'user', content: buildTranscriptContextPrompt(segments) }],
         temperature: 0.1,
-        max_tokens: 2_500,
+        max_tokens: MAX_CONTEXT_OUTPUT_TOKENS,
       }),
       signal: AbortSignal.timeout(CONTEXT_REQUEST_TIMEOUT_MS),
     });
@@ -151,10 +164,7 @@ export async function POST(request: NextRequest) {
     }
 
     const providerData: unknown = await providerResponse.json();
-    const suggestions = normalizeTranscriptContextSuggestions(
-      parseCompletionContent(providerData),
-      requestData.segmentIds,
-    );
+    const completionContent = parseCompletionContent(providerData);
     const completionUsage = parseGroqCompletionUsage(providerData);
 
     await recordAiUsageSafely(createAiUsageEvent({
@@ -166,6 +176,18 @@ export async function POST(request: NextRequest) {
       providerRequestId: parseGroqProviderRequestId(providerData),
       ...(completionUsage ?? {}),
     }), { bypassed: access.bypassed });
+
+    if (completionContent === null || completionWasTruncated(providerData)) {
+      return NextResponse.json(
+        { error: 'Nalira belum berhasil menyelesaikan analisis konteks halaman ini.' },
+        { status: 502 },
+      );
+    }
+
+    const suggestions = normalizeTranscriptContextSuggestions(
+      completionContent,
+      requestData.segmentIds,
+    );
 
     return NextResponse.json({ suggestions });
   } catch {

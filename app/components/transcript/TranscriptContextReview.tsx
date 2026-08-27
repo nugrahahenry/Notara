@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AlertCircle,
   Check,
@@ -136,27 +136,17 @@ export function TranscriptContextReview({
 }: TranscriptContextReviewProps) {
   const [analysisState, setAnalysisState] = useState<AnalysisState>('idle');
   const [suggestions, setSuggestions] = useState<Map<number, TranscriptContextSuggestion>>(new Map());
-  const [annotations, setAnnotations] = useState<Map<number, TranscriptContextAnnotation>>(new Map());
+  const [annotations, setAnnotations] = useState<Map<number, TranscriptContextAnnotation>>(() => new Map(
+    segments.flatMap((segment) => (
+      segment.currentContext ? [[segment.id, segment.currentContext] as const] : []
+    )),
+  ));
   const [drafts, setDrafts] = useState<Map<number, DraftDecision>>(new Map());
   const [savingSegmentId, setSavingSegmentId] = useState<number | null>(null);
   const [saveErrorSegmentId, setSaveErrorSegmentId] = useState<number | null>(null);
   const [savedSegmentId, setSavedSegmentId] = useState<number | null>(null);
 
   const segmentIds = useMemo(() => segments.map((segment) => segment.id), [segments]);
-
-  useEffect(() => {
-    setAnalysisState('idle');
-    setSuggestions(new Map());
-    setDrafts(new Map());
-    setSavingSegmentId(null);
-    setSaveErrorSegmentId(null);
-    setSavedSegmentId(null);
-    setAnnotations(new Map(
-      segments.flatMap((segment) => (
-        segment.currentContext ? [[segment.id, segment.currentContext] as const] : []
-      )),
-    ));
-  }, [segments]);
 
   const analyzePage = async () => {
     if (

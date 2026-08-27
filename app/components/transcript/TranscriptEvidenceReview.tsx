@@ -228,6 +228,7 @@ export function TranscriptEvidenceReview({
 
       {data.segments.length > 0 ? (
         <TranscriptContextReview
+          key={`${summaryId}:${data.segments.map((segment) => `${segment.id}:${segment.currentContext?.version ?? 0}`).join(',')}`}
           summaryId={summaryId}
           segments={data.segments}
           listStart={(data.page - 1) * data.pageSize + 1}

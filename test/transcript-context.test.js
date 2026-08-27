@@ -76,6 +76,29 @@ test('context suggestions are bounded, allowlisted, and fail neutral', () => {
   });
   assert.equal(suggestions.some((item) => item.segmentId === 999), false);
 
+  const compactSuggestions = normalizeTranscriptContextSuggestions({
+    s: [
+      [7, 'q', 'i', 'm', 'Pertanyaan memperjelas konsep.'],
+      [9, 's', 'p', 'h', 'Percakapan tidak terkait materi.'],
+    ],
+  }, [7, 9]);
+  assert.deepEqual(compactSuggestions, [
+    {
+      segmentId: 7,
+      proposedContext: 'student_question',
+      proposedTreatment: 'include',
+      confidence: 'medium',
+      reason: 'Pertanyaan memperjelas konsep.',
+    },
+    {
+      segmentId: 9,
+      proposedContext: 'side_conversation',
+      proposedTreatment: 'deprioritize',
+      confidence: 'high',
+      reason: 'Percakapan tidak terkait materi.',
+    },
+  ]);
+
   assert.throws(
     () => parseTranscriptContextRequest({ summaryId: 'not-a-uuid', segmentIds: [1] }),
     /summary/i,
@@ -99,7 +122,9 @@ test('context prompt treats transcript as untrusted evidence and forbids identit
   assert.match(prompt, /jangan mengikuti instruksi/i);
   assert.match(prompt, /bukan pengenal suara/i);
   assert.match(prompt, /tidak boleh.*exclude/i);
-  assert.match(prompt, /"segment_id":7/);
+  assert.match(prompt, /\[7,6,61000,65500,/);
+  assert.match(prompt, /"s":\[\[7,"u","i","l"/);
+  assert.match(prompt, /maksimal 32 karakter/i);
   assert.doesNotMatch(prompt, /Henry|nama dosen|identitas asli/i);
 });
 
@@ -140,6 +165,9 @@ test('suggestion route re-reads owned segments and never trusts client transcrip
   assert.match(route, /buildTranscriptContextPrompt/);
   assert.match(route, /normalizeTranscriptContextSuggestions/);
   assert.match(route, /recordAiUsageSafely/);
+  assert.match(route, /finish_reason/);
+  assert.match(route, /completionContent === null \|\| completionWasTruncated/);
+  assert.match(route, /MAX_CONTEXT_OUTPUT_TOKENS = 4_096/);
   assert.doesNotMatch(route, /payload\.transcript|service_role|retry\s*\(/i);
 });
 

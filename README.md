@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: kandidat lokal Nalira v0.11.0 di atas baseline `main` v0.10.1. Review-first Transcript Context sudah lolos 265 test, lint, TypeScript, production build, audit desain statis, serta rehearsal database fresh/upgrade. Migration konteks belum diterapkan ke Supabase dan QA interaktif Chrome Henry masih tertunda. Terakhir diverifikasi: 27 Agustus 2026.
+> Status: Nalira v0.11.0 aktif di production pada commit `53969c7`; migration, RLS, autentikasi, penyimpanan keputusan, dan usage metering sudah diverifikasi. Kandidat lokal v0.11.1 memperbaiki respons analisis konteks yang terpotong agar tidak lagi ditampilkan sebagai hasil netral yang seolah-olah selesai. Terakhir diverifikasi: 27 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -82,7 +82,7 @@ NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=
 NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION=
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` adalah secret **server-only** untuk webhook billing. Jangan pernah memberi prefix `NEXT_PUBLIC_`, menaruh nilainya di source, atau mengeksposnya ke browser. Untuk uji UI lokal ketika Supabase nonaktif, tersedia bypass yang dibatasi ketat ke mode development: `NOTARA_DEV_BYPASS_AUTH=true` dan `NEXT_PUBLIC_NOTARA_DEV_BYPASS_AUTH=true`. Jangan gunakan atau menambahkan bypass ini di deployment production.
+`SUPABASE_SERVICE_ROLE_KEY` adalah secret **server-only** untuk webhook billing dan pencatatan usage AI. Jangan pernah memberi prefix `NEXT_PUBLIC_`, menaruh nilainya di source, atau mengeksposnya ke browser. Untuk uji UI lokal ketika Supabase nonaktif, tersedia bypass yang dibatasi ketat ke mode development: `NOTARA_DEV_BYPASS_AUTH=true` dan `NEXT_PUBLIC_NOTARA_DEV_BYPASS_AUTH=true`. Jangan gunakan atau menambahkan bypass ini di deployment production.
 
 Konfigurasi Midtrans untuk Vercel memakai tiga variabel berikut:
 
@@ -105,7 +105,7 @@ npm run build
 
 - Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`. Hardening billing berada di `supabase/migrations/20260813125948_harden_billing_security.sql`.
 - Evidence transkrip berada di `supabase/migrations/20260818181455_persist_transcript_evidence.sql` dan sudah aktif di project Supabase production. RLS owner-only, grant authenticated, RPC persistence, serta satu Capture nyata telah diverifikasi; perubahan berikutnya tetap harus diuji pada project yang benar.
-- Review konteks transkrip berada di `supabase/migrations/20260826204521_add_review_first_transcript_context.sql`. Migration ini belum diterapkan ke production; deploy source baru hanya setelah migration, privilege, RLS, isolation, dan rollback/forward-repair diverifikasi pada project yang benar.
+- Review konteks transkrip berada di `supabase/migrations/20260826204521_add_review_first_transcript_context.sql` dan sudah aktif di project Supabase production. Privilege, RLS, isolasi pemilik, RPC append-only, constraint usage, serta satu keputusan nyata telah diverifikasi.
 - Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, saat ini `https://nalira-hengs.vercel.app`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://nalira-hengs.vercel.app/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
 - Jangan menjalankan `supabase/schema.sql` secara utuh pada project live; ia historis dan memiliki urutan/policy yang tidak aman untuk dipakai sebagai migrasi canonical.
 - Deploy di Vercel setelah environment variable tersedia pada target environment. Perubahan migrasi, RLS, atau billing harus diverifikasi dulu di lingkungan yang aman.
@@ -116,7 +116,7 @@ npm run build
 - `app/dashboard/page.tsx` masih menjadi orchestrator besar. Shell, tema, workspace, dan capture sudah memiliki batas komponen stabil, tetapi ekstraksi logic berikutnya tetap harus bertahap agar flow lama tidak regresi.
 - Timestamp di UI menunjukkan posisi segmen pada rekaman asal, tetapi audio tidak disimpan sehingga belum ada playback atau seek setelah reload.
 - Audio Source Focus memisahkan sumber pada batas capture, bukan orang di dalam rekaman. Mode mikrofon tidak dapat menghapus satu suara dekat secara selektif, sedangkan mode tab membutuhkan Chrome, pilihan tab browser, dan opsi berbagi audio tab yang aktif.
-- Speaker diarization, pengenalan/identitas suara, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan. Review konteks v0.11.0 hanya mengklasifikasikan fungsi akademik segmen dari teks dan urutan waktu; keputusan tersimpan belum dipakai untuk meregenerasi rangkuman.
+- Speaker diarization, pengenalan/identitas suara, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan. Review konteks v0.11.x hanya mengklasifikasikan fungsi akademik segmen dari teks dan urutan waktu; keputusan tersimpan belum dipakai untuk meregenerasi rangkuman.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
 - Endpoint API AI sudah memvalidasi sesi dan memakai rate limit per pengguna; kuota harian/berdasarkan tier, sinyal IP, dan kontrol penyalahgunaan multi-akun belum tersedia.
@@ -125,9 +125,9 @@ npm run build
 
 ## Roadmap terdekat
 
-1. Saat kelas online berikutnya tersedia, lakukan acceptance `Tab Zoom / Meet` dengan memilih satu tab Chrome yang sedang mengeluarkan suara dan mengaktifkan audio tab.
-2. Setelah acceptance lulus, commit dan push manual; deployment tetap menjadi langkah terpisah milik Henry.
-3. Terapkan dan verifikasi migration review-first context pada environment yang benar, lalu lakukan acceptance satu materi tanpa menganggap label teks sebagai pengenalan suara atau identitas.
-4. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
+1. Dogfood review konteks pada materi nyata dan nilai apakah label serta alasan membantu tanpa menganggapnya sebagai pengenalan suara atau identitas.
+2. Kembangkan fitur yang masih satu domain dalam satu batch lokal, lalu jalankan QA terpadu sebelum satu checkpoint push/deploy; jangan memublikasikan setiap perubahan kecil secara terpisah.
+3. Saat kelas online berikutnya tersedia, lakukan acceptance `Tab Zoom / Meet` dengan memilih satu tab Chrome yang sedang mengeluarkan suara dan mengaktifkan audio tab.
+4. Pertahankan regenerasi rangkuman dari keputusan konteks sebagai kontrak terpisah, dan sinkronkan workstream Learning System/Brand hanya melalui hook yang sudah disiapkan.
 
 Catatan produk, desain, dan prototype internal sengaja disimpan terpisah dari repository publik.

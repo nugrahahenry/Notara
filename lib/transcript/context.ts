@@ -50,6 +50,22 @@ const CONFIDENCE_LEVELS = new Set<TranscriptContextConfidence>([
   'medium',
   'high',
 ]);
+const COMPACT_CONTEXT_LABELS: Record<string, TranscriptContextLabel> = {
+  l: 'lecturer_explanation',
+  q: 'student_question',
+  d: 'class_discussion',
+  s: 'side_conversation',
+  u: 'unknown',
+};
+const COMPACT_SUMMARY_TREATMENTS: Record<string, TranscriptSummaryTreatment> = {
+  i: 'include',
+  p: 'deprioritize',
+};
+const COMPACT_CONFIDENCE_LEVELS: Record<string, TranscriptContextConfidence> = {
+  l: 'low',
+  m: 'medium',
+  h: 'high',
+};
 const FALLBACK_REASON = 'Nalira belum yakin dengan konteks bagian ini.';
 
 export function isTranscriptContextLabel(value: unknown): value is TranscriptContextLabel {
@@ -132,19 +148,33 @@ export function normalizeTranscriptContextSuggestions(
     .slice(0, MAX_TRANSCRIPT_CONTEXT_SEGMENTS);
   const allowed = new Set(requested);
   const parsed = new Map<number, TranscriptContextSuggestion>();
-  const candidates = record(value)?.suggestions;
+  const response = record(value);
+  const candidates = Array.isArray(response?.s)
+    ? response.s
+    : response?.suggestions;
 
   if (Array.isArray(candidates)) {
     for (const candidate of candidates.slice(0, MAX_TRANSCRIPT_CONTEXT_SEGMENTS * 2)) {
       const row = record(candidate);
-      const segmentId = positiveInteger(row?.segment_id);
+      const compact = Array.isArray(candidate) ? candidate : null;
+      const segmentId = positiveInteger(compact?.[0] ?? row?.segment_id);
       if (segmentId === null || !allowed.has(segmentId) || parsed.has(segmentId)) continue;
 
-      const context = row?.context;
-      const treatment = row?.treatment;
-      const confidence = row?.confidence;
-      const reason = typeof row?.reason === 'string'
-        ? row.reason.trim().slice(0, MAX_TRANSCRIPT_CONTEXT_REASON_CHARACTERS)
+      const contextValue = compact?.[1] ?? row?.context;
+      const treatmentValue = compact?.[2] ?? row?.treatment;
+      const confidenceValue = compact?.[3] ?? row?.confidence;
+      const reasonValue = compact?.[4] ?? row?.reason;
+      const context = compact && typeof contextValue === 'string'
+        ? COMPACT_CONTEXT_LABELS[contextValue]
+        : contextValue;
+      const treatment = compact && typeof treatmentValue === 'string'
+        ? COMPACT_SUMMARY_TREATMENTS[treatmentValue]
+        : treatmentValue;
+      const confidence = compact && typeof confidenceValue === 'string'
+        ? COMPACT_CONFIDENCE_LEVELS[confidenceValue]
+        : confidenceValue;
+      const reason = typeof reasonValue === 'string'
+        ? reasonValue.trim().slice(0, MAX_TRANSCRIPT_CONTEXT_REASON_CHARACTERS)
         : '';
 
       if (

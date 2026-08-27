@@ -4,7 +4,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.11.0.
+Belum ada perubahan setelah kandidat lokal v0.11.1.
+
+## [0.11.1] - 2026-08-27
+### Fixed
+- Analisis konteks memakai format provider yang lebih ringkas dan batas output 4.096 token sehingga satu halaman berisi 50 segmen dapat diselesaikan tanpa memotong JSON.
+- Respons provider yang berakhir karena batas panjang atau tidak menghasilkan JSON valid kini mengembalikan kegagalan yang jujur dan dapat dicoba ulang, bukan 50 saran netral yang salah ditampilkan sebagai hasil siap review.
+- State review konteks kini diinisialisasi ulang melalui identitas halaman/versi segmen, sehingga perpindahan evidence tetap bersih tanpa pembaruan state sinkron di dalam effect React.
+
+### Quality
+- Normalizer tetap menerima format verbose v0.11.0 untuk kompatibilitas, tetapi memvalidasi format ringkas baru dengan allowlist konteks, perlakuan, confidence, ID, dan batas alasan yang sama.
+- Smoke test provider sintetis 50 segmen selesai dengan `finish_reason=stop`, 1.810 output token, serta 50 ID unik dan valid; tidak ada transkrip milik pengguna yang dikirim ulang untuk pengujian fix ini.
+- Seluruh 265 test, lint tanpa warning, TypeScript, production build, `git diff --check`, dan pemeriksaan literal secret pada file berubah lulus.
 
 ## [0.11.0] - 2026-08-27
 ### Added
