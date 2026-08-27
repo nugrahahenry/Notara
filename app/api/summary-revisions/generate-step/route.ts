@@ -11,8 +11,8 @@ import { authorizeAiRequest, authorizeAuthenticatedUser } from '@/lib/api/ai-acc
 import { BoundedJsonBodyError, readBoundedJsonBody } from '@/lib/api/bounded-json';
 import { readHierarchicalEvidenceSnapshot } from '@/lib/summary/hierarchical-evidence';
 import {
+  inspectMapStageOutput,
   normalizeFinalStageOutput,
-  normalizeMapStageOutput,
   normalizeReduceStageOutput,
   parseStoredClaimSet,
   serializeGroundedClaimSet,
@@ -132,11 +132,13 @@ function completionFinishReason(value: unknown): string | null {
 function reportRejectedOutput(
   stage: ClaimedStage,
   reason: 'truncated' | 'empty' | 'map-invalid' | 'reduce-invalid' | 'final-invalid',
+  structuralReason?: string,
 ) {
   console.error('[summary-revisions] hierarchical output rejected', {
     stage: stage.stageIndex,
     kind: stage.stageKind,
     reason,
+    ...(structuralReason ? { structuralReason } : {}),
   });
 }
 
@@ -232,6 +234,9 @@ export async function POST(request: NextRequest) {
         { status: progress.requestState === 'completed' ? 200 : 202 },
       );
     }
+    if (claimed.stageIndex === null || claimed.stageKind === null) {
+      throw new Error('hierarchical-stage-metadata-invalid');
+    }
 
     let prompt: string;
     let childClaimSets: GroundedClaimSet[] = [];
@@ -265,6 +270,7 @@ export async function POST(request: NextRequest) {
       prompt = buildHierarchicalReducePrompt({
         inputs: childClaimSets,
         final: claimed.stageKind === 'final',
+        stageIndex: claimed.stageIndex,
       });
     }
     if (prompt.length > MAX_CONTEXT_SUMMARY_PROMPT_CHARACTERS) {
@@ -379,18 +385,18 @@ export async function POST(request: NextRequest) {
     let storedOutput: string;
     let groundingManifest: Record<string, unknown> | null = null;
     if (claimed.stageKind === 'map') {
-      const normalized = normalizeMapStageOutput(content, claimed.ordinalStart!, claimed.ordinalEnd!);
-      if (!normalized) {
+      const inspected = inspectMapStageOutput(content, claimed.ordinalStart!, claimed.ordinalEnd!);
+      if (!inspected.ok) {
         await failStage(supabase, claimed, 'invalid_output');
-        reportRejectedOutput(claimed, 'map-invalid');
+        reportRejectedOutput(claimed, 'map-invalid', inspected.reason);
         return NextResponse.json(
           { code: 'stage_output_invalid', error: 'Klaim tahap tidak memiliki sumber yang valid.' },
           { status: 502 },
         );
       }
-      storedOutput = serializeGroundedClaimSet(normalized);
+      storedOutput = serializeGroundedClaimSet(inspected.value);
     } else if (claimed.stageKind === 'reduce') {
-      const normalized = normalizeReduceStageOutput(content, childClaims);
+      const normalized = normalizeReduceStageOutput(content, childClaims, `reduce_${claimed.stageIndex}_c`);
       if (!normalized) {
         await failStage(supabase, claimed, 'invalid_output');
         reportRejectedOutput(claimed, 'reduce-invalid');
@@ -401,7 +407,7 @@ export async function POST(request: NextRequest) {
       }
       storedOutput = serializeGroundedClaimSet(normalized);
     } else {
-      const normalized = normalizeFinalStageOutput(content, childClaims);
+      const normalized = normalizeFinalStageOutput(content, childClaims, `final_${claimed.stageIndex}_c`);
       if (!normalized) {
         await failStage(supabase, claimed, 'invalid_output');
         reportRejectedOutput(claimed, 'final-invalid');

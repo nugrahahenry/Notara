@@ -328,7 +328,7 @@ test('grounded stage parsers reject foreign ranges, invented references, unknown
   } = require('../build/lib/summary/hierarchical-output.js');
 
   const map = normalizeMapStageOutput(JSON.stringify({ claims: [{
-    id: 'm1_c1',
+    id: 'map_10_12_c1',
     text: 'Rumus y = wx + b dan angka 12.',
     kind: 'formula',
     sourceRanges: [[10, 11]],
@@ -336,7 +336,7 @@ test('grounded stage parsers reject foreign ranges, invented references, unknown
   }] }), 10, 12);
   assert.ok(map);
   assert.equal(normalizeMapStageOutput(JSON.stringify({ claims: [{
-    id: 'm1_c1', text: 'Asing', kind: 'concept', sourceRanges: [[9, 10]], inputClaimIds: [],
+    id: 'map_10_12_c2', text: 'Asing', kind: 'concept', sourceRanges: [[9, 10]], inputClaimIds: [],
   }] }), 10, 12), null);
 
   const reduced = normalizeReduceStageOutput(JSON.stringify({ claims: [{
@@ -344,7 +344,7 @@ test('grounded stage parsers reject foreign ranges, invented references, unknown
     text: 'Rumus y = wx + b dan angka 12.',
     kind: 'formula',
     sourceRanges: [[10, 11]],
-    inputClaimIds: ['m1_c1'],
+    inputClaimIds: ['map_10_12_c1'],
   }] }), map.claims);
   assert.ok(reduced);
   assert.equal(normalizeReduceStageOutput(JSON.stringify({ claims: [{
@@ -367,6 +367,185 @@ test('grounded stage parsers reject foreign ranges, invented references, unknown
       id: 'f_c1', text: 'Angka 99', kind: 'number', sourceRanges: [[10, 11]], inputClaimIds: [],
     }] },
   }), reduced.claims), null);
+});
+
+test('map output inspection recovers safe JSON wrappers and reports content-free structural failures', () => {
+  const {
+    inspectMapStageOutput,
+    normalizeMapStageOutput,
+  } = require('../build/lib/summary/hierarchical-output.js');
+  const valid = {
+    claims: [{
+      id: 'map_10_12_c1',
+      text: 'Risiko likuiditas perlu dipantau.',
+      kind: 'concept',
+      sourceRanges: [[10, 12]],
+      inputClaimIds: [],
+    }],
+  };
+
+  assert.ok(normalizeMapStageOutput(`\`\`\`json\n${JSON.stringify(valid)}\n\`\`\``, 10, 12));
+  assert.ok(normalizeMapStageOutput(JSON.stringify({ result: valid }), 10, 12));
+  assert.ok(normalizeMapStageOutput(JSON.stringify({ data: valid }), 10, 12));
+  const canonicalized = normalizeMapStageOutput(JSON.stringify({ claims: [
+    { ...valid.claims[0], id: 'm1_c1' },
+    { ...valid.claims[0], id: 'm1_c1', text: 'Likuiditas berbeda dari profitabilitas.' },
+  ] }), 10, 12);
+  assert.deepEqual(canonicalized.claims.map((claim) => claim.id), [
+    'map_10_12_c1',
+    'map_10_12_c2',
+  ]);
+  assert.equal(normalizeMapStageOutput(`Hasil:\n${JSON.stringify(valid)}`, 10, 12), null);
+  assert.equal(normalizeMapStageOutput(JSON.stringify({ result: valid, extra: true }), 10, 12), null);
+
+  assert.deepEqual(inspectMapStageOutput('{broken', 10, 12), {
+    ok: false,
+    reason: 'json-invalid',
+  });
+  assert.deepEqual(inspectMapStageOutput(JSON.stringify({ claims: [{
+    ...valid.claims[0],
+    sourceRanges: [[9, 12]],
+  }] }), 10, 12), {
+    ok: false,
+    reason: 'source-range-out-of-bounds',
+  });
+  assert.deepEqual(inspectMapStageOutput(JSON.stringify({ claims: [{
+    ...valid.claims[0],
+    sourceRanges: [['10', '12']],
+  }] }), 10, 12), {
+    ok: false,
+    reason: 'source-range-invalid',
+  });
+});
+
+test('map prompt publishes exact ordinal and identifier contracts without ambiguous placeholders', () => {
+  const { buildHierarchicalMapPrompt } = require('../build/lib/transcript/hierarchical-summary-prompt.js');
+  const prompt = buildHierarchicalMapPrompt({
+    segments: [{
+      id: 11,
+      ordinal: 10,
+      startMs: 61_000,
+      endMs: 66_000,
+      text: 'Risiko likuiditas perlu dipantau.',
+      contextLabel: 'lecturer_explanation',
+      summaryTreatment: 'include',
+    }, {
+      id: 12,
+      ordinal: 11,
+      startMs: 66_000,
+      endMs: 70_000,
+      text: 'Likuiditas berbeda dari profitabilitas.',
+      contextLabel: null,
+      summaryTreatment: null,
+    }],
+  });
+
+  assert.match(prompt, /ordinal minimum 10 dan maksimum 11/i);
+  assert.match(prompt, /map_10_11_c1/);
+  assert.match(prompt, /sourceRanges.*hanya bilangan bulat/i);
+  assert.match(prompt, /inputClaimIds.*harus selalu \[\]/i);
+  assert.match(prompt, /jangan membungkus objek di dalam result, data, atau output/i);
+  assert.doesNotMatch(prompt, /ordinal_awal|ordinal_akhir/);
+});
+
+test('reduce prompts serialize child lineage in the exact provider output shape', () => {
+  const { buildHierarchicalReducePrompt } = require('../build/lib/transcript/hierarchical-summary-prompt.js');
+  const inputs = [{ claims: [{
+    id: 'map_10_12_c1',
+    text: 'Risiko likuiditas perlu dipantau.',
+    kind: 'concept',
+    sourceRanges: [{ start: 10, end: 12 }],
+    inputClaimIds: [],
+  }] }];
+  const reducePrompt = buildHierarchicalReducePrompt({ inputs, final: false, stageIndex: 4 });
+  const finalPrompt = buildHierarchicalReducePrompt({ inputs, final: true, stageIndex: 6 });
+
+  assert.match(reducePrompt, /reduce_4_c1/);
+  assert.match(reducePrompt, /"sourceRanges":\[\[10,12\]\]/);
+  assert.match(reducePrompt, /"inputClaimIds":\["map_10_12_c1"\]/);
+  assert.doesNotMatch(reducePrompt, /"sourceRanges":\[\{"start"/);
+  assert.match(finalPrompt, /final_6_c1/);
+  assert.match(finalPrompt, /"sourceRanges":\[\[10,12\]\]/);
+});
+
+test('six-stage grounded simulation preserves distinct map ids and complete source lineage', () => {
+  const {
+    createSummaryRegenerationPlan,
+  } = require('../build/lib/summary/hierarchical-plan.js');
+  const {
+    normalizeFinalStageOutput,
+    normalizeMapStageOutput,
+    normalizeReduceStageOutput,
+  } = require('../build/lib/summary/hierarchical-output.js');
+  const segments = Array.from({ length: 3 }, (_, ordinal) => ({
+    id: ordinal + 1,
+    ordinal,
+    startMs: ordinal * 30_000,
+    endMs: (ordinal + 1) * 30_000,
+    text: `${'Konsep risiko likuiditas dan tata kelola. '.repeat(170)}Bagian ${ordinal}.`,
+    contextLabel: 'lecturer_explanation',
+    summaryTreatment: 'include',
+  }));
+  const plan = createSummaryRegenerationPlan(segments, {
+    summaryId: '8eb7b37f-f349-4bb0-888f-72e37f06187d',
+    baseSummaryContent: '# Rangkuman aktif',
+    activeRevisionId: null,
+    revisionEpoch: 0,
+    contextAnnotationIds: [],
+    productName: 'Nalira',
+  });
+  assert.equal(plan.mode, 'hierarchical');
+  assert.equal(plan.stages.length, 6);
+  assert.deepEqual(plan.stages.map((stage) => stage.kind), [
+    'map', 'map', 'map', 'reduce', 'reduce', 'final',
+  ]);
+
+  const maps = plan.stages.slice(0, 3).map((stage) => normalizeMapStageOutput(JSON.stringify({
+    claims: [{
+      id: `map_${stage.ordinalStart}_${stage.ordinalEnd}_c1`,
+      text: 'Konsep risiko likuiditas dan tata kelola.',
+      kind: 'concept',
+      sourceRanges: [[stage.ordinalStart, stage.ordinalEnd]],
+      inputClaimIds: [],
+    }],
+  }), stage.ordinalStart, stage.ordinalEnd));
+  assert.ok(maps.every(Boolean));
+  assert.equal(new Set(maps.flatMap((set) => set.claims.map((claim) => claim.id))).size, 3);
+
+  const firstReduce = normalizeReduceStageOutput(JSON.stringify({ claims: [{
+    id: 'reduce_1_c1',
+    text: 'Konsep risiko likuiditas dan tata kelola.',
+    kind: 'concept',
+    sourceRanges: [[0, 0], [1, 1]],
+    inputClaimIds: ['map_0_0_c1', 'map_1_1_c1'],
+  }] }), [...maps[0].claims, ...maps[1].claims]);
+  assert.ok(firstReduce);
+
+  const secondReduce = normalizeReduceStageOutput(JSON.stringify({ claims: [{
+    id: 'reduce_2_c1',
+    text: 'Konsep risiko likuiditas dan tata kelola.',
+    kind: 'concept',
+    sourceRanges: [[0, 0], [1, 1], [2, 2]],
+    inputClaimIds: ['reduce_1_c1', 'map_2_2_c1'],
+  }] }), [...firstReduce.claims, ...maps[2].claims]);
+  assert.ok(secondReduce);
+
+  const final = normalizeFinalStageOutput(JSON.stringify({
+    markdown: '# Materi\n## Ringkasan Singkat\nRisiko likuiditas dan tata kelola saling berkaitan.',
+    groundingManifest: { claims: [{
+      id: 'final_c1',
+      text: 'Risiko likuiditas dan tata kelola saling berkaitan.',
+      kind: 'concept',
+      sourceRanges: [[0, 0], [1, 1], [2, 2]],
+      inputClaimIds: ['reduce_2_c1'],
+    }] },
+  }), secondReduce.claims);
+  assert.ok(final);
+  assert.deepEqual(final.groundingManifest.claims[0].sourceRanges, [
+    { start: 0, end: 0 },
+    { start: 1, end: 1 },
+    { start: 2, end: 2 },
+  ]);
 });
 
 test('migration keeps candidates private and materializes only an explicitly applied active revision', () => {
@@ -489,8 +668,11 @@ test('hierarchical routes plan without provider, start exact disclosed topology,
   assert.match(step, /stage_output_truncated/);
   assert.match(step, /hierarchical output rejected/);
   assert.match(step, /reason: 'truncated'/);
-  assert.match(step, /reportRejectedOutput\(claimed, 'map-invalid'\)/);
-  assert.match(step, /normalizeMapStageOutput/);
+  assert.match(step, /reportRejectedOutput\(claimed, 'map-invalid', inspected\.reason\)/);
+  assert.match(step, /inspectMapStageOutput/);
+  assert.match(step, /structuralReason/);
+  assert.match(step, /`reduce_\$\{claimed\.stageIndex\}_c`/);
+  assert.match(step, /`final_\$\{claimed\.stageIndex\}_c`/);
   assert.match(step, /normalizeReduceStageOutput/);
   assert.match(step, /normalizeFinalStageOutput/);
   assert.match(step, /complete_hierarchical_summary_stage/);

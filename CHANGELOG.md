@@ -4,7 +4,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.14.4.
+Belum ada perubahan setelah Nalira v0.14.5.
+
+## [0.14.5] - 2026-08-28
+### Fixed
+- Output map hierarkis kini mengklasifikasikan kegagalan struktur dengan kode tetap seperti JSON rusak, bentuk klaim salah, ID tidak valid, atau rentang ordinal di luar batas. Log hanya membawa metadata tahap dan kelas kegagalan, tanpa prompt, transkrip, klaim, atau respons provider.
+- Parser menerima satu Markdown JSON fence atau satu envelope `result`/`data`/`output` yang bentuk dalamnya tetap memenuhi kontrak ketat. Prosa tambahan, field asing, string yang menyamar sebagai ordinal, rentang di luar evidence, referensi rekaan, dan ID duplikat tetap ditolak.
+- Prompt map menyebut ordinal minimum/maksimum konkret dan pola ID unik per partisi. Server mengkanonisasi ID output per tahap, sementara prompt reduce/final menyajikan `sourceRanges` dalam bentuk array yang sama dengan output tervalidasi, bukan bentuk object internal.
+
+### Security
+- Grounding tetap fail-closed: map tidak boleh memiliki input claim, reduce/final hanya boleh menunjuk child claim yang benar-benar tersedia, setiap rentang harus tercakup oleh child yang dirujuk, ID output dikembalikan ke pola canonical, dan cabang dengan ID child bertabrakan ditolak.
+- Tidak ada schema, migration, RLS, auth, secret, provider, automatic retry, candidate apply, atau raw-content logging baru. Batch lokal ini tidak mengirim request Groq.
+
+### Quality
+- Simulasi deterministik enam tahap membuktikan tiga map, dua reduce, dan satu final mempertahankan lineage semua ordinal dengan ID antarstage yang tidak bertabrakan.
+- Seluruh 288 test, ESLint, TypeScript, production build, `git diff --check`, conflict-marker scan, dan literal-secret scan lulus. Route tetap memiliki tepat satu titik fetch Groq dan tidak menambah log raw content.
 
 ## [0.14.4] - 2026-08-28
 ### Fixed
