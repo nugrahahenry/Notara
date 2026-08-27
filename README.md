@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Nalira v0.11.0 aktif di production pada commit `53969c7`; migration, RLS, autentikasi, penyimpanan keputusan, dan usage metering sudah diverifikasi. Kandidat lokal v0.12.0 menggabungkan perbaikan respons terpotong v0.11.1 dengan antrean review konteks yang lebih ringkas, dapat diprioritaskan, dan tahan terhadap kegagalan jaringan/provider. Terakhir diverifikasi: 27 Agustus 2026.
+> Status: Nalira v0.11.0 terakhir terverifikasi aktif di production pada commit `53969c7`; migration, RLS, autentikasi, penyimpanan keputusan, dan usage metering sudah diverifikasi. Kandidat lokal v0.12.1 menggabungkan perbaikan respons terpotong, antrean review konteks yang lebih ringkas, serta pengunci operasi agar analisis ulang dan penyimpanan keputusan tidak saling menimpa. Terakhir diverifikasi: 27 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.

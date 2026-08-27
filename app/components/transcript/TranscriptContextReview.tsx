@@ -156,12 +156,14 @@ export function TranscriptContextReview({
     )),
   ));
   const [drafts, setDrafts] = useState<Map<number, DraftDecision>>(new Map());
-  const [savingSegmentId, setSavingSegmentId] = useState<number | null>(null);
-  const [saveErrorSegmentId, setSaveErrorSegmentId] = useState<number | null>(null);
-  const [savedSegmentId, setSavedSegmentId] = useState<number | null>(null);
+  const [savingSegmentIds, setSavingSegmentIds] = useState<Set<number>>(() => new Set());
+  const [saveErrorSegmentIds, setSaveErrorSegmentIds] = useState<Set<number>>(() => new Set());
+  const [savedSegmentIds, setSavedSegmentIds] = useState<Set<number>>(() => new Set());
   const [reviewMode, setReviewMode] = useState<ReviewMode>('all');
   const [expandedSegmentId, setExpandedSegmentId] = useState<number | null>(null);
   const analysisAbortRef = useRef<AbortController | null>(null);
+  const annotationsRef = useRef(annotations);
+  const savingSegmentIdsRef = useRef<Set<number>>(new Set());
 
   const segmentIds = useMemo(() => segments.map((segment) => segment.id), [segments]);
   const prioritySegmentIds = useMemo(() => new Set(
@@ -182,16 +184,16 @@ export function TranscriptContextReview({
   const analyzePage = async () => {
     if (
       !contextAvailable
-      || analysisState === 'loading'
-      || savingSegmentId !== null
+      || analysisAbortRef.current !== null
+      || savingSegmentIdsRef.current.size > 0
       || segmentIds.length === 0
     ) return;
     const controller = new AbortController();
     analysisAbortRef.current = controller;
     setAnalysisState('loading');
     setAnalysisError(null);
-    setSaveErrorSegmentId(null);
-    setSavedSegmentId(null);
+    setSaveErrorSegmentIds(new Set());
+    setSavedSegmentIds(new Set());
 
     try {
       const response = await fetch('/api/transcript-context/suggest', {
@@ -216,7 +218,7 @@ export function TranscriptContextReview({
       setSuggestions(nextSuggestions);
       setDrafts(new Map(segments.map((segment) => [
         segment.id,
-        draftFrom(annotations.get(segment.id) ?? null, nextSuggestions.get(segment.id)),
+        draftFrom(annotationsRef.current.get(segment.id) ?? null, nextSuggestions.get(segment.id)),
       ])));
       setReviewMode('all');
       setExpandedSegmentId(null);
@@ -235,6 +237,7 @@ export function TranscriptContextReview({
   };
 
   const updateDraft = (segmentId: number, update: Partial<DraftDecision>) => {
+    if (analysisAbortRef.current || savingSegmentIdsRef.current.size > 0) return;
     const suggestion = suggestions.get(segmentId);
     const annotation = annotations.get(segmentId) ?? null;
     setDrafts((current) => {
@@ -246,11 +249,20 @@ export function TranscriptContextReview({
       });
       return next;
     });
-    setSavedSegmentId(null);
-    setSaveErrorSegmentId(null);
+    setSavedSegmentIds((current) => {
+      const next = new Set(current);
+      next.delete(segmentId);
+      return next;
+    });
+    setSaveErrorSegmentIds((current) => {
+      const next = new Set(current);
+      next.delete(segmentId);
+      return next;
+    });
   };
 
   const ignoreSuggestion = (segmentId: number) => {
+    if (analysisAbortRef.current || savingSegmentIdsRef.current.size > 0) return;
     setSuggestions((current) => {
       const next = new Map(current);
       next.delete(segmentId);
@@ -261,17 +273,35 @@ export function TranscriptContextReview({
       next.delete(segmentId);
       return next;
     });
-    setSavedSegmentId(null);
-    setSaveErrorSegmentId(null);
+    setSavedSegmentIds((current) => {
+      const next = new Set(current);
+      next.delete(segmentId);
+      return next;
+    });
+    setSaveErrorSegmentIds((current) => {
+      const next = new Set(current);
+      next.delete(segmentId);
+      return next;
+    });
     if (expandedSegmentId === segmentId) setExpandedSegmentId(null);
   };
 
   const saveDecision = async (segmentId: number) => {
+    if (analysisAbortRef.current || savingSegmentIdsRef.current.size > 0) return;
     const draft = drafts.get(segmentId)
       ?? draftFrom(annotations.get(segmentId) ?? null, suggestions.get(segmentId));
-    setSavingSegmentId(segmentId);
-    setSaveErrorSegmentId(null);
-    setSavedSegmentId(null);
+    savingSegmentIdsRef.current.add(segmentId);
+    setSavingSegmentIds((current) => new Set(current).add(segmentId));
+    setSaveErrorSegmentIds((current) => {
+      const next = new Set(current);
+      next.delete(segmentId);
+      return next;
+    });
+    setSavedSegmentIds((current) => {
+      const next = new Set(current);
+      next.delete(segmentId);
+      return next;
+    });
 
     try {
       const saved = await saveTranscriptContextDecision({
@@ -279,7 +309,11 @@ export function TranscriptContextReview({
         contextLabel: draft.contextLabel,
         summaryTreatment: draft.summaryTreatment,
       });
-      setAnnotations((current) => new Map(current).set(segmentId, saved));
+      setAnnotations((current) => {
+        const next = new Map(current).set(segmentId, saved);
+        annotationsRef.current = next;
+        return next;
+      });
       setSuggestions((current) => {
         const next = new Map(current);
         next.delete(segmentId);
@@ -289,12 +323,17 @@ export function TranscriptContextReview({
         contextLabel: saved.contextLabel,
         summaryTreatment: saved.summaryTreatment,
       }));
-      setExpandedSegmentId(null);
-      setSavedSegmentId(segmentId);
+      setExpandedSegmentId((current) => (current === segmentId ? null : current));
+      setSavedSegmentIds((current) => new Set(current).add(segmentId));
     } catch {
-      setSaveErrorSegmentId(segmentId);
+      setSaveErrorSegmentIds((current) => new Set(current).add(segmentId));
     } finally {
-      setSavingSegmentId(null);
+      savingSegmentIdsRef.current.delete(segmentId);
+      setSavingSegmentIds((current) => {
+        const next = new Set(current);
+        next.delete(segmentId);
+        return next;
+      });
     }
   };
 
@@ -363,7 +402,7 @@ export function TranscriptContextReview({
             !contextAvailable
             || segments.length === 0
             || analysisState === 'loading'
-            || savingSegmentId !== null
+            || savingSegmentIds.size > 0
           }
           aria-describedby="transcript-context-status"
           onClick={() => void analyzePage()}
@@ -396,8 +435,8 @@ export function TranscriptContextReview({
           const draft = drafts.get(segment.id) ?? draftFrom(annotation, suggestion);
           const showDecision = Boolean(suggestion || annotation);
           const isExpanded = expandedSegmentId === segment.id;
-          const isSaving = savingSegmentId === segment.id;
-          const controlsBusy = savingSegmentId !== null || analysisState === 'loading';
+          const isSaving = savingSegmentIds.has(segment.id);
+          const controlsBusy = savingSegmentIds.size > 0 || analysisState === 'loading';
           const decisionChanged = !annotation
             || annotation.contextLabel !== draft.contextLabel
             || annotation.summaryTreatment !== draft.summaryTreatment;
@@ -422,6 +461,7 @@ export function TranscriptContextReview({
                     data-expanded={isExpanded}
                     data-priority={suggestion ? transcriptContextNeedsPriorityReview(suggestion) : false}
                     aria-label={`Konteks bagian ${segment.ordinal + 1}`}
+                    aria-busy={isSaving}
                   >
                     <div className="notara-context-decision-summary">
                       <div>
@@ -499,8 +539,8 @@ export function TranscriptContextReview({
                             </button>
                           )}
                           <span aria-live="polite">
-                            {savedSegmentId === segment.id && 'Keputusan tersimpan sebagai versi baru.'}
-                            {saveErrorSegmentId === segment.id && 'Perubahan belum tersimpan. Pilihanmu tetap ada; coba lagi.'}
+                            {savedSegmentIds.has(segment.id) && 'Keputusan tersimpan sebagai versi baru.'}
+                            {saveErrorSegmentIds.has(segment.id) && 'Perubahan belum tersimpan. Pilihanmu tetap ada; coba lagi.'}
                           </span>
                         </div>
                     </div>

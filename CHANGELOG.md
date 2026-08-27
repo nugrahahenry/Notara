@@ -4,7 +4,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat lokal v0.12.0.
+Belum ada perubahan setelah kandidat lokal v0.12.1.
+
+## [0.12.1] - 2026-08-27
+### Fixed
+- Penyimpanan keputusan konteks memakai status per segmen dan pengunci sinkron, sehingga klik cepat atau operasi yang bertumpuk tidak dapat menukar spinner, pesan berhasil, maupun pesan gagal antarbagian.
+- Analisis ulang membekukan perubahan keputusan sejak request dimulai dan membangun draft hasil dari anotasi terbaru, sehingga respons lama tidak dapat menimpa keputusan yang baru tersimpan.
+
+### Accessibility
+- Setiap editor keputusan mengumumkan status sibuknya melalui `aria-busy`, sementara kontrol lain tetap terkunci selama penyimpanan atau analisis berlangsung.
+
+### Quality
+- Kontrak race-condition untuk penyimpanan dan analisis ulang dilindungi focused test; seluruh 266 test, lint tanpa warning, TypeScript, production build, `git diff --check`, pemeriksaan secret boundary, dan detector Impeccable lulus.
 
 ## [0.12.0] - 2026-08-27
 ### Added

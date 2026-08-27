@@ -207,7 +207,10 @@ test('Transcript Evidence keeps context review inline, explicit, and reversible'
   assert.match(contextReview, /Simpan keputusan/);
   assert.match(contextReview, /Abaikan usulan/);
   assert.doesNotMatch(contextReview, /setSuggestions\(new Map\(\)\)/);
-  assert.match(contextReview, /controlsBusy = savingSegmentId !== null \|\| analysisState === 'loading'/);
+  assert.match(contextReview, /controlsBusy = savingSegmentIds\.size > 0 \|\| analysisState === 'loading'/);
+  assert.match(contextReview, /analysisAbortRef\.current \|\| savingSegmentIdsRef\.current\.size > 0/);
+  assert.match(contextReview, /annotationsRef\.current\.get\(segment\.id\)/);
+  assert.match(contextReview, /aria-busy=\{isSaving\}/);
   assert.match(contextReview, /Cek lebih dulu/);
   assert.match(contextReview, /aria-expanded/);
   assert.match(contextReview, /analysisAbortRef/);
