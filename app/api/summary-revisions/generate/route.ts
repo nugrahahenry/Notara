@@ -22,7 +22,10 @@ import {
 import { createClient } from '@/lib/supabase-server';
 import { normalizeTranscriptContextAnnotation } from '@/lib/transcript/context';
 import type { TranscriptContextAnnotation } from '@/lib/transcript/context';
-import { buildContextAwareSummaryPrompt } from '@/lib/transcript/context-summary-prompt';
+import {
+  buildContextAwareSummaryPrompt,
+  MAX_CONTEXT_SUMMARY_PROMPT_CHARACTERS,
+} from '@/lib/transcript/context-summary-prompt';
 import { normalizeTranscriptEvidenceSegment } from '@/lib/transcript/evidence';
 import type { TranscriptEvidenceSegment } from '@/lib/transcript/evidence';
 
@@ -31,7 +34,7 @@ const MAX_REGENERATION_TRANSCRIPT_CHARACTERS = 300_000;
 const SEGMENT_PAGE_SIZE = 500;
 const ANNOTATION_BATCH_SIZE = 100;
 const REGENERATION_TIMEOUT_MS = 45_000;
-const MAX_REGENERATION_OUTPUT_TOKENS = 4_096;
+const MAX_REGENERATION_OUTPUT_TOKENS = 1_536;
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -62,6 +65,11 @@ function statusForFailureCode(code: SummaryRegenerationFailureCode | null): numb
   if (code === 'provider_timeout' || code === 'generation_timeout') return 504;
   if (code === 'provider_failed' || code === 'invalid_output') return 502;
   return 500;
+}
+
+function statusForProviderResponse(status: number): number {
+  if (status === 413 || status === 429 || status === 503) return status;
+  return 502;
 }
 
 async function failRequest(
@@ -258,6 +266,16 @@ export async function POST(request: NextRequest) {
         };
       }),
     });
+    if (prompt.length > MAX_CONTEXT_SUMMARY_PROMPT_CHARACTERS) {
+      await failRequest(supabase, reservation.requestId, 'provider_failed');
+      return NextResponse.json(
+        {
+          code: 'provider_input_too_large',
+          error: 'Materi terlalu panjang untuk satu preview pada paket AI saat ini.',
+        },
+        { status: 413 },
+      );
+    }
 
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey) {
@@ -280,6 +298,7 @@ export async function POST(request: NextRequest) {
           model: GROQ_LLM_MODEL,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.15,
+          reasoning_effort: 'low',
           max_tokens: MAX_REGENERATION_OUTPUT_TOKENS,
         }),
         signal: AbortSignal.timeout(REGENERATION_TIMEOUT_MS),
@@ -292,7 +311,10 @@ export async function POST(request: NextRequest) {
     if (!providerResponse.ok) {
       console.error('[summary-revisions] provider request failed', { status: providerResponse.status });
       await failRequest(supabase, reservation.requestId, 'provider_failed');
-      return NextResponse.json({ error: 'Nalira belum berhasil membuat preview.' }, { status: 502 });
+      return NextResponse.json(
+        { error: 'Nalira belum berhasil membuat preview.' },
+        { status: statusForProviderResponse(providerResponse.status) },
+      );
     }
 
     let providerData: unknown;

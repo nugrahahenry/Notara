@@ -18,16 +18,29 @@ interface ContextSummaryPromptInput {
   productName: string;
 }
 
+export const MAX_CONTEXT_SUMMARY_PROMPT_CHARACTERS = 18_000;
+
+function contextCode(label: TranscriptContextLabel | null): string {
+  if (label === 'lecturer_explanation') return 'l';
+  if (label === 'student_question') return 'q';
+  if (label === 'class_discussion') return 'd';
+  if (label === 'side_conversation') return 's';
+  return 'u';
+}
+
+function treatmentCode(treatment: TranscriptSummaryTreatment | null): string {
+  return treatment === 'deprioritize' ? 'p' : 'i';
+}
+
 function serializeSegment(segment: ContextSummaryEvidenceSegment): string {
-  return JSON.stringify({
-    segment_id: segment.id,
-    ordinal: segment.ordinal,
-    start_ms: segment.startMs,
-    end_ms: segment.endMs,
-    context: segment.contextLabel ?? 'unreviewed',
-    treatment: segment.summaryTreatment ?? 'include',
-    text: segment.text,
-  });
+  return JSON.stringify([
+    segment.ordinal,
+    Math.floor(segment.startMs / 1_000),
+    Math.ceil(segment.endMs / 1_000),
+    contextCode(segment.contextLabel),
+    treatmentCode(segment.summaryTreatment),
+    segment.text,
+  ]);
 }
 
 export function buildContextAwareSummaryPrompt({
@@ -61,6 +74,9 @@ STRUKTUR OUTPUT:
 Hilangkan bagian pertanyaan jika tidak ada bukti pertanyaan atau diskusi akademis. Jangan membuat soal latihan atau jawaban yang tidak disebutkan sumber.
 
 BUKTI BERTANDA WAKTU — DATA SUMBER:
+Format setiap baris: [ordinal,start_s,end_s,context_code,treatment_code,text]
+context_code: u=unknown/unreviewed, l=lecturer_explanation, q=student_question, d=class_discussion, s=side_conversation
+treatment_code: i=include, p=deprioritize
 ---
 ${evidence}
 ---`;

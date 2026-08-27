@@ -4,7 +4,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat lokal v0.13.0.
+Belum ada perubahan setelah Nalira v0.13.1.
+
+## [0.13.1] - 2026-08-27
+### Fixed
+- Evidence bertimestamp untuk preview rangkuman kini memakai array berkode yang ringkas tanpa menghapus teks, urutan, waktu, label konteks, atau treatment. Pada materi Fintech production, perkiraan payload evidence turun dari 35.747 menjadi 12.692 karakter.
+- Preview membatasi output ke 1.536 token dan memakai reasoning rendah agar satu request tetap berada di bawah batas 8.000 token per menit paket gratis Groq. Prompt yang masih melampaui 18.000 karakter ditolak sebelum provider dipanggil, tanpa pemotongan bukti diam-diam.
+- Status provider 413, 429, dan 503 kini dipetakan ke recovery state yang sesuai alih-alih selalu tampil sebagai kegagalan 502 generik.
+
+### Security
+- Browser tetap hanya mengirim ID materi dan idempotency key. Pemadatan terjadi server-side setelah ownership check, reservation, dan pembacaan evidence owner; tidak ada transkrip, provider body, credential, atau raw error baru yang ditulis ke log.
+
+### Quality
+- Kegagalan production pertama terdokumentasi sebagai satu request `provider_failed` tanpa candidate dan tanpa usage event; rangkuman aktif tidak berubah. Focused contract test melindungi format evidence, batas prompt, output budget, reasoning mode, dan fail-fast sebelum Groq.
 
 ## [0.13.0] - 2026-08-27
 ### Added
@@ -23,7 +35,7 @@ Belum ada perubahan setelah kandidat lokal v0.13.0.
 ### Quality
 - Seluruh 274 test lulus. Migration PostgreSQL 18 dijalankan pada database sementara dan smoke test membuktikan reserve, candidate tanpa overwrite, apply atomik, restore, RLS dua owner, serta privilege mutation; database uji kemudian dihentikan dan dihapus.
 - Full ESLint, TypeScript, dan production build lulus. Impeccable detector menemukan satu side-accent baru yang langsung diganti dengan border netral; temuan lain berasal dari dashboard legacy di luar scope revision studio.
-- Checkpoint lokal ini tidak menerapkan migration production, deploy, push, atau menjalankan Groq dengan materi pengguna.
+- Migration dan source v0.13.0 diterapkan ke production sebelum acceptance. Satu percobaan Groq dengan materi Fintech kemudian ditolak provider dengan HTTP 413 tanpa candidate, usage event, apply, atau perubahan rangkuman aktif; perbaikan kompatibel berada di v0.13.1.
 
 ## [0.12.1] - 2026-08-27
 ### Fixed
