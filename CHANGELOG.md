@@ -4,7 +4,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.14.1.
+Belum ada perubahan setelah Nalira v0.14.2.
+
+## [0.14.2] - 2026-08-28
+### Fixed
+- Tahap rangkuman hierarkis mendapat ruang output sedikit lebih besar agar JSON grounded yang padat dapat selesai, sementara normalisasi tetap membatasi hasil tersimpan maksimal 5.000 karakter.
+- Respons provider yang terpotong, kosong, atau gagal validasi kini menghasilkan kode kegagalan tetap dan log metadata aman tanpa transkrip, prompt, maupun isi respons provider.
+- Retry tahap gagal tidak lagi tampak tercakup dalam jumlah tahap awal. Antarmuka menjelaskan bahwa setiap retry menambah satu request Groq dan meminta konfirmasi kedua sebelum request dikirim.
+
+### Quality
+- Acceptance production `AI1.m4a` membuktikan perbaikan v0.14.1: seluruh 28 bagian transkripsi tersimpan sebagai materi privat 54:14 dengan 2.696 kata, lalu workflow hierarkis merencanakan enam tahap tanpa mengubah rangkuman aktif.
+- Tahap pertama selesai. Tahap kedua menerima respons provider tetapi ditolak sebagai output tidak valid; workflow berhenti aman pada 1/6 dan tidak di-retry karena persetujuan awal dibatasi maksimal enam request.
+- Seluruh 283 test, ESLint, TypeScript, production build, `git diff --check`, scan literal secret, dan detector Impeccable lulus.
 
 ## [0.14.1] - 2026-08-27
 ### Fixed

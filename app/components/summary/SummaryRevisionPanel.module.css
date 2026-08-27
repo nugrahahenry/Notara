@@ -129,6 +129,23 @@
   gap: 8px;
 }
 
+.retryConfirmation {
+  display: flex;
+  max-width: 46rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.retryConfirmation > span {
+  flex: 1 1 18rem;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 .headerCopy h2 {
   margin: 5px 0 0;
   color: var(--text-primary) !important;
@@ -461,6 +478,8 @@
   .progressActions .secondaryButton { width: 100%; }
   .workflowProgress { grid-template-columns: minmax(0, 1fr); }
   .progressActions { justify-content: stretch; }
+  .retryConfirmation,
+  .retryConfirmation > span { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

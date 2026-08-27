@@ -486,6 +486,10 @@ test('hierarchical routes plan without provider, start exact disclosed topology,
   assert.match(step, /requestId: claimed\.attemptId/);
   assert.match(step, /provider_timeout_ambiguous/);
   assert.match(step, /response_format: \{ type: 'json_object' \}/);
+  assert.match(step, /stage_output_truncated/);
+  assert.match(step, /hierarchical output rejected/);
+  assert.match(step, /reason: 'truncated'/);
+  assert.match(step, /reportRejectedOutput\(claimed, 'map-invalid'\)/);
   assert.match(step, /normalizeMapStageOutput/);
   assert.match(step, /normalizeReduceStageOutput/);
   assert.match(step, /normalizeFinalStageOutput/);
@@ -553,8 +557,11 @@ test('revision studio keeps candidates private until an explicit user action app
   assert.match(panel, /restore_accepted/);
   assert.doesNotMatch(panel, /useEffect\([\s\S]{0,400}applySummaryRevision/);
   assert.match(panel, /Materi ini membutuhkan \{hierarchicalPlan\.plannedCalls\} tahap/);
+  assert.match(panel, /Setiap percobaan ulang menambah 1 request/);
   assert.match(panel, /Menutup tab akan menjeda proses/);
-  assert.match(panel, /Ulangi tahap/);
+  assert.match(panel, /Ulangi tahap \(\+1 request\)/);
+  assert.match(panel, /Konfirmasi 1 request tambahan/);
+  assert.match(panel, /Batal retry/);
   assert.match(panel, /Dijeda aman\. Progres tersimpan/);
   assert.match(panel, /role="progressbar"/);
   assert.match(panel, /aria-valuemax=\{hierarchicalProgress\.stageCount\}/);

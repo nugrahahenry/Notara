@@ -115,10 +115,29 @@ function completionContent(value: unknown): string | null {
   const choices = data?.choices;
   if (!Array.isArray(choices) || choices.length !== 1) return null;
   const choice = record(choices[0]);
-  if (!choice || choice.finish_reason === 'length') return null;
+  if (!choice) return null;
   const message = record(choice.message);
   const content = typeof message?.content === 'string' ? message.content.trim() : '';
   return content || null;
+}
+
+function completionFinishReason(value: unknown): string | null {
+  const data = record(value);
+  const choices = data?.choices;
+  if (!Array.isArray(choices) || choices.length !== 1) return null;
+  const choice = record(choices[0]);
+  return typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
+}
+
+function reportRejectedOutput(
+  stage: ClaimedStage,
+  reason: 'truncated' | 'empty' | 'map-invalid' | 'reduce-invalid' | 'final-invalid',
+) {
+  console.error('[summary-revisions] hierarchical output rejected', {
+    stage: stage.stageIndex,
+    kind: stage.stageKind,
+    reason,
+  });
 }
 
 function nextStepAtFromHeaders(headers: Headers): string {
@@ -338,10 +357,23 @@ export async function POST(request: NextRequest) {
       ...(usage ?? {}),
     }), { bypassed: false });
 
+    const finishReason = completionFinishReason(providerData);
+    if (finishReason === 'length') {
+      await failStage(supabase, claimed, 'invalid_output');
+      reportRejectedOutput(claimed, 'truncated');
+      return NextResponse.json(
+        { code: 'stage_output_truncated', error: 'Hasil tahap terpotong sebelum JSON selesai.' },
+        { status: 502 },
+      );
+    }
     const content = completionContent(providerData);
     if (!content) {
       await failStage(supabase, claimed, 'invalid_output');
-      return NextResponse.json({ error: 'Hasil tahap belum selesai dengan utuh.' }, { status: 502 });
+      reportRejectedOutput(claimed, 'empty');
+      return NextResponse.json(
+        { code: 'stage_output_empty', error: 'Hasil tahap belum selesai dengan utuh.' },
+        { status: 502 },
+      );
     }
     const childClaims = childClaimSets.flatMap((set) => set.claims);
     let storedOutput: string;
@@ -350,21 +382,33 @@ export async function POST(request: NextRequest) {
       const normalized = normalizeMapStageOutput(content, claimed.ordinalStart!, claimed.ordinalEnd!);
       if (!normalized) {
         await failStage(supabase, claimed, 'invalid_output');
-        return NextResponse.json({ error: 'Klaim tahap tidak memiliki sumber yang valid.' }, { status: 502 });
+        reportRejectedOutput(claimed, 'map-invalid');
+        return NextResponse.json(
+          { code: 'stage_output_invalid', error: 'Klaim tahap tidak memiliki sumber yang valid.' },
+          { status: 502 },
+        );
       }
       storedOutput = serializeGroundedClaimSet(normalized);
     } else if (claimed.stageKind === 'reduce') {
       const normalized = normalizeReduceStageOutput(content, childClaims);
       if (!normalized) {
         await failStage(supabase, claimed, 'invalid_output');
-        return NextResponse.json({ error: 'Reduksi tahap kehilangan rujukan sumber.' }, { status: 502 });
+        reportRejectedOutput(claimed, 'reduce-invalid');
+        return NextResponse.json(
+          { code: 'stage_output_invalid', error: 'Reduksi tahap kehilangan rujukan sumber.' },
+          { status: 502 },
+        );
       }
       storedOutput = serializeGroundedClaimSet(normalized);
     } else {
       const normalized = normalizeFinalStageOutput(content, childClaims);
       if (!normalized) {
         await failStage(supabase, claimed, 'invalid_output');
-        return NextResponse.json({ error: 'Rangkuman akhir belum memiliki grounding yang valid.' }, { status: 502 });
+        reportRejectedOutput(claimed, 'final-invalid');
+        return NextResponse.json(
+          { code: 'stage_output_invalid', error: 'Rangkuman akhir belum memiliki grounding yang valid.' },
+          { status: 502 },
+        );
       }
       storedOutput = normalized.markdown;
       groundingManifest = JSON.parse(serializeGroundedClaimSet(normalized.groundingManifest));

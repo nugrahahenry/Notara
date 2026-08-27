@@ -98,6 +98,7 @@ export function SummaryRevisionPanel({
   const [hierarchicalPlan, setHierarchicalPlan] = useState<SummaryRegenerationPlanView | null>(null);
   const [hierarchicalProgress, setHierarchicalProgress] = useState<HierarchicalSummaryProgress | null>(null);
   const [hierarchicalPaused, setHierarchicalPaused] = useState(true);
+  const [retryConfirmationStageId, setRetryConfirmationStageId] = useState<string | null>(null);
   const [applyingRevisionId, setApplyingRevisionId] = useState<string | null>(null);
   const [restoreConfirmationId, setRestoreConfirmationId] = useState<string | null>(null);
   const [notice, setNotice] = useState<PanelNotice | null>(null);
@@ -265,6 +266,7 @@ export function SummaryRevisionPanel({
       });
       if (!mountedRef.current) return;
       setHierarchicalProgress(updated);
+      setRetryConfirmationStageId(null);
       if (updated.candidate) {
         setCandidate(updated.candidate);
         setActiveRevisionId(updated.activeRevisionId);
@@ -304,7 +306,12 @@ export function SummaryRevisionPanel({
       if (!mountedRef.current) return;
       setPausedState(true);
       const requestError = error instanceof SummaryRevisionRequestError ? error : null;
-      const copy = getSummaryRevisionErrorCopy(requestError?.status ?? 500, requestError?.code);
+      const copy = requestError?.code === 'stage_output_truncated'
+        ? {
+          title: 'Tahap terpotong sebelum selesai',
+          detail: 'Progres sebelumnya tetap aman. Percobaan ulang memakai 1 request Groq tambahan.',
+        }
+        : getSummaryRevisionErrorCopy(requestError?.status ?? 500, requestError?.code);
       setNotice({
         tone: 'error',
         title: requestError?.status === 429 ? 'Tahap menunggu batas provider' : copy.title,
@@ -549,7 +556,8 @@ export function SummaryRevisionPanel({
           <div>
             <h3 id={`hierarchical-plan-${summaryId}`}>Materi ini membutuhkan {hierarchicalPlan.plannedCalls} tahap</h3>
             <p>
-              Maksimal {hierarchicalPlan.plannedCalls} request dikirim satu per satu ke Groq dengan pacing paket gratis.
+              {hierarchicalPlan.plannedCalls} request direncanakan untuk {hierarchicalPlan.plannedCalls} tahap bila setiap tahap berhasil sekali jalan.
+              Setiap percobaan ulang menambah 1 request Groq setelah konfirmasi.
               Menutup tab akan menjeda proses; tahap yang selesai tetap tersimpan privat.
             </p>
           </div>
@@ -571,7 +579,9 @@ export function SummaryRevisionPanel({
             <strong>{hierarchicalProgress.completedStageCount} dari {hierarchicalProgress.stageCount} tahap selesai</strong>
             <span>
               {hierarchicalProgress.failedStageId
-                ? 'Tahap gagal menunggu keputusanmu.'
+                ? hierarchicalProgress.failureCode === 'invalid_output'
+                  ? 'Format hasil belum utuh. Retry tidak berjalan otomatis.'
+                  : 'Tahap gagal menunggu keputusanmu.'
                 : hierarchicalPaused ? 'Dijeda aman. Progres tersimpan.' : 'Berjalan satu tahap pada satu waktu.'}
             </span>
           </div>
@@ -587,18 +597,51 @@ export function SummaryRevisionPanel({
           </div>
           <div className={styles.progressActions}>
             {hierarchicalProgress.failedStageId ? (
-              <button
-                type="button"
-                className={styles.primaryButton}
-                disabled={busy}
-                onClick={() => {
-                  setPausedState(false);
-                  void runHierarchicalStep(hierarchicalProgress, hierarchicalProgress.failedStageId);
-                }}
-              >
-                <RefreshCw size={16} aria-hidden="true" />
-                Ulangi tahap
-              </button>
+              retryConfirmationStageId === hierarchicalProgress.failedStageId ? (
+                <div className={styles.retryConfirmation} role="group" aria-label="Konfirmasi 1 request tambahan">
+                  <span>Retry ini mengirim 1 request tambahan ke Groq. Rangkuman aktif tetap aman.</span>
+                  <button
+                    type="button"
+                    className={styles.primaryButton}
+                    disabled={busy}
+                    onClick={() => {
+                      const stageId = hierarchicalProgress.failedStageId;
+                      setRetryConfirmationStageId(null);
+                      setPausedState(false);
+                      void runHierarchicalStep(hierarchicalProgress, stageId);
+                    }}
+                  >
+                    <RefreshCw size={16} aria-hidden="true" />
+                    Kirim 1 request tambahan
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    disabled={busy}
+                    onClick={() => setRetryConfirmationStageId(null)}
+                  >
+                    Batal retry
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  disabled={busy}
+                  onClick={() => {
+                    setPausedState(true);
+                    setRetryConfirmationStageId(hierarchicalProgress.failedStageId);
+                    setNotice({
+                      tone: 'warning',
+                      title: 'Konfirmasi 1 request tambahan',
+                      detail: 'Retry hanya berjalan setelah kamu menekan tombol konfirmasi di bawah.',
+                    });
+                  }}
+                >
+                  <RefreshCw size={16} aria-hidden="true" />
+                  Ulangi tahap (+1 request)
+                </button>
+              )
             ) : hierarchicalPaused ? (
               <button type="button" className={styles.primaryButton} disabled={busy} onClick={handleResumeHierarchy}>
                 <Play size={16} aria-hidden="true" />

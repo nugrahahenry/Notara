@@ -12,7 +12,9 @@ export const MAX_HIERARCHICAL_SOURCE_CHARACTERS = 90_000;
 export const MAX_HIERARCHICAL_MAP_EVIDENCE_CHARACTERS = 12_000;
 export const MAX_HIERARCHICAL_PLANNED_CALLS = 24;
 export const MAX_HIERARCHICAL_STAGE_OUTPUT_CHARACTERS = 5_000;
-export const MAX_HIERARCHICAL_STAGE_OUTPUT_TOKENS = 1_024;
+// Leave enough generation headroom for grounded JSON to close cleanly on dense
+// maps. Normalization still enforces the 5,000-character storage ceiling.
+export const MAX_HIERARCHICAL_STAGE_OUTPUT_TOKENS = 1_280;
 export const HIERARCHICAL_REDUCER_FAN_IN = 2;
 
 export type HierarchicalPlanMode = 'single' | 'hierarchical' | 'unsupported';
