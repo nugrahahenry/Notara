@@ -4,11 +4,25 @@ import { supabase } from '@/lib/supabase';
 import {
   MAX_SUMMARY_REVISIONS,
   normalizeAppliedSummaryRevision,
+  normalizeHierarchicalSummaryProgress,
   normalizeSummaryRevision,
   type AppliedSummaryRevision,
+  type HierarchicalSummaryProgress,
   type SummaryRevision,
   type SummaryRevisionApplyRequest,
 } from './revisions';
+
+export interface SummaryRegenerationPlanView {
+  mode: 'single' | 'hierarchical' | 'unsupported';
+  planVersion: string;
+  planDigest: string;
+  plannedCalls: number;
+  sourceCharacters: number;
+  unsupportedReason: string | null;
+  pacingSeconds: number;
+  destination: 'Groq';
+  progress: HierarchicalSummaryProgress | null;
+}
 
 const REVISION_FIELDS = [
   'id',
@@ -49,6 +63,121 @@ async function readResponseBody(response: Response): Promise<Record<string, unkn
   } catch {
     return {};
   }
+}
+
+async function postRevisionRequest(
+  path: string,
+  payload: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<{ response: Response; body: Record<string, unknown> }> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch {
+    throw new SummaryRevisionRequestError('summary-revision-network-failed', null);
+  }
+  const body = await readResponseBody(response);
+  if (!response.ok) {
+    throw new SummaryRevisionRequestError(
+      typeof body.error === 'string' ? body.error : 'summary-revision-request-failed',
+      response.status,
+      typeof body.code === 'string' ? body.code : null,
+    );
+  }
+  return { response, body };
+}
+
+export async function readSummaryRegenerationPlan(
+  summaryId: string,
+  signal?: AbortSignal,
+): Promise<SummaryRegenerationPlanView> {
+  const { body } = await postRevisionRequest(
+    '/api/summary-revisions/plan',
+    { summaryId },
+    signal,
+  );
+  const mode = body.mode;
+  const planVersion = typeof body.planVersion === 'string' ? body.planVersion : '';
+  const planDigest = typeof body.planDigest === 'string' ? body.planDigest : '';
+  const plannedCalls = Number(body.plannedCalls);
+  const sourceCharacters = Number(body.sourceCharacters);
+  const unsupportedReason = body.unsupportedReason === null
+    ? null
+    : typeof body.unsupportedReason === 'string' ? body.unsupportedReason : undefined;
+  const pacingSeconds = Number(body.pacingSeconds);
+  const progress = body.progress === null || body.progress === undefined
+    ? null
+    : normalizeHierarchicalSummaryProgress([body.progress]);
+  if (
+    (mode !== 'single' && mode !== 'hierarchical' && mode !== 'unsupported')
+    || !planVersion
+    || !/^[0-9a-f]{64}$/.test(planDigest)
+    || !Number.isSafeInteger(plannedCalls)
+    || plannedCalls < 0
+    || plannedCalls > 24
+    || !Number.isSafeInteger(sourceCharacters)
+    || sourceCharacters < 0
+    || unsupportedReason === undefined
+    || !Number.isSafeInteger(pacingSeconds)
+    || pacingSeconds < 1
+    || body.destination !== 'Groq'
+    || (body.progress && !progress)
+  ) throw new SummaryRevisionRequestError('summary-revision-response-invalid', 502);
+  return {
+    mode,
+    planVersion,
+    planDigest,
+    plannedCalls,
+    sourceCharacters,
+    unsupportedReason,
+    pacingSeconds,
+    destination: 'Groq',
+    progress,
+  };
+}
+
+export async function startHierarchicalSummaryRevision({
+  summaryId,
+  clientRequestId,
+  planDigest,
+}: {
+  summaryId: string;
+  clientRequestId: string;
+  planDigest: string;
+}): Promise<HierarchicalSummaryProgress> {
+  const { body } = await postRevisionRequest('/api/summary-revisions/start', {
+    summaryId,
+    clientRequestId,
+    planDigest,
+  });
+  const progress = normalizeHierarchicalSummaryProgress([body.progress]);
+  if (!progress) throw new SummaryRevisionRequestError('summary-revision-response-invalid', 502);
+  return progress;
+}
+
+export async function generateHierarchicalSummaryStep({
+  requestId,
+  clientStepId,
+  retryStageId = null,
+}: {
+  requestId: string;
+  clientStepId: string;
+  retryStageId?: string | null;
+}): Promise<HierarchicalSummaryProgress> {
+  const { body } = await postRevisionRequest('/api/summary-revisions/generate-step', {
+    requestId,
+    clientStepId,
+    intent: retryStageId ? 'retry_failed' : 'continue',
+    retryStageId,
+  });
+  const progress = normalizeHierarchicalSummaryProgress([body.progress]);
+  if (!progress) throw new SummaryRevisionRequestError('summary-revision-response-invalid', 502);
+  return progress;
 }
 
 export async function readSummaryRevisionHistory(

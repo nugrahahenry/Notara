@@ -19,9 +19,22 @@ function findRevisionMigration() {
   return read(path.join('supabase', 'migrations', migrationName));
 }
 
+function findHierarchicalMigration() {
+  const migrationDir = path.join(projectRoot, 'supabase', 'migrations');
+  const migrationName = fs.readdirSync(migrationDir)
+    .filter((name) => name.endsWith('_add_hierarchical_summary_workflow.sql'))
+    .sort()
+    .at(-1);
+  assert.ok(migrationName, 'versioned hierarchical workflow migration must exist');
+  return read(path.join('supabase', 'migrations', migrationName));
+}
+
 test('summary revision requests and apply payloads reject malformed identifiers and intent', () => {
   const {
+    parseHierarchicalSummaryStartRequest,
+    parseHierarchicalSummaryStepRequest,
     parseSummaryRegenerationRequest,
+    parseSummaryRegenerationPlanRequest,
     parseSummaryRevisionApplyRequest,
   } = require('../build/lib/summary/revisions.js');
 
@@ -61,6 +74,31 @@ test('summary revision requests and apply payloads reject malformed identifiers 
     }),
     /invalid/i,
   );
+  assert.deepEqual(parseSummaryRegenerationPlanRequest({
+    summaryId: '8eb7b37f-f349-4bb0-888f-72e37f06187d',
+  }), { summaryId: '8eb7b37f-f349-4bb0-888f-72e37f06187d' });
+  assert.deepEqual(parseHierarchicalSummaryStartRequest({
+    summaryId: '8eb7b37f-f349-4bb0-888f-72e37f06187d',
+    clientRequestId: 'edc9b2e0-07f0-4207-b199-d91cf3679c4a',
+    planDigest: 'a'.repeat(64),
+  }).planDigest, 'a'.repeat(64));
+  assert.deepEqual(parseHierarchicalSummaryStepRequest({
+    requestId: '17',
+    clientStepId: 'edc9b2e0-07f0-4207-b199-d91cf3679c4a',
+    intent: 'retry_failed',
+    retryStageId: '9a8e93b1-cf3e-4091-8b3d-486ffb1aa8f1',
+  }), {
+    requestId: '17',
+    clientStepId: 'edc9b2e0-07f0-4207-b199-d91cf3679c4a',
+    intent: 'retry_failed',
+    retryStageId: '9a8e93b1-cf3e-4091-8b3d-486ffb1aa8f1',
+  });
+  assert.throws(() => parseHierarchicalSummaryStepRequest({
+    requestId: '17',
+    clientStepId: 'edc9b2e0-07f0-4207-b199-d91cf3679c4a',
+    intent: 'continue',
+    retryStageId: '9a8e93b1-cf3e-4091-8b3d-486ffb1aa8f1',
+  }), /invalid/i);
 });
 
 test('summary revision normalizers fail closed and preserve bounded candidate metadata', () => {
@@ -194,6 +232,143 @@ test('context-aware summary prompt stays compact enough for a bounded free-tier 
   assert.equal(prompt.match(/Perbankan dan fintech dibahas\./g)?.length, 234);
 });
 
+test('hierarchical planner preserves every ordinal and discloses a bounded deterministic call tree', () => {
+  const {
+    createSummaryRegenerationPlan,
+    MAX_HIERARCHICAL_PLANNED_CALLS,
+    verifyPlanCoverage,
+  } = require('../build/lib/summary/hierarchical-plan.js');
+  const segments = Array.from({ length: 180 }, (_, ordinal) => ({
+    id: ordinal + 1,
+    ordinal,
+    startMs: ordinal * 30_000,
+    endMs: (ordinal + 1) * 30_000,
+    text: `${'Konsep perbankan digital dan risiko likuiditas. '.repeat(9)} Bagian ${ordinal}.`,
+    contextLabel: ordinal % 20 === 0 ? 'lecturer_explanation' : null,
+    summaryTreatment: ordinal % 20 === 0 ? 'include' : null,
+  }));
+  const context = {
+    summaryId: '8eb7b37f-f349-4bb0-888f-72e37f06187d',
+    baseSummaryContent: '# Rangkuman aktif',
+    activeRevisionId: '9a8e93b1-cf3e-4091-8b3d-486ffb1aa8f1',
+    revisionEpoch: 3,
+    contextAnnotationIds: [14, 11],
+    productName: 'Nalira',
+  };
+  const plan = createSummaryRegenerationPlan(segments, context);
+  const replay = createSummaryRegenerationPlan(segments, {
+    ...context,
+    contextAnnotationIds: [11, 14],
+  });
+
+  assert.equal(plan.mode, 'hierarchical');
+  assert.ok(plan.plannedCalls > 1 && plan.plannedCalls <= MAX_HIERARCHICAL_PLANNED_CALLS);
+  assert.equal(plan.stages.at(-1).kind, 'final');
+  assert.equal(verifyPlanCoverage(plan, segments), true);
+  assert.equal(plan.planDigest, replay.planDigest);
+  const changedEvidence = createSummaryRegenerationPlan([
+    { ...segments[0], text: segments[0].text.replace('Konsep', 'Topikk') },
+    ...segments.slice(1),
+  ], context);
+  assert.notEqual(plan.planDigest, changedEvidence.planDigest);
+  assert.notEqual(plan.planDigest, createSummaryRegenerationPlan(segments, {
+    ...context,
+    baseSummaryContent: '# Rangkuman aktif berubah',
+  }).planDigest);
+  assert.equal(new Set(plan.stages.map((stage) => stage.stageIndex)).size, plan.stages.length);
+});
+
+test('hierarchical planner fails before transmission for gaps, pathological segments, and over-cap evidence', () => {
+  const {
+    createSummaryRegenerationPlan,
+    MAX_HIERARCHICAL_MAP_EVIDENCE_CHARACTERS,
+    MAX_HIERARCHICAL_SOURCE_CHARACTERS,
+  } = require('../build/lib/summary/hierarchical-plan.js');
+  const context = {
+    summaryId: '8eb7b37f-f349-4bb0-888f-72e37f06187d',
+    baseSummaryContent: '# Rangkuman aktif',
+    activeRevisionId: null,
+    revisionEpoch: 0,
+    contextAnnotationIds: [],
+    productName: 'Nalira',
+  };
+  const segment = (ordinal, text) => ({
+    id: ordinal + 1,
+    ordinal,
+    startMs: ordinal * 1_000,
+    endMs: ordinal * 1_000 + 900,
+    text,
+    contextLabel: null,
+    summaryTreatment: null,
+  });
+
+  assert.equal(
+    createSummaryRegenerationPlan([segment(0, 'a'), segment(2, 'b')], context).unsupportedReason,
+    'ordinal-discontinuity',
+  );
+  assert.equal(
+    createSummaryRegenerationPlan([
+      segment(0, 'x'.repeat(MAX_HIERARCHICAL_MAP_EVIDENCE_CHARACTERS + 8_000)),
+    ], context).unsupportedReason,
+    'segment-too-large',
+  );
+  assert.equal(
+    createSummaryRegenerationPlan([
+      segment(0, 'x'.repeat(MAX_HIERARCHICAL_SOURCE_CHARACTERS + 1)),
+    ], context).unsupportedReason,
+    'evidence-too-large',
+  );
+});
+
+test('grounded stage parsers reject foreign ranges, invented references, unknown fields, and ungrounded numbers', () => {
+  const {
+    normalizeFinalStageOutput,
+    normalizeMapStageOutput,
+    normalizeReduceStageOutput,
+  } = require('../build/lib/summary/hierarchical-output.js');
+
+  const map = normalizeMapStageOutput(JSON.stringify({ claims: [{
+    id: 'm1_c1',
+    text: 'Rumus y = wx + b dan angka 12.',
+    kind: 'formula',
+    sourceRanges: [[10, 11]],
+    inputClaimIds: [],
+  }] }), 10, 12);
+  assert.ok(map);
+  assert.equal(normalizeMapStageOutput(JSON.stringify({ claims: [{
+    id: 'm1_c1', text: 'Asing', kind: 'concept', sourceRanges: [[9, 10]], inputClaimIds: [],
+  }] }), 10, 12), null);
+
+  const reduced = normalizeReduceStageOutput(JSON.stringify({ claims: [{
+    id: 'r1_c1',
+    text: 'Rumus y = wx + b dan angka 12.',
+    kind: 'formula',
+    sourceRanges: [[10, 11]],
+    inputClaimIds: ['m1_c1'],
+  }] }), map.claims);
+  assert.ok(reduced);
+  assert.equal(normalizeReduceStageOutput(JSON.stringify({ claims: [{
+    id: 'r1_c1', text: 'Rekaan', kind: 'number', sourceRanges: [[10, 11]], inputClaimIds: ['asing'],
+  }] }), map.claims), null);
+
+  assert.ok(normalizeFinalStageOutput(JSON.stringify({
+    markdown: '# 📝 Materi\n## 🎯 Ringkasan Singkat\nRumus y = wx + b dan angka 12.',
+    groundingManifest: { claims: [{
+      id: 'f_c1',
+      text: 'Rumus y = wx + b dan angka 12.',
+      kind: 'formula',
+      sourceRanges: [[10, 11]],
+      inputClaimIds: ['r1_c1'],
+    }] },
+  }), reduced.claims));
+  assert.equal(normalizeFinalStageOutput(JSON.stringify({
+    markdown: '# Materi\nAngka 99',
+    groundingManifest: { claims: [{
+      id: 'f_c1', text: 'Angka 99', kind: 'number', sourceRanges: [[10, 11]], inputClaimIds: [],
+    }] },
+  }), reduced.claims), null);
+});
+
 test('migration keeps candidates private and materializes only an explicitly applied active revision', () => {
   const sql = findRevisionMigration();
 
@@ -256,6 +431,68 @@ test('migration RPC grants are explicit and direct revision mutation stays revok
   assert.match(sql, /CREATE INDEX idx_summary_regeneration_requests_summary_started[\s\S]*\(summary_id, started_at DESC\)/i);
 });
 
+test('hierarchical migration keeps stage content private, tenant-bound, resumable, and explicitly retryable', () => {
+  const sql = findHierarchicalMigration();
+
+  assert.match(sql, /ADD COLUMN workflow_kind TEXT NOT NULL DEFAULT 'single'/i);
+  assert.match(sql, /ADD COLUMN plan_digest TEXT/i);
+  assert.match(sql, /CREATE TABLE public\.summary_regeneration_stages/i);
+  assert.match(sql, /FOREIGN KEY \(request_id, summary_id, user_id\)[\s\S]*ON DELETE CASCADE/i);
+  assert.match(sql, /UNIQUE \(request_id, stage_index\)/i);
+  assert.match(sql, /UNIQUE \(request_id, client_step_id\)/i);
+  assert.match(sql, /CARDINALITY\(input_stage_ids\) <= 2/i);
+  assert.match(sql, /state IN \('queued', 'generating', 'completed', 'failed'\)/i);
+  assert.match(sql, /provider_timeout_ambiguous/i);
+  assert.match(sql, /CREATE UNIQUE INDEX idx_summary_regeneration_one_active_hierarchy/i);
+  assert.match(sql, /FOR UPDATE SKIP LOCKED/i);
+  assert.match(sql, /attempt_count >= 5/i);
+  assert.match(sql, /CREATE TRIGGER guard_hierarchical_generation_timeout/i);
+  assert.match(sql, /COALESCE\(OLD\.last_progress_at, OLD\.started_at\)[\s\S]*INTERVAL '24 hours'/i);
+  assert.match(sql, /CREATE TRIGGER scrub_terminal_hierarchical_stage_output/i);
+  assert.match(sql, /UPDATE public\.summary_regeneration_stages AS stage[\s\S]*SET output_text = NULL, grounding_manifest = NULL/i);
+  assert.match(sql, /ALTER TABLE public\.summary_regeneration_stages ENABLE ROW LEVEL SECURITY/i);
+  assert.match(sql, /REVOKE ALL ON TABLE public\.summary_regeneration_stages[\s\S]*authenticated/i);
+  assert.doesNotMatch(sql, /GRANT (SELECT|INSERT|UPDATE|DELETE)[\s\S]*summary_regeneration_stages[\s\S]*authenticated/i);
+  for (const fn of [
+    'start_hierarchical_summary_regeneration',
+    'claim_hierarchical_summary_stage',
+    'complete_hierarchical_summary_stage',
+    'fail_hierarchical_summary_stage',
+    'read_hierarchical_summary_progress',
+    'read_hierarchical_summary_request',
+  ]) {
+    assert.match(sql, new RegExp(`REVOKE EXECUTE ON FUNCTION public\\.${fn}[\\s\\S]*FROM PUBLIC, anon, authenticated, service_role`, 'i'));
+    assert.match(sql, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}[\\s\\S]*TO authenticated`, 'i'));
+  }
+  assert.doesNotMatch(sql, /GRANT EXECUTE[\s\S]*TO anon/i);
+  assert.doesNotMatch(sql, /raw_audio|audio_blob|voiceprint|speaker_name/i);
+});
+
+test('hierarchical routes plan without provider, start exact disclosed topology, and call Groq at most once per step', () => {
+  const plan = read('app/api/summary-revisions/plan/route.ts');
+  const start = read('app/api/summary-revisions/start/route.ts');
+  const step = read('app/api/summary-revisions/generate-step/route.ts');
+
+  assert.match(plan, /authorizeAuthenticatedUser\(\)/);
+  assert.match(plan, /createSummaryRegenerationPlan/);
+  assert.doesNotMatch(plan, /api\.groq\.com|GROQ_API_KEY|authorizeAiRequest\('regenerate'\)/);
+  assert.match(start, /plan\.planDigest !== input\.planDigest/);
+  assert.match(start, /start_hierarchical_summary_regeneration/);
+  assert.doesNotMatch(start, /api\.groq\.com|GROQ_API_KEY/);
+
+  assert.match(step, /claim_hierarchical_summary_stage/);
+  assert.ok(step.indexOf('claim_hierarchical_summary_stage') < step.indexOf("authorizeAiRequest('regenerate')"));
+  assert.equal((step.match(/fetch\('https:\/\/api\.groq\.com/g) ?? []).length, 1);
+  assert.match(step, /requestId: claimed\.attemptId/);
+  assert.match(step, /provider_timeout_ambiguous/);
+  assert.match(step, /response_format: \{ type: 'json_object' \}/);
+  assert.match(step, /normalizeMapStageOutput/);
+  assert.match(step, /normalizeReduceStageOutput/);
+  assert.match(step, /normalizeFinalStageOutput/);
+  assert.match(step, /complete_hierarchical_summary_stage/);
+  assert.doesNotMatch(step, /console\.(log|error)\([^\n]*(prompt|content|providerData|transcript)/i);
+});
+
 test('error copy keeps the active summary truthful across conflicts and provider failures', () => {
   const { getSummaryRevisionErrorCopy } = require('../build/lib/summary/revisions.js');
 
@@ -315,6 +552,14 @@ test('revision studio keeps candidates private until an explicit user action app
   assert.match(panel, /Jadikan aktif\?/);
   assert.match(panel, /restore_accepted/);
   assert.doesNotMatch(panel, /useEffect\([\s\S]{0,400}applySummaryRevision/);
+  assert.match(panel, /Materi ini membutuhkan \{hierarchicalPlan\.plannedCalls\} tahap/);
+  assert.match(panel, /Menutup tab akan menjeda proses/);
+  assert.match(panel, /Ulangi tahap/);
+  assert.match(panel, /Dijeda aman\. Progres tersimpan/);
+  assert.match(panel, /role="progressbar"/);
+  assert.match(panel, /aria-valuemax=\{hierarchicalProgress\.stageCount\}/);
+  assert.match(panel, /setPausedState\(true\)/);
+  assert.doesNotMatch(panel, /transcript:\s|content:\s*currentSummary/);
 
   assert.match(dashboard, /key={`\$\{selectedSummary\.id\}:\$\{selectedSummary\.revision_epoch \?\? 0\}`}/);
   assert.match(dashboard, /<SummaryRevisionPanel/);

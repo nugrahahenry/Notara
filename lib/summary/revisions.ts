@@ -13,6 +13,13 @@ export type SummaryRegenerationFailureCode =
   | 'invalid_output'
   | 'generation_timeout'
   | 'internal_error';
+export type HierarchicalStageFailureCode =
+  | 'provider_unavailable'
+  | 'provider_failed'
+  | 'provider_rate_limited'
+  | 'provider_timeout_ambiguous'
+  | 'invalid_output'
+  | 'internal_error';
 
 export interface SummaryRevision {
   id: string;
@@ -28,6 +35,38 @@ export interface SummaryRevision {
 export interface SummaryRegenerationRequest {
   summaryId: string;
   clientRequestId: string;
+}
+
+export interface SummaryRegenerationPlanRequest {
+  summaryId: string;
+}
+
+export interface HierarchicalSummaryStartRequest extends SummaryRegenerationRequest {
+  planDigest: string;
+}
+
+export interface HierarchicalSummaryStepRequest {
+  requestId: string;
+  clientStepId: string;
+  intent: 'continue' | 'retry_failed';
+  retryStageId: string | null;
+}
+
+export interface HierarchicalSummaryProgress {
+  requestId: string;
+  clientRequestId: string;
+  planVersion: string;
+  planDigest: string;
+  requestState: 'generating' | 'completed' | 'failed';
+  stageCount: number;
+  completedStageCount: number;
+  nextStepAt: string | null;
+  failedStageId: string | null;
+  failedStageKind: 'map' | 'reduce' | 'final' | null;
+  failureCode: HierarchicalStageFailureCode | null;
+  candidate: SummaryRevision | null;
+  activeRevisionId: string;
+  revisionEpoch: number;
 }
 
 export interface SummaryRevisionApplyRequest {
@@ -83,6 +122,16 @@ const FAILURE_CODES = new Set<SummaryRegenerationFailureCode>([
   'generation_timeout',
   'internal_error',
 ]);
+const HIERARCHICAL_FAILURE_CODES = new Set<HierarchicalStageFailureCode>([
+  'provider_unavailable',
+  'provider_failed',
+  'provider_rate_limited',
+  'provider_timeout_ambiguous',
+  'invalid_output',
+  'internal_error',
+]);
+const HIERARCHICAL_STAGE_KINDS = new Set(['map', 'reduce', 'final']);
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -145,6 +194,51 @@ export function parseSummaryRegenerationRequest(
     throw new Error('Invalid summary regeneration request.');
   }
   return { summaryId, clientRequestId };
+}
+
+export function parseSummaryRegenerationPlanRequest(
+  value: unknown,
+): SummaryRegenerationPlanRequest {
+  const body = record(value);
+  const summaryId = uuid(body?.summaryId);
+  if (!summaryId) throw new Error('Invalid summary regeneration plan request.');
+  return { summaryId };
+}
+
+export function parseHierarchicalSummaryStartRequest(
+  value: unknown,
+): HierarchicalSummaryStartRequest {
+  const request = parseSummaryRegenerationRequest(value);
+  const body = record(value);
+  const planDigest = typeof body?.planDigest === 'string' && SHA256_PATTERN.test(body.planDigest)
+    ? body.planDigest
+    : null;
+  if (!planDigest) throw new Error('Invalid hierarchical summary start request.');
+  return { ...request, planDigest };
+}
+
+export function parseHierarchicalSummaryStepRequest(
+  value: unknown,
+): HierarchicalSummaryStepRequest {
+  const body = record(value);
+  const normalizedRequestId = requestId(body?.requestId);
+  const clientStepId = uuid(body?.clientStepId);
+  const intent = body?.intent;
+  const retryStageId = nullableUuid(body?.retryStageId);
+  if (
+    !normalizedRequestId
+    || !clientStepId
+    || (intent !== 'continue' && intent !== 'retry_failed')
+    || retryStageId === undefined
+    || (intent === 'continue' && retryStageId !== null)
+    || (intent === 'retry_failed' && retryStageId === null)
+  ) throw new Error('Invalid hierarchical summary step request.');
+  return {
+    requestId: normalizedRequestId,
+    clientStepId,
+    intent,
+    retryStageId,
+  };
 }
 
 export function parseSummaryRevisionApplyRequest(
@@ -320,6 +414,99 @@ export function normalizeCompletedSummaryRevision(value: unknown): SummaryRevisi
     created_at: row.created_at,
     accepted_at: null,
   });
+}
+
+export function normalizeHierarchicalSummaryProgress(
+  value: unknown,
+): HierarchicalSummaryProgress | null {
+  if (!Array.isArray(value) || value.length !== 1) return null;
+  const row = record(value[0]);
+  if (!row) return null;
+  const normalizedRequestId = requestId(row.request_id ?? row.requestId);
+  const clientRequestId = uuid(row.client_request_id ?? row.clientRequestId);
+  const planVersion = nonEmptyText(row.plan_version ?? row.planVersion, 100);
+  const planDigest = typeof (row.plan_digest ?? row.planDigest) === 'string'
+    && SHA256_PATTERN.test((row.plan_digest ?? row.planDigest) as string)
+    ? (row.plan_digest ?? row.planDigest) as string
+    : null;
+  const requestState = row.request_state ?? row.requestState;
+  const stageCount = nonNegativeInteger(row.stage_count ?? row.stageCount);
+  const completedStageCount = nonNegativeInteger(
+    row.completed_stage_count ?? row.completedStageCount,
+  );
+  const nextStepValue = row.next_step_at ?? row.nextStepAt;
+  const nextStepAt = nextStepValue === null || nextStepValue === undefined
+    ? null
+    : typeof nextStepValue === 'string' ? nextStepValue : undefined;
+  const failedStageId = nullableUuid(row.failed_stage_id ?? row.failedStageId);
+  const failedStageKindValue = row.failed_stage_kind ?? row.failedStageKind;
+  const failedStageKind = failedStageKindValue === null || failedStageKindValue === undefined
+    ? null
+    : typeof failedStageKindValue === 'string'
+      && HIERARCHICAL_STAGE_KINDS.has(failedStageKindValue)
+      ? failedStageKindValue as HierarchicalSummaryProgress['failedStageKind']
+      : undefined;
+  const failureValue = row.failure_code ?? row.failureCode;
+  const failureCode = failureValue === null || failureValue === undefined
+    ? null
+    : typeof failureValue === 'string'
+      && HIERARCHICAL_FAILURE_CODES.has(failureValue as HierarchicalStageFailureCode)
+      ? failureValue as HierarchicalStageFailureCode
+      : undefined;
+  const activeRevisionId = uuid(row.active_revision_id ?? row.activeRevisionId);
+  const revisionEpoch = nonNegativeInteger(row.revision_epoch ?? row.revisionEpoch);
+
+  if (
+    !normalizedRequestId
+    || !clientRequestId
+    || !planVersion
+    || !planDigest
+    || typeof requestState !== 'string'
+    || !REQUEST_STATES.has(requestState as HierarchicalSummaryProgress['requestState'])
+    || stageCount === null
+    || stageCount < 2
+    || stageCount > 24
+    || completedStageCount === null
+    || completedStageCount > stageCount
+    || nextStepAt === undefined
+    || failedStageId === undefined
+    || failedStageKind === undefined
+    || failureCode === undefined
+    || Boolean(failedStageId) !== Boolean(failureCode)
+    || !activeRevisionId
+    || revisionEpoch === null
+  ) return null;
+
+  const candidateId = nullableUuid(row.candidate_revision_id ?? row.candidateRevisionId);
+  if (candidateId === undefined) return null;
+  const candidate = candidateId ? normalizeSummaryRevision({
+    revision_id: candidateId,
+    revision_version: row.candidate_version ?? row.candidateVersion,
+    revision_content: row.candidate_content ?? row.candidateContent,
+    revision_state: row.candidate_state ?? row.candidateState,
+    parent_revision_id: row.candidate_parent_revision_id ?? row.candidateParentRevisionId,
+    source_kind: 'context_regeneration',
+    created_at: row.candidate_created_at ?? row.candidateCreatedAt,
+    accepted_at: null,
+  }) : null;
+  if (candidateId && !candidate) return null;
+
+  return {
+    requestId: normalizedRequestId,
+    clientRequestId,
+    planVersion,
+    planDigest,
+    requestState: requestState as HierarchicalSummaryProgress['requestState'],
+    stageCount,
+    completedStageCount,
+    nextStepAt,
+    failedStageId,
+    failedStageKind,
+    failureCode,
+    candidate,
+    activeRevisionId,
+    revisionEpoch,
+  };
 }
 
 export function normalizeAppliedSummaryRevision(

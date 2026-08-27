@@ -27,7 +27,7 @@
 
 .headerCopy { min-width: 0; }
 
-.eyebrow {
+.privacyLabel {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -36,6 +36,97 @@
   font-weight: 850;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+}
+
+.workflowDisclosure,
+.workflowProgress {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+  margin-top: 22px;
+  border-block: 1px solid var(--border-strong);
+  background: color-mix(in srgb, var(--knowledge-accent) 4%, var(--surface-canvas));
+  padding: 18px;
+}
+
+.workflowDisclosure h3,
+.progressCopy strong {
+  display: block;
+  color: var(--text-primary) !important;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.workflowDisclosure p,
+.progressCopy span {
+  display: block;
+  max-width: 70ch;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.workflowDisclosure dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--border-subtle);
+}
+
+.workflowDisclosure dl > div {
+  min-width: 0;
+  background: var(--surface-canvas);
+  padding: 11px 12px;
+}
+
+.workflowDisclosure dt {
+  color: var(--text-tertiary);
+  font-size: 9px;
+  font-weight: 820;
+}
+
+.workflowDisclosure dd {
+  margin-top: 3px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.workflowDisclosure > .primaryButton { justify-self: start; }
+
+.workflowProgress {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.progressCopy { min-width: 0; }
+
+.progressTrack {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--knowledge-accent) 12%, var(--surface-tool));
+}
+
+.progressTrack > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--knowledge-accent);
+}
+
+.progressActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .headerCopy h2 {
@@ -361,6 +452,15 @@
   .historyList > li { grid-template-columns: auto minmax(0, 1fr); }
   .historyActions { grid-column: 2; justify-content: flex-start; }
   .restoreConfirmation { flex-wrap: wrap; justify-content: flex-start; }
+  .workflowDisclosure,
+  .workflowProgress { padding: 16px 0; }
+  .workflowDisclosure dl { grid-template-columns: minmax(0, 1fr); }
+  .workflowDisclosure > .primaryButton,
+  .progressActions,
+  .progressActions .primaryButton,
+  .progressActions .secondaryButton { width: 100%; }
+  .workflowProgress { grid-template-columns: minmax(0, 1fr); }
+  .progressActions { justify-content: stretch; }
 }
 
 @media (prefers-reduced-motion: reduce) {

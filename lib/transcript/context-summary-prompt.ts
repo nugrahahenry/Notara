@@ -32,7 +32,9 @@ function treatmentCode(treatment: TranscriptSummaryTreatment | null): string {
   return treatment === 'deprioritize' ? 'p' : 'i';
 }
 
-function serializeSegment(segment: ContextSummaryEvidenceSegment): string {
+export function serializeContextSummaryEvidenceSegment(
+  segment: ContextSummaryEvidenceSegment,
+): string {
   return JSON.stringify([
     segment.ordinal,
     Math.floor(segment.startMs / 1_000),
@@ -47,7 +49,7 @@ export function buildContextAwareSummaryPrompt({
   segments,
   productName,
 }: ContextSummaryPromptInput): string {
-  const evidence = segments.map(serializeSegment).join('\n');
+  const evidence = segments.map(serializeContextSummaryEvidenceSegment).join('\n');
 
   return `Anda adalah penyusun materi belajar bernama ${productName}. Buat satu rangkuman baru dalam Bahasa Indonesia berdasarkan bukti bertanda waktu berikut.
 

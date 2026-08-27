@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Nalira v0.13.1 memperbaiki batas request preview rangkuman pada paket gratis Groq setelah migration, RLS, deployment v0.13.0, dan compatibility smoke production terverifikasi. Preview tetap privat dan tidak mengubah rangkuman aktif sebelum explicit apply. Terakhir diverifikasi: 27 Agustus 2026.
+> Status: Nalira v0.14.0 menambahkan source lokal untuk preview rangkuman kelas panjang yang bertahap, grounded, resumable, dan tetap privat. Migration production, deploy, serta provider acceptance belum dijalankan; production terakhir yang terverifikasi tetap v0.13.1. Terakhir diverifikasi lokal: 27 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -17,7 +17,7 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform; rangkuman dibuat sekali dari transkrip gabungan.
 - Saat material disimpan, Nalira menyimpan processing run dan segmen bertimestamp secara privat serta idempoten. Timestamp antarchunk tetap mengacu ke posisi rekaman asal, dan pemilik dapat meninjau status kualitas, alasan peringatan, serta segmen bertanda waktu melalui pagination.
 - Pemilik dapat meminta usulan konteks berbasis teks untuk maksimal satu halaman transkrip, memprioritaskan usulan yang meragukan, membuka satu editor pada satu waktu, mengubah atau mengabaikannya, lalu menyimpan keputusan append-only per segmen. Usulan ini tidak mengenali suara.
-- Sejak v0.13.0, keputusan tersimpan dapat digunakan untuk membuat preview rangkuman privat. v0.13.1 memadatkan evidence tanpa membuang teks dan menolak prompt yang tetap terlalu besar sebelum provider dipanggil. Preview tidak mengubah Guided, Tanya Materi, copy, ekspor, share, atau public link sampai pemilik memilih “Gunakan versi ini”; versi accepted sebelumnya tetap dapat dipulihkan.
+- Keputusan tersimpan dapat digunakan untuk membuat preview rangkuman privat. Materi pendek tetap memakai jalur single-call v0.13.1; source v0.14.0 menghitung seluruh evidence lebih dulu dan, bila perlu, menawarkan maksimal 24 tahap berurutan tanpa sampling. Jumlah request, destination, pacing, progress, pause/resume, dan retry eksplisit terlihat sebelum/dalam proses. Preview tidak mengubah Guided, Tanya Materi, copy, ekspor, share, atau public link sampai pemilik memilih “Gunakan versi ini”.
 - Folder/mata kuliah, pencarian, pengelolaan rangkuman, ekspor Word, dan riwayat chat.
 - Chat streaming dengan scope satu rangkuman, satu folder, atau koleksi pengguna.
 - Study Canvas, Study Dock, serta slot Learning Lab untuk konsep, rumus, visual, quiz, dan pembicara sudah memiliki fondasi UI; kemampuan analisis Learning Lab belum tersedia.
@@ -47,6 +47,11 @@ Pemilik → buat preview rangkuman → /api/summary-revisions/generate
                                    ├─ reserve idempotent + baca ulang evidence/keputusan owner-only
                                    └─ candidate privat → bandingkan → explicit apply/restore RPC
                                                                       └─ summaries.summary tetap canonical
+
+Materi panjang → /api/summary-revisions/plan (tanpa provider)
+                 └─ explicit confirm → /start (tanpa provider)
+                                      └─ /generate-step (maks. satu call per tahap)
+                                           └─ klaim grounded → reduksi → candidate privat
 
 Chat dashboard → /api/chat → Groq LLM streaming (SSE)
 Auth, data, RLS, share, dan grup → Supabase
@@ -112,6 +117,7 @@ npm run build
 - Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`. Hardening billing berada di `supabase/migrations/20260813125948_harden_billing_security.sql`.
 - Evidence transkrip berada di `supabase/migrations/20260818181455_persist_transcript_evidence.sql` dan sudah aktif di project Supabase production. RLS owner-only, grant authenticated, RPC persistence, serta satu Capture nyata telah diverifikasi; perubahan berikutnya tetap harus diuji pada project yang benar.
 - Review konteks transkrip berada di `supabase/migrations/20260826204521_add_review_first_transcript_context.sql` dan sudah aktif di project Supabase production. Privilege, RLS, isolasi pemilik, RPC append-only, constraint usage, serta satu keputusan nyata telah diverifikasi.
+- Preview rangkuman panjang berada di `supabase/migrations/20260827203244_add_hierarchical_summary_workflow.sql`. Migration ini lulus PostgreSQL 18 fresh/upgrade smoke secara lokal, termasuk resumability melewati timeout single-call 10 menit dan lazy expiry plus output scrub setelah 24 jam, tetapi **belum** diterapkan ke Supabase production.
 - Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, saat ini `https://nalira-hengs.vercel.app`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://nalira-hengs.vercel.app/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
 - Jangan menjalankan `supabase/schema.sql` secara utuh pada project live; ia historis dan memiliki urutan/policy yang tidak aman untuk dipakai sebagai migrasi canonical.
 - Deploy di Vercel setelah environment variable tersedia pada target environment. Perubahan migrasi, RLS, atau billing harus diverifikasi dulu di lingkungan yang aman.
@@ -125,14 +131,14 @@ npm run build
 - Speaker diarization, pengenalan/identitas suara, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan. Review konteks hanya mengklasifikasikan fungsi akademik segmen dari teks dan urutan waktu; sejak v0.13.0 keputusan tersimpan dapat dipakai untuk membuat candidate rangkuman, tetapi tetap bukan pengenalan suara atau identitas pembicara.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
-- Endpoint API AI sudah memvalidasi sesi dan memakai rate limit per pengguna; kuota harian/berdasarkan tier, sinyal IP, dan kontrol penyalahgunaan multi-akun belum tersedia.
+- Endpoint API AI sudah memvalidasi sesi dan memakai rate limit per pengguna. Jalur panjang memakai pacing konservatif sekitar 125 detik per tahap agar tetap berada di bawah limiter regenerasi saat ini; browser harus tetap terbuka ketika pengguna ingin tahapan berlanjut. Worker background, kuota harian/berdasarkan tier, sinyal IP, dan kontrol penyalahgunaan multi-akun belum tersedia.
 - Audit dependency v0.8.1 bersih pada runtime dan seluruh tree. Pertahankan versi Next.js serta konfigurasi lint secara exact dan tetap review setiap perubahan dependency sebelum deployment.
 - Hardening billing sudah siap di source, tetapi belum aktif di production sampai secret server tersedia di Vercel, migration privilege/RLS diterapkan ke project yang benar, dan smoke test webhook serta checkout lulus.
 
 ## Roadmap terdekat
 
-1. Dogfood review konteks pada materi nyata dan nilai apakah label serta alasan membantu tanpa menganggapnya sebagai pengenalan suara atau identitas.
-2. Kembangkan fitur yang masih satu domain dalam satu batch lokal, lalu jalankan QA terpadu sebelum satu checkpoint push/deploy; jangan memublikasikan setiap perubahan kecil secara terpisah.
+1. Setelah approval terpisah, terapkan migration v0.14.0 ke Supabase production lalu deploy source yang sama; audit privilege/RLS sebelum satu pun provider call panjang.
+2. Lakukan satu acceptance terukur pada materi panjang dengan jumlah tahap yang diungkap UI. Jangan menjalankan real multi-call test tanpa konfirmasi baru atas materi, destination Groq, dan maksimum call.
 3. Saat kelas online berikutnya tersedia, lakukan acceptance `Tab Zoom / Meet` dengan memilih satu tab Chrome yang sedang mengeluarkan suara dan mengaktifkan audio tab.
 4. Selesaikan acceptance preview → gunakan → pulihkan pada satu materi nyata sebelum memperluas regenerasi ke transkrip kelas panjang atau menghubungkannya ke workstream Learning System/Brand.
 

@@ -9,6 +9,31 @@ export type AiAuthorizationResult =
   | { ok: true; userId: string; bypassed: boolean }
   | { ok: false; response: Response };
 
+export async function authorizeAuthenticatedUser(): Promise<AiAuthorizationResult> {
+  const supabase = await createClient();
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user?.id) {
+      return {
+        ok: false,
+        response: Response.json(
+          { code: 'unauthorized', error: 'Sesi tidak valid. Silakan login kembali.' },
+          { status: 401 },
+        ),
+      };
+    }
+    return { ok: true, userId: data.user.id, bypassed: false };
+  } catch {
+    return {
+      ok: false,
+      response: Response.json(
+        { code: 'unauthorized', error: 'Sesi tidak valid. Silakan login kembali.' },
+        { status: 401 },
+      ),
+    };
+  }
+}
+
 export async function authorizeAiRequest(
   operation: AiOperation,
 ): Promise<AiAuthorizationResult> {

@@ -4,7 +4,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.13.1.
+Belum ada perubahan setelah Nalira v0.14.0.
+
+## [0.14.0] - 2026-08-27
+### Added
+- Materi yang melampaui batas single-call kini memiliki planner deterministik `single`/`hierarchical`/`unsupported`, partisi evidence lengkap tanpa sampling, pohon reduksi biner maksimal 24 tahap, dan digest SHA-256 yang mengikat rangkuman aktif, evidence, keputusan konteks, prompt, serta topologi.
+- Jalur panjang baru memakai endpoint plan/start/generate-step. Plan dan start tidak memanggil provider; setiap generate-step mengklaim tepat satu tahap dan melakukan maksimal satu request Groq.
+- State workflow dan tahap tersimpan secara resumable. Tahap yang selesai dipakai ulang, tab yang ditutup menjeda proses, timeout ambigu serta 429 tidak diulang otomatis, dan retry tahap gagal selalu eksplisit.
+- Output map/reduce memakai klaim JSON dengan jenis, rentang ordinal, dan referensi turunan. Final Markdown membawa grounding manifest privat; angka, formula, dan pertanyaan tanpa rujukan ditolak.
+
+### Security
+- Migration baru menambah composite tenant boundary, RLS, direct-table revoke, narrow owner-only RPC, unique active workflow, bounded lease/attempt, output digest, serta scrubbing intermediate content setelah candidate final terbentuk.
+- Browser hanya mengirim summary/request/step ID, plan digest, dan intent retry. Transcript, prompt, claim content, provider response, credential, dan raw error tidak masuk payload browser atau log.
+
+### Accessibility
+- Revision Panel mengungkap jumlah request maksimum, destination, ukuran evidence, pacing paket gratis, progress tahap yang benar-benar selesai, pause/resume, dan explicit retry dengan live-region serta progressbar semantik.
+- Kontrol tetap bertarget minimal 44 px, mobile menumpuk satu kolom, reduced motion dihormati, dan pengguna dapat meminta jeda saat satu tahap masih berjalan.
+
+### Quality
+- Satu gelombang QA awal menemukan tiga fixture alias CommonJS dan memperbaikinya dalam satu fix wave. Evaluasi akhir lulus 280/280 test, ESLint tanpa warning, TypeScript, production build, dan detector Impeccable.
+- PostgreSQL 18 temporary upgrade menjalankan seluruh migration berurutan. Functional smoke membuktikan start, claim, complete, fail, explicit retry, final candidate, exact-request resume, active-workflow release, cross-owner denial, privilege matrix, dan intermediate-output scrub. Uji lifecycle tambahan memastikan workflow hierarkis tidak ikut timeout single-call pada menit ke-10, lalu benar-benar ditutup dan dibersihkan setelah 24 jam; database sementara kemudian dihapus.
+- Source dan migration v0.14.0 masih lokal. Tidak ada migration production, push, deploy, atau provider call nyata pada checkpoint ini.
 
 ## [0.13.1] - 2026-08-27
 ### Fixed

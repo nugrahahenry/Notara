@@ -6,6 +6,8 @@ import {
   History,
   LoaderCircle,
   LockKeyhole,
+  Pause,
+  Play,
   RefreshCw,
   RotateCcw,
   Sparkles,
@@ -20,13 +22,18 @@ import {
 } from 'react';
 import {
   applySummaryRevision,
+  generateHierarchicalSummaryStep,
   generateSummaryRevision,
+  readSummaryRegenerationPlan,
   readSummaryRevisionHistory,
+  startHierarchicalSummaryRevision,
+  type SummaryRegenerationPlanView,
   SummaryRevisionRequestError,
 } from '@/lib/summary/revision-reader';
 import {
   getSummaryRevisionErrorCopy,
   type AppliedSummaryRevision,
+  type HierarchicalSummaryProgress,
   type SummaryRevision,
 } from '@/lib/summary/revisions';
 import styles from './SummaryRevisionPanel.module.css';
@@ -86,17 +93,38 @@ export function SummaryRevisionPanel({
   const [revisionEpoch, setRevisionEpoch] = useState(revisionEpochProp);
   const [pendingClientRequestId, setPendingClientRequestId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPlanning, setIsPlanning] = useState(false);
+  const [hierarchicalPlan, setHierarchicalPlan] = useState<SummaryRegenerationPlanView | null>(null);
+  const [hierarchicalProgress, setHierarchicalProgress] = useState<HierarchicalSummaryProgress | null>(null);
+  const [hierarchicalPaused, setHierarchicalPaused] = useState(true);
   const [applyingRevisionId, setApplyingRevisionId] = useState<string | null>(null);
   const [restoreConfirmationId, setRestoreConfirmationId] = useState<string | null>(null);
   const [notice, setNotice] = useState<PanelNotice | null>(null);
   const mountedRef = useRef(true);
   const actionInFlightRef = useRef(false);
+  const hierarchicalBusyRef = useRef(false);
+  const hierarchicalPausedRef = useRef(true);
+  const hierarchicalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const runHierarchicalStepRef = useRef<((
+    progress: HierarchicalSummaryProgress,
+    retryStageId?: string | null,
+  ) => Promise<void>) | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      if (hierarchicalTimerRef.current) clearTimeout(hierarchicalTimerRef.current);
     };
+  }, []);
+
+  const setPausedState = useCallback((value: boolean) => {
+    hierarchicalPausedRef.current = value;
+    setHierarchicalPaused(value);
+    if (value && hierarchicalTimerRef.current) {
+      clearTimeout(hierarchicalTimerRef.current);
+      hierarchicalTimerRef.current = null;
+    }
   }, []);
 
   const refreshHistory = useCallback(async () => {
@@ -135,6 +163,30 @@ export function SummaryRevisionPanel({
       active = false;
     };
   }, [enabled, summaryId]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    void readSummaryRegenerationPlan(summaryId, controller.signal)
+      .then((plan) => {
+        if (!mountedRef.current || !plan.progress) return;
+        setHierarchicalPlan(plan);
+        setHierarchicalProgress(plan.progress);
+        setPausedState(true);
+        if (plan.progress.candidate) setCandidate(plan.progress.candidate);
+        if (plan.progress.requestState === 'generating') {
+          setNotice({
+            tone: plan.progress.failedStageId ? 'warning' : 'info',
+            title: plan.progress.failedStageId ? 'Satu tahap perlu diulang' : 'Preview panjang dijeda',
+            detail: plan.progress.failedStageId
+              ? 'Tahap yang gagal tidak diulang otomatis. Periksa lalu pilih “Ulangi tahap”.'
+              : `Progres ${plan.progress.completedStageCount} dari ${plan.progress.stageCount} tahap tersimpan. Lanjutkan saat siap.`,
+          });
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [enabled, setPausedState, summaryId]);
 
   const handleGenerate = async () => {
     if (!enabled || actionInFlightRef.current || isGenerating || applyingRevisionId) return;
@@ -185,6 +237,187 @@ export function SummaryRevisionPanel({
       actionInFlightRef.current = false;
       if (mountedRef.current) setIsGenerating(false);
     }
+  };
+
+  const runHierarchicalStep = useCallback(async (
+    progress: HierarchicalSummaryProgress,
+    retryStageId: string | null = null,
+  ) => {
+    if (
+      hierarchicalBusyRef.current
+      || hierarchicalPausedRef.current
+      || progress.requestState !== 'generating'
+      || (!retryStageId && progress.failedStageId)
+    ) return;
+    hierarchicalBusyRef.current = true;
+    setIsGenerating(true);
+    setNotice({
+      tone: 'info',
+      title: retryStageId ? 'Mengulangi satu tahap' : `Menjalankan tahap ${progress.completedStageCount + 1} dari ${progress.stageCount}`,
+      detail: 'Hanya satu request dikirim ke Groq. Rangkuman aktif tetap tidak berubah.',
+    });
+    try {
+      const updated = await generateHierarchicalSummaryStep({
+        requestId: progress.requestId,
+        clientStepId: crypto.randomUUID(),
+        retryStageId,
+      });
+      if (!mountedRef.current) return;
+      setHierarchicalProgress(updated);
+      if (updated.candidate) {
+        setCandidate(updated.candidate);
+        setActiveRevisionId(updated.activeRevisionId);
+        setRevisionEpoch(updated.revisionEpoch);
+      }
+      if (updated.requestState === 'completed') {
+        setPausedState(true);
+        setNotice({
+          tone: 'success',
+          title: 'Preview panjang siap dibandingkan',
+          detail: 'Semua tahap selesai. Tidak ada bagian yang diterapkan otomatis.',
+        });
+        await refreshHistory();
+      } else if (updated.failedStageId) {
+        setPausedState(true);
+        setNotice({
+          tone: 'warning',
+          title: 'Satu tahap perlu diulang',
+          detail: 'Hasil tahap sebelumnya tetap tersimpan. Tahap gagal hanya berjalan lagi setelah konfirmasi.',
+        });
+      } else if (!hierarchicalPausedRef.current) {
+        const target = updated.nextStepAt ? new Date(updated.nextStepAt).getTime() : Date.now();
+        const delay = Math.max(target - Date.now(), 0);
+        setNotice({
+          tone: 'info',
+          title: `${updated.completedStageCount} dari ${updated.stageCount} tahap selesai`,
+          detail: delay > 1_000
+            ? `Tahap berikutnya menunggu pacing paket gratis sekitar ${Math.ceil(delay / 1_000)} detik.`
+            : 'Tahap berikutnya segera dimulai.',
+        });
+        hierarchicalTimerRef.current = setTimeout(() => {
+          hierarchicalTimerRef.current = null;
+          void runHierarchicalStepRef.current?.(updated);
+        }, delay);
+      }
+    } catch (error) {
+      if (!mountedRef.current) return;
+      setPausedState(true);
+      const requestError = error instanceof SummaryRevisionRequestError ? error : null;
+      const copy = getSummaryRevisionErrorCopy(requestError?.status ?? 500, requestError?.code);
+      setNotice({
+        tone: 'error',
+        title: requestError?.status === 429 ? 'Tahap menunggu batas provider' : copy.title,
+        detail: requestError?.status === 429
+          ? 'Tahap tidak diulang otomatis. Lanjutkan lagi setelah batas paket gratis tersedia.'
+          : copy.detail,
+      });
+      try {
+        const refreshed = await readSummaryRegenerationPlan(summaryId);
+        if (mountedRef.current && refreshed.progress) {
+          setHierarchicalPlan(refreshed);
+          setHierarchicalProgress(refreshed.progress);
+        }
+      } catch {
+        // Notice utama sudah menjelaskan kegagalan; refresh progres boleh dicoba kembali manual.
+      }
+    } finally {
+      hierarchicalBusyRef.current = false;
+      if (mountedRef.current) setIsGenerating(false);
+    }
+  }, [refreshHistory, setPausedState, summaryId]);
+  useEffect(() => {
+    runHierarchicalStepRef.current = runHierarchicalStep;
+  }, [runHierarchicalStep]);
+
+  const handlePlanOrGenerate = async () => {
+    if (!enabled || actionInFlightRef.current || isGenerating || isPlanning || applyingRevisionId) return;
+    setIsPlanning(true);
+    setNotice({
+      tone: 'info',
+      title: 'Menghitung kebutuhan preview',
+      detail: 'Nalira memeriksa seluruh evidence secara privat tanpa mengirimkannya ke provider.',
+    });
+    try {
+      const plan = await readSummaryRegenerationPlan(summaryId);
+      if (!mountedRef.current) return;
+      setHierarchicalPlan(plan);
+      if (plan.progress) {
+        setHierarchicalProgress(plan.progress);
+        setPausedState(true);
+        if (plan.progress.candidate) setCandidate(plan.progress.candidate);
+        setNotice({
+          tone: plan.progress.requestState === 'completed' ? 'success' : 'info',
+          title: plan.progress.requestState === 'completed' ? 'Preview ditemukan kembali' : 'Progres ditemukan kembali',
+          detail: plan.progress.requestState === 'completed'
+            ? 'Preview siap dibandingkan.'
+            : `${plan.progress.completedStageCount} dari ${plan.progress.stageCount} tahap sudah tersimpan.`,
+        });
+      } else if (plan.mode === 'single') {
+        setHierarchicalPlan(null);
+        await handleGenerate();
+      } else if (plan.mode === 'unsupported') {
+        setNotice({
+          tone: 'error',
+          title: 'Materi belum dapat diproses utuh',
+          detail: plan.unsupportedReason === 'evidence-too-large'
+            ? 'Evidence melampaui 90.000 karakter. Nalira tidak akan memotong sumber secara diam-diam.'
+            : 'Struktur evidence tidak memenuhi batas kelengkapan dan keamanan saat ini.',
+        });
+      } else {
+        setPausedState(true);
+        setNotice(null);
+      }
+    } catch (error) {
+      if (!mountedRef.current) return;
+      const requestError = error instanceof SummaryRevisionRequestError ? error : null;
+      const copy = getSummaryRevisionErrorCopy(requestError?.status ?? 500, requestError?.code);
+      setNotice({ tone: 'error', ...copy });
+    } finally {
+      if (mountedRef.current) setIsPlanning(false);
+    }
+  };
+
+  const handleStartHierarchy = async () => {
+    if (!hierarchicalPlan || hierarchicalPlan.mode !== 'hierarchical' || isGenerating) return;
+    setIsGenerating(true);
+    try {
+      const progress = await startHierarchicalSummaryRevision({
+        summaryId,
+        clientRequestId: crypto.randomUUID(),
+        planDigest: hierarchicalPlan.planDigest,
+      });
+      if (!mountedRef.current) return;
+      setHierarchicalProgress(progress);
+      setPausedState(false);
+      await runHierarchicalStep(progress);
+    } catch (error) {
+      if (!mountedRef.current) return;
+      const requestError = error instanceof SummaryRevisionRequestError ? error : null;
+      const copy = getSummaryRevisionErrorCopy(requestError?.status ?? 500, requestError?.code);
+      setNotice({ tone: 'error', ...copy });
+    } finally {
+      if (mountedRef.current && !hierarchicalBusyRef.current) setIsGenerating(false);
+    }
+  };
+
+  const handleResumeHierarchy = () => {
+    if (!hierarchicalProgress || hierarchicalProgress.failedStageId) return;
+    setPausedState(false);
+    const target = hierarchicalProgress.nextStepAt
+      ? new Date(hierarchicalProgress.nextStepAt).getTime()
+      : Date.now();
+    const delay = Math.max(target - Date.now(), 0);
+    hierarchicalTimerRef.current = setTimeout(() => {
+      hierarchicalTimerRef.current = null;
+      void runHierarchicalStep(hierarchicalProgress);
+    }, delay);
+    setNotice({
+      tone: 'info',
+      title: 'Preview panjang dilanjutkan',
+      detail: delay > 1_000
+        ? `Tahap berikutnya menunggu sekitar ${Math.ceil(delay / 1_000)} detik.`
+        : 'Tahap berikutnya segera dimulai.',
+    });
   };
 
   const handleApply = async (
@@ -249,7 +482,7 @@ export function SummaryRevisionPanel({
     && candidate.parentRevisionId === activeRevisionId,
   );
   const candidateIsActive = Boolean(candidate && candidate.id === activeRevisionId);
-  const busy = isGenerating || applyingRevisionId !== null;
+  const busy = isGenerating || isPlanning || applyingRevisionId !== null;
 
   return (
     <section className={styles.panel} aria-labelledby={`summary-revision-title-${summaryId}`}>
@@ -258,7 +491,7 @@ export function SummaryRevisionPanel({
           <Sparkles size={18} />
         </div>
         <div className={styles.headerCopy}>
-          <div className={styles.eyebrow}>
+          <div className={styles.privacyLabel}>
             <LockKeyhole size={13} aria-hidden="true" />
             Preview privat
           </div>
@@ -283,19 +516,94 @@ export function SummaryRevisionPanel({
             type="button"
             className={styles.primaryButton}
             disabled={!enabled || busy}
-            onClick={() => void handleGenerate()}
+            onClick={() => void handlePlanOrGenerate()}
           >
-            {isGenerating ? (
+            {isGenerating || isPlanning ? (
               <LoaderCircle className={styles.spinner} size={16} aria-hidden="true" />
             ) : pendingClientRequestId ? (
               <RefreshCw size={16} aria-hidden="true" />
             ) : (
               <GitCompareArrows size={16} aria-hidden="true" />
             )}
-            {isGenerating ? 'Membuat preview…' : pendingClientRequestId ? 'Cek preview' : 'Buat preview baru'}
+            {isPlanning ? 'Menghitung tahap…' : isGenerating ? 'Membuat preview…' : pendingClientRequestId ? 'Cek preview' : 'Buat preview baru'}
           </button>
         </div>
       </div>
+
+      {hierarchicalPlan?.mode === 'hierarchical' && !hierarchicalProgress && (
+        <div className={styles.workflowDisclosure} role="group" aria-labelledby={`hierarchical-plan-${summaryId}`}>
+          <div>
+            <h3 id={`hierarchical-plan-${summaryId}`}>Materi ini membutuhkan {hierarchicalPlan.plannedCalls} tahap</h3>
+            <p>
+              Maksimal {hierarchicalPlan.plannedCalls} request dikirim satu per satu ke Groq dengan pacing paket gratis.
+              Menutup tab akan menjeda proses; tahap yang selesai tetap tersimpan privat.
+            </p>
+          </div>
+          <dl>
+            <div><dt>Tujuan</dt><dd>Groq</dd></div>
+            <div><dt>Evidence</dt><dd>{new Intl.NumberFormat('id-ID').format(hierarchicalPlan.sourceCharacters)} karakter</dd></div>
+            <div><dt>Pacing</dt><dd>±{hierarchicalPlan.pacingSeconds} dtk/tahap</dd></div>
+          </dl>
+          <button type="button" className={styles.primaryButton} disabled={busy} onClick={() => void handleStartHierarchy()}>
+            <Play size={16} aria-hidden="true" />
+            Mulai {hierarchicalPlan.plannedCalls} tahap
+          </button>
+        </div>
+      )}
+
+      {hierarchicalProgress?.requestState === 'generating' && (
+        <div className={styles.workflowProgress} aria-live="polite" aria-busy={isGenerating}>
+          <div className={styles.progressCopy}>
+            <strong>{hierarchicalProgress.completedStageCount} dari {hierarchicalProgress.stageCount} tahap selesai</strong>
+            <span>
+              {hierarchicalProgress.failedStageId
+                ? 'Tahap gagal menunggu keputusanmu.'
+                : hierarchicalPaused ? 'Dijeda aman. Progres tersimpan.' : 'Berjalan satu tahap pada satu waktu.'}
+            </span>
+          </div>
+          <div
+            className={styles.progressTrack}
+            role="progressbar"
+            aria-label="Progres preview rangkuman"
+            aria-valuemin={0}
+            aria-valuemax={hierarchicalProgress.stageCount}
+            aria-valuenow={hierarchicalProgress.completedStageCount}
+          >
+            <span style={{ width: `${(hierarchicalProgress.completedStageCount / hierarchicalProgress.stageCount) * 100}%` }} />
+          </div>
+          <div className={styles.progressActions}>
+            {hierarchicalProgress.failedStageId ? (
+              <button
+                type="button"
+                className={styles.primaryButton}
+                disabled={busy}
+                onClick={() => {
+                  setPausedState(false);
+                  void runHierarchicalStep(hierarchicalProgress, hierarchicalProgress.failedStageId);
+                }}
+              >
+                <RefreshCw size={16} aria-hidden="true" />
+                Ulangi tahap
+              </button>
+            ) : hierarchicalPaused ? (
+              <button type="button" className={styles.primaryButton} disabled={busy} onClick={handleResumeHierarchy}>
+                <Play size={16} aria-hidden="true" />
+                Lanjutkan
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                disabled={applyingRevisionId !== null}
+                onClick={() => setPausedState(true)}
+              >
+                <Pause size={16} aria-hidden="true" />
+                Jeda setelah tahap ini
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {!enabled && (
         <div className={styles.disabledNote}>
