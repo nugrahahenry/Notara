@@ -8,6 +8,8 @@ import {
   type TranscriptEvidenceFilter,
   type TranscriptEvidencePage,
 } from './evidence';
+import { readLatestTranscriptContextAnnotations } from './context-reader';
+import type { TranscriptContextAnnotation } from './context';
 
 const RUN_FIELDS = [
   'id',
@@ -70,12 +72,29 @@ export async function readTranscriptEvidencePage({
   const { data: segmentRows, error: segmentError, count } = await query.range(from, to);
   if (segmentError) throw new Error('segment-read-failed');
 
+  const segments = (segmentRows ?? []).flatMap((row) => {
+    const segment = normalizeTranscriptEvidenceSegment(row);
+    return segment ? [segment] : [];
+  });
+  let contextAvailable = true;
+  let annotations = new Map<number, TranscriptContextAnnotation>();
+  try {
+    annotations = await readLatestTranscriptContextAnnotations(
+      segments.map((segment) => segment.id),
+    );
+  } catch {
+    // Keep existing transcript evidence readable while an environment is awaiting migration.
+    console.error('[transcript-context] annotations unavailable');
+    contextAvailable = false;
+  }
+
   return {
     run,
-    segments: (segmentRows ?? []).flatMap((row) => {
-      const segment = normalizeTranscriptEvidenceSegment(row);
-      return segment ? [segment] : [];
-    }),
+    contextAvailable,
+    segments: segments.map((segment) => ({
+      ...segment,
+      currentContext: annotations.get(segment.id) ?? null,
+    })),
     total: count ?? 0,
     page: safePage,
     pageSize: safePageSize,

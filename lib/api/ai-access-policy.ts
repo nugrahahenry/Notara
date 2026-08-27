@@ -1,4 +1,4 @@
-export type AiOperation = 'capture' | 'summarize' | 'chat';
+export type AiOperation = 'capture' | 'summarize' | 'chat' | 'context';
 
 type AuthLookupResult = {
   data: { user: { id: string } | null };

@@ -4,6 +4,7 @@ import type {
   TranscriptQualityWarningCode,
   TranscriptQualitySeverity,
 } from './contract';
+import type { TranscriptContextAnnotation } from './context';
 
 export const TRANSCRIPT_EVIDENCE_PAGE_SIZE = 50;
 export const LOW_CONFIDENCE_THRESHOLD = -0.5;
@@ -34,11 +35,13 @@ export interface TranscriptEvidenceSegment {
   averageLogProbability: number | null;
   noSpeechProbability: number | null;
   reviewReasons: Array<'low-confidence' | 'high-no-speech'>;
+  currentContext: TranscriptContextAnnotation | null;
 }
 
 export interface TranscriptEvidencePage {
   run: TranscriptEvidenceRun;
   segments: TranscriptEvidenceSegment[];
+  contextAvailable: boolean;
   total: number;
   page: number;
   pageSize: number;
@@ -195,6 +198,7 @@ export function normalizeTranscriptEvidenceSegment(
       averageLogProbability,
       noSpeechProbability,
     ),
+    currentContext: null,
   };
 }
 

@@ -4,7 +4,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah kandidat rilis v0.10.1.
+Belum ada perubahan setelah kandidat rilis v0.11.0.
+
+## [0.11.0] - 2026-08-27
+### Added
+- Tab Transkrip kini memiliki review konteks inline yang dapat menganalisis maksimal 50 segmen pada halaman aktif sebagai penjelasan pengajar, pertanyaan mahasiswa, diskusi kelas, obrolan samping, atau belum diketahui.
+- Pengguna dapat menerima, mengubah, mengabaikan, lalu menyimpan keputusan konteks dan perlakuan belajar per segmen sebagai versi baru yang append-only.
+
+### Security
+- Browser hanya mengirim ID rangkuman dan ID segmen; endpoint membaca ulang bukti milik pengguna melalui Supabase RLS sebelum mengirim teks ke Groq.
+- Saran mesin bersifat sementara, memakai allowlist ketat, gagal ke kondisi netral, dibatasi 10 analisis per 10 menit, dan tidak menyimpan alasan model, audio, identitas, atau voiceprint.
+- Penulisan keputusan hanya tersedia melalui RPC authenticated yang memeriksa kepemilikan, memakai advisory lock, membatasi 100 versi per segmen, dan tidak memberi hak INSERT/UPDATE/DELETE langsung.
+
+### Changed
+- Evidence transkrip tetap dapat dibaca ketika environment belum menerima migration konteks; kontrol baru dinonaktifkan secara jujur tanpa menggagalkan seluruh tab.
+- Keputusan konteks belum meregenerasi atau mengubah rangkuman. Integrasi keputusan ke rangkuman memerlukan checkpoint terpisah.
+
+### Quality
+- Kontrak request, prompt-injection boundary, output AI, RLS/RPC/grant, rate limit, usage metering, dan UX review eksplisit dilindungi focused tests.
+- Seluruh 265 test, lint, TypeScript, production build, dan Impeccable detector lulus. Rehearsal PostgreSQL 18 pada database fresh serta upgrade dengan data lama membuktikan RPC append-only, RLS dua pengguna, privilege, dan constraint operasi; database sementara kemudian dihentikan serta dibersihkan.
+- Review akhir mengunci seluruh kontrol keputusan selama save/analisis dan membersihkan draft lama sebelum analisis ulang agar hasil paralel tidak menimpa status baris lain.
+- QA interaktif Chrome Henry tertunda karena koneksi ekstensi tidak tersedia pada sesi finalisasi.
 
 ## [0.10.1] - 2026-08-22
 ### Fixed

@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: kandidat lokal Nalira v0.10.1 di atas baseline `main` v0.10.0. Audio Source Focus sudah committed dan pushed; patch izin sumber sudah lolos acceptance mikrofon nyata, guard pemilihan tab, seluruh 259 test, lint, TypeScript, dan production build. Acceptance sinyal tab bersuara ditunda sampai kelas online nyata tersedia. Terakhir diverifikasi: 22 Agustus 2026.
+> Status: kandidat lokal Nalira v0.11.0 di atas baseline `main` v0.10.1. Review-first Transcript Context sudah lolos 265 test, lint, TypeScript, production build, audit desain statis, serta rehearsal database fresh/upgrade. Migration konteks belum diterapkan ke Supabase dan QA interaktif Chrome Henry masih tertunda. Terakhir diverifikasi: 27 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -16,6 +16,7 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - Antrean Capture maksimal tiga file secara sekuensial, dengan preview metadata, validasi, progress yang hanya muncul saat benar-benar terukur, kegagalan per item, serta retry dari awal tanpa menghapus hasil item lain.
 - Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform; rangkuman dibuat sekali dari transkrip gabungan.
 - Saat material disimpan, Nalira menyimpan processing run dan segmen bertimestamp secara privat serta idempoten. Timestamp antarchunk tetap mengacu ke posisi rekaman asal, dan pemilik dapat meninjau status kualitas, alasan peringatan, serta segmen bertanda waktu melalui pagination.
+- Pemilik dapat meminta usulan konteks berbasis teks untuk maksimal satu halaman transkrip, mengubah atau mengabaikannya, lalu menyimpan keputusan append-only per segmen. Usulan ini tidak mengenali suara dan belum mengubah rangkuman.
 - Folder/mata kuliah, pencarian, pengelolaan rangkuman, ekspor Word, dan riwayat chat.
 - Chat streaming dengan scope satu rangkuman, satu folder, atau koleksi pengguna.
 - Study Canvas, Study Dock, serta slot Learning Lab untuk konsep, rumus, visual, quiz, dan pembicara sudah memiliki fondasi UI; kemampuan analisis Learning Lab belum tersedia.
@@ -36,6 +37,10 @@ Browser
                                   └─ transkrip + segmen gabungan → /api/summarize-transcript → Groq LLM
                                                                                  └─ simpan summary
                                                                                        └─ RPC evidence → Supabase Postgres
+
+Pemilik → review halaman transkrip → /api/transcript-context/suggest
+                                      ├─ baca ulang segmen owner-only via RLS → Groq LLM
+                                      └─ keputusan eksplisit pengguna → RPC append-only → Supabase Postgres
 
 Chat dashboard → /api/chat → Groq LLM streaming (SSE)
 Auth, data, RLS, share, dan grup → Supabase
@@ -100,6 +105,7 @@ npm run build
 
 - Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`. Hardening billing berada di `supabase/migrations/20260813125948_harden_billing_security.sql`.
 - Evidence transkrip berada di `supabase/migrations/20260818181455_persist_transcript_evidence.sql` dan sudah aktif di project Supabase production. RLS owner-only, grant authenticated, RPC persistence, serta satu Capture nyata telah diverifikasi; perubahan berikutnya tetap harus diuji pada project yang benar.
+- Review konteks transkrip berada di `supabase/migrations/20260826204521_add_review_first_transcript_context.sql`. Migration ini belum diterapkan ke production; deploy source baru hanya setelah migration, privilege, RLS, isolation, dan rollback/forward-repair diverifikasi pada project yang benar.
 - Untuk production, isi `NEXT_PUBLIC_SITE_URL` dengan origin canonical tanpa path, saat ini `https://nalira-hengs.vercel.app`. Di Supabase Auth > URL Configuration, samakan Site URL dengan origin tersebut dan masukkan `https://nalira-hengs.vercel.app/auth/callback` ke Redirect URLs. Local development membutuhkan `http://localhost:3000/auth/callback`.
 - Jangan menjalankan `supabase/schema.sql` secara utuh pada project live; ia historis dan memiliki urutan/policy yang tidak aman untuk dipakai sebagai migrasi canonical.
 - Deploy di Vercel setelah environment variable tersedia pada target environment. Perubahan migrasi, RLS, atau billing harus diverifikasi dulu di lingkungan yang aman.
@@ -110,7 +116,7 @@ npm run build
 - `app/dashboard/page.tsx` masih menjadi orchestrator besar. Shell, tema, workspace, dan capture sudah memiliki batas komponen stabil, tetapi ekstraksi logic berikutnya tetap harus bertahap agar flow lama tidak regresi.
 - Timestamp di UI menunjukkan posisi segmen pada rekaman asal, tetapi audio tidak disimpan sehingga belum ada playback atau seek setelah reload.
 - Audio Source Focus memisahkan sumber pada batas capture, bukan orang di dalam rekaman. Mode mikrofon tidak dapat menghapus satu suara dekat secara selektif, sedangkan mode tab membutuhkan Chrome, pilihan tab browser, dan opsi berbagi audio tab yang aktif.
-- Speaker diarization, identitas/peran pembicara, koreksi label pembicara, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan.
+- Speaker diarization, pengenalan/identitas suara, formula capture/renderer matematika, Learning Lab berbasis AI, serta integrasi Neurova belum diimplementasikan. Review konteks v0.11.0 hanya mengklasifikasikan fungsi akademik segmen dari teks dan urutan waktu; keputusan tersimpan belum dipakai untuk meregenerasi rangkuman.
 - Chat “global” memilih konteks dengan pencarian kata kunci di sisi klien; ini bukan retrieval system terindeks.
 - Upload langsung dibatasi oleh memori browser dan request body platform. UI menolak berkas di atas 150 MB; antrean tidak bertahan setelah refresh, pemrosesan belum berjalan di background, dan chunk gagal belum dapat dilanjutkan dari titik terakhir.
 - Endpoint API AI sudah memvalidasi sesi dan memakai rate limit per pengguna; kuota harian/berdasarkan tier, sinyal IP, dan kontrol penyalahgunaan multi-akun belum tersedia.
@@ -121,7 +127,7 @@ npm run build
 
 1. Saat kelas online berikutnya tersedia, lakukan acceptance `Tab Zoom / Meet` dengan memilih satu tab Chrome yang sedang mengeluarkan suara dan mengaktifkan audio tab.
 2. Setelah acceptance lulus, commit dan push manual; deployment tetap menjadi langkah terpisah milik Henry.
-3. Lanjutkan Speaker Context sebagai checkpoint terpisah: diarization tidak boleh dianggap selesai hanya karena sumber capture sudah benar.
+3. Terapkan dan verifikasi migration review-first context pada environment yang benar, lalu lakukan acceptance satu materi tanpa menganggap label teks sebagai pengenalan suara atau identitas.
 4. Sinkronkan workstream Learning System dan Brand hanya melalui hook yang sudah disiapkan; jangan mengubah hierarchy shell tanpa keputusan produk.
 
 Catatan produk, desain, dan prototype internal sengaja disimpan terpisah dari repository publik.

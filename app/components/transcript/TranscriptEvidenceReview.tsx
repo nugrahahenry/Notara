@@ -19,6 +19,7 @@ import {
   type TranscriptEvidenceFilter,
   type TranscriptEvidencePage,
 } from '@/lib/transcript/evidence';
+import { TranscriptContextReview } from './TranscriptContextReview';
 
 interface TranscriptEvidenceReviewProps {
   summaryId: string;
@@ -226,24 +227,12 @@ export function TranscriptEvidenceReview({
       </div>
 
       {data.segments.length > 0 ? (
-        <ol className="notara-transcript-segment-list" start={(data.page - 1) * data.pageSize + 1}>
-          {data.segments.map((segment) => (
-            <li key={segment.id} data-needs-review={segment.reviewReasons.length > 0}>
-              <time dateTime={`PT${Math.floor(segment.startMs / 1000)}S`}>
-                {formatTranscriptTimecode(segment.startMs)}
-              </time>
-              <div>
-                <p>{segment.text}</p>
-                {segment.reviewReasons.length > 0 && (
-                  <div className="notara-transcript-segment-flags" aria-label="Alasan bagian perlu ditinjau">
-                    {segment.reviewReasons.includes('low-confidence') && <span>Keyakinan transkripsi rendah</span>}
-                    {segment.reviewReasons.includes('high-no-speech') && <span>Ucapan samar atau banyak jeda</span>}
-                  </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ol>
+        <TranscriptContextReview
+          summaryId={summaryId}
+          segments={data.segments}
+          listStart={(data.page - 1) * data.pageSize + 1}
+          contextAvailable={data.contextAvailable}
+        />
       ) : (
         <div className="notara-transcript-empty-filter" role="status">
           <SearchX className="h-6 w-6" aria-hidden="true" />

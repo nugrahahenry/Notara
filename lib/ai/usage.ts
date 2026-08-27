@@ -31,7 +31,7 @@ export type GroqCostEstimate = {
   estimatedCostMicrousd: number | null;
 };
 
-export type AiUsageOperation = 'capture' | 'summarize' | 'chat';
+export type AiUsageOperation = 'capture' | 'summarize' | 'chat' | 'context';
 export type AiUsageStage = 'transcription' | 'generation';
 
 export type AiUsageEvent = {
