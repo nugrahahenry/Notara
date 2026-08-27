@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.14.2.
+Belum ada perubahan setelah Nalira v0.14.3.
+
+## [0.14.3] - 2026-08-28
+### Fixed
+- Membatalkan konfirmasi retry kini sekaligus membersihkan notifikasi konfirmasi, sehingga layar tidak lagi menyatakan bahwa satu request tambahan menunggu setelah pengguna memilih batal.
+
+### Quality
+- Pemeriksaan authenticated di Chrome Henry memulihkan workflow `AI1` pada 1/6, membuktikan konfirmasi dua langkah v0.14.2 tanpa mengirim request Groq, lalu menemukan dan melindungi state pembatalan ini dengan regression test.
+- Seluruh 283 test, ESLint, TypeScript, production build, `git diff --check`, scan literal secret, dan detector Impeccable lulus.
 
 ## [0.14.2] - 2026-08-28
 ### Fixed

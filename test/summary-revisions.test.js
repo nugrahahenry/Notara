@@ -562,6 +562,7 @@ test('revision studio keeps candidates private until an explicit user action app
   assert.match(panel, /Ulangi tahap \(\+1 request\)/);
   assert.match(panel, /Konfirmasi 1 request tambahan/);
   assert.match(panel, /Batal retry/);
+  assert.match(panel, /setRetryConfirmationStageId\(null\);\s*setNotice\(null\);/);
   assert.match(panel, /Dijeda aman\. Progres tersimpan/);
   assert.match(panel, /role="progressbar"/);
   assert.match(panel, /aria-valuemax=\{hierarchicalProgress\.stageCount\}/);

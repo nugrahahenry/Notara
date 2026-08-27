@@ -618,7 +618,10 @@ export function SummaryRevisionPanel({
                     type="button"
                     className={styles.secondaryButton}
                     disabled={busy}
-                    onClick={() => setRetryConfirmationStageId(null)}
+                    onClick={() => {
+                      setRetryConfirmationStageId(null);
+                      setNotice(null);
+                    }}
                   >
                     Batal retry
                   </button>
