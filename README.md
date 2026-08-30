@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Nalira v0.14.5 mengeraskan kontrak output rangkuman hierarkis dengan diagnosis struktur yang aman, ID unik per tahap, batas ordinal konkret, dan simulasi penuh enam tahap. Production terverifikasi menjalankan v0.14.4 pada commit `d43b601`; satu retry tambahan `AI1` tahap dua yang disetujui Henry kembali ditolak sebagai `map-invalid`, sehingga workflow tetap dijeda aman pada 1/6 dan rangkuman aktif tidak berubah. Terakhir diverifikasi lokal: 28 Agustus 2026.
+> Status: Source lokal Nalira v0.14.6 memperluas diagnosis struktur aman dari map ke tahap reduce dan final, termasuk validasi lineage sumber, bentuk Markdown, serta grounding angka/formula/pertanyaan. v0.14.5 sudah berada di `origin/main`; production terakhir yang diverifikasi langsung masih v0.14.4. Workflow `AI1` tetap dijeda aman pada 1/6 dan rangkuman aktif tidak berubah. Tidak ada request Groq, browser acceptance, push, atau deploy pada checkpoint ini. Terakhir diverifikasi lokal: 31 Agustus 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.

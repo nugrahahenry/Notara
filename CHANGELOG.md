@@ -4,7 +4,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.14.5.
+Belum ada perubahan setelah Nalira v0.14.6.
+
+## [0.14.6] - 2026-08-31
+### Fixed
+- Output reduce kini mengembalikan alasan kegagalan tetap untuk JSON rusak, child claim tidak valid, referensi asing, dan rentang sumber yang tidak berasal dari child claim yang benar-benar dirujuk.
+- Output final kini membedakan bentuk root, Markdown kosong/berlebih/berisi HTML, manifest grounding yang rusak, lineage sumber yang tidak sah, serta angka, formula, atau pertanyaan yang tidak memiliki jenis klaim pendukung.
+- Final dapat memulihkan satu JSON fence atau satu envelope `result`/`data`/`output` yang persis dan tetap mengkanonisasi ID menurut tahap. Prosa, field tambahan, coercion, dan repair referensi tetap ditolak.
+
+### Security
+- Route hanya mencatat indeks/jenis tahap, kelas kegagalan, dan satu alasan struktur dari allowlist. Prompt, transkrip, klaim, Markdown final, respons provider, dan credential tidak masuk log.
+- Tidak ada schema, migration, RLS, auth, secret, provider, retry otomatis, candidate apply, atau perubahan akses publik. Batch ini tidak membuka browser dan tidak mengirim request Groq.
+
+### Quality
+- Regression matrix baru melindungi reduce/final parsing, exact-envelope recovery, canonical stage IDs, child lineage, dan grounding sensitif secara provider-free.
+- Seluruh 290 test, ESLint, TypeScript, production build, `git diff --check`, conflict-marker scan, dan literal-secret scan lulus. Route tetap memiliki tepat satu titik fetch Groq.
 
 ## [0.14.5] - 2026-08-28
 ### Fixed

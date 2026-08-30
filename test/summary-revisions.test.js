@@ -418,6 +418,176 @@ test('map output inspection recovers safe JSON wrappers and reports content-free
   });
 });
 
+test('reduce output inspection reports child and lineage failures without provider content', () => {
+  const {
+    inspectReduceStageOutput,
+    normalizeMapStageOutput,
+  } = require('../build/lib/summary/hierarchical-output.js');
+  const firstMap = normalizeMapStageOutput(JSON.stringify({ claims: [{
+    id: 'ignored',
+    text: 'Risiko likuiditas perlu dipantau.',
+    kind: 'concept',
+    sourceRanges: [[10, 10]],
+    inputClaimIds: [],
+  }] }), 10, 10);
+  const secondMap = normalizeMapStageOutput(JSON.stringify({ claims: [{
+    id: 'ignored',
+    text: 'Profitabilitas tidak sama dengan likuiditas.',
+    kind: 'concept',
+    sourceRanges: [[11, 11]],
+    inputClaimIds: [],
+  }] }), 11, 11);
+  assert.ok(firstMap && secondMap);
+  const children = [...firstMap.claims, ...secondMap.claims];
+
+  assert.deepEqual(inspectReduceStageOutput('{broken', children, 'reduce_4_c'), {
+    ok: false,
+    reason: 'json-invalid',
+  });
+  assert.deepEqual(inspectReduceStageOutput(JSON.stringify({ claims: [{
+    id: 'reduce_4_c1',
+    text: 'Klaim memakai rujukan yang tidak tersedia.',
+    kind: 'concept',
+    sourceRanges: [[10, 10]],
+    inputClaimIds: ['foreign_claim'],
+  }] }), children, 'reduce_4_c'), {
+    ok: false,
+    reason: 'input-claim-reference-invalid',
+  });
+  assert.deepEqual(inspectReduceStageOutput(JSON.stringify({ claims: [{
+    id: 'reduce_4_c1',
+    text: 'Rentang sumber tidak berasal dari klaim yang dirujuk.',
+    kind: 'concept',
+    sourceRanges: [[11, 11]],
+    inputClaimIds: ['map_10_10_c1'],
+  }] }), children, 'reduce_4_c'), {
+    ok: false,
+    reason: 'source-lineage-invalid',
+  });
+  assert.deepEqual(inspectReduceStageOutput('{}', [], 'reduce_4_c'), {
+    ok: false,
+    reason: 'child-claims-invalid',
+  });
+});
+
+test('final output inspection safely unwraps exact envelopes and explains grounding failures', () => {
+  const {
+    inspectFinalStageOutput,
+    normalizeMapStageOutput,
+  } = require('../build/lib/summary/hierarchical-output.js');
+  const childSet = normalizeMapStageOutput(JSON.stringify({ claims: [{
+    id: 'ignored',
+    text: 'Likuiditas perlu dipantau.',
+    kind: 'concept',
+    sourceRanges: [[20, 20]],
+    inputClaimIds: [],
+  }, {
+    id: 'ignored',
+    text: 'Nilai contoh adalah 12.',
+    kind: 'number',
+    sourceRanges: [[21, 21]],
+    inputClaimIds: [],
+  }] }), 20, 21);
+  assert.ok(childSet);
+  const validFinal = {
+    markdown: '# Materi\nLikuiditas perlu dipantau dan nilai contoh adalah 12.',
+    groundingManifest: { claims: [{
+      id: 'provider_repeated_id',
+      text: 'Likuiditas perlu dipantau.',
+      kind: 'concept',
+      sourceRanges: [[20, 20]],
+      inputClaimIds: ['map_20_21_c1'],
+    }, {
+      id: 'provider_repeated_id',
+      text: 'Nilai contoh adalah 12.',
+      kind: 'number',
+      sourceRanges: [[21, 21]],
+      inputClaimIds: ['map_20_21_c2'],
+    }] },
+  };
+  const wrapped = inspectFinalStageOutput(
+    JSON.stringify({ output: validFinal }),
+    childSet.claims,
+    'final_6_c',
+  );
+  assert.ok(wrapped.ok);
+  assert.deepEqual(wrapped.value.groundingManifest.claims.map((claim) => claim.id), [
+    'final_6_c1',
+    'final_6_c2',
+  ]);
+  assert.ok(inspectFinalStageOutput(
+    `\`\`\`json\n${JSON.stringify(validFinal)}\n\`\`\``,
+    childSet.claims,
+    'final_6_c',
+  ).ok);
+  assert.deepEqual(inspectFinalStageOutput(JSON.stringify({
+    ...validFinal,
+    extra: true,
+  }), childSet.claims, 'final_6_c'), {
+    ok: false,
+    reason: 'final-shape-invalid',
+  });
+  assert.deepEqual(inspectFinalStageOutput(JSON.stringify({
+    ...validFinal,
+    markdown: '<script>alert(1)</script>',
+  }), childSet.claims, 'final_6_c'), {
+    ok: false,
+    reason: 'markdown-invalid',
+  });
+  assert.deepEqual(inspectFinalStageOutput(JSON.stringify({
+    markdown: '# Materi\nNilai contoh adalah 12.',
+    groundingManifest: { claims: [{
+      id: 'final_6_c1',
+      text: 'Likuiditas perlu dipantau.',
+      kind: 'concept',
+      sourceRanges: [[20, 20]],
+      inputClaimIds: ['map_20_21_c1'],
+    }] },
+  }), childSet.claims, 'final_6_c'), {
+    ok: false,
+    reason: 'number-grounding-missing',
+  });
+  assert.deepEqual(inspectFinalStageOutput(JSON.stringify({
+    markdown: '# Materi\nApa dampaknya?',
+    groundingManifest: { claims: [{
+      id: 'final_6_c1',
+      text: 'Likuiditas perlu dipantau.',
+      kind: 'concept',
+      sourceRanges: [[20, 20]],
+      inputClaimIds: ['map_20_21_c1'],
+    }] },
+  }), childSet.claims, 'final_6_c'), {
+    ok: false,
+    reason: 'question-grounding-missing',
+  });
+  assert.deepEqual(inspectFinalStageOutput(JSON.stringify({
+    markdown: '# Materi\nGunakan y = x.',
+    groundingManifest: { claims: [{
+      id: 'final_6_c1',
+      text: 'Likuiditas perlu dipantau.',
+      kind: 'concept',
+      sourceRanges: [[20, 20]],
+      inputClaimIds: ['map_20_21_c1'],
+    }] },
+  }), childSet.claims, 'final_6_c'), {
+    ok: false,
+    reason: 'formula-grounding-missing',
+  });
+  assert.deepEqual(inspectFinalStageOutput(JSON.stringify({
+    markdown: '# Materi\nLikuiditas perlu dipantau.',
+    groundingManifest: { claims: [{
+      id: 'final_6_c1',
+      text: 'Rentang salah.',
+      kind: 'concept',
+      sourceRanges: [[21, 21]],
+      inputClaimIds: ['map_20_21_c1'],
+    }] },
+  }), childSet.claims, 'final_6_c'), {
+    ok: false,
+    reason: 'source-lineage-invalid',
+  });
+});
+
 test('map prompt publishes exact ordinal and identifier contracts without ambiguous placeholders', () => {
   const { buildHierarchicalMapPrompt } = require('../build/lib/transcript/hierarchical-summary-prompt.js');
   const prompt = buildHierarchicalMapPrompt({
@@ -673,8 +843,10 @@ test('hierarchical routes plan without provider, start exact disclosed topology,
   assert.match(step, /structuralReason/);
   assert.match(step, /`reduce_\$\{claimed\.stageIndex\}_c`/);
   assert.match(step, /`final_\$\{claimed\.stageIndex\}_c`/);
-  assert.match(step, /normalizeReduceStageOutput/);
-  assert.match(step, /normalizeFinalStageOutput/);
+  assert.match(step, /inspectReduceStageOutput/);
+  assert.match(step, /inspectFinalStageOutput/);
+  assert.match(step, /reportRejectedOutput\(claimed, 'reduce-invalid', inspected\.reason\)/);
+  assert.match(step, /reportRejectedOutput\(claimed, 'final-invalid', inspected\.reason\)/);
   assert.match(step, /complete_hierarchical_summary_stage/);
   assert.doesNotMatch(step, /console\.(log|error)\([^\n]*(prompt|content|providerData|transcript)/i);
 });

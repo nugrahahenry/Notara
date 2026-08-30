@@ -44,7 +44,14 @@ export type GroundedStageOutputRejectionReason =
   | 'source-range-out-of-bounds'
   | 'input-claim-ids-invalid'
   | 'input-claim-reference-invalid'
-  | 'duplicate-claim-id';
+  | 'duplicate-claim-id'
+  | 'child-claims-invalid'
+  | 'source-lineage-invalid'
+  | 'final-shape-invalid'
+  | 'markdown-invalid'
+  | 'number-grounding-missing'
+  | 'question-grounding-missing'
+  | 'formula-grounding-missing';
 
 export type GroundedStageOutputInspection<T> =
   | { ok: true; value: T }
@@ -106,12 +113,15 @@ function inspectJsonObject(
   }
 }
 
-function unwrapClaimSetEnvelope(value: Record<string, unknown>): Record<string, unknown> {
-  if (hasOnlyKeys(value, ['claims'])) return value;
+function unwrapExactEnvelope(
+  value: Record<string, unknown>,
+  expectedKeys: string[],
+): Record<string, unknown> {
+  if (hasOnlyKeys(value, expectedKeys)) return value;
   for (const key of ['result', 'data', 'output']) {
     if (!hasOnlyKeys(value, [key])) continue;
     const nested = record(value[key]);
-    if (nested && hasOnlyKeys(nested, ['claims'])) return nested;
+    if (nested && hasOnlyKeys(nested, expectedKeys)) return nested;
   }
   return value;
 }
@@ -209,7 +219,7 @@ function inspectClaimSet(
 ): GroundedStageOutputInspection<GroundedClaimSet> {
   const candidate = record(value);
   if (!candidate) return reject('root-invalid');
-  const result = options.allowEnvelope ? unwrapClaimSetEnvelope(candidate) : candidate;
+  const result = options.allowEnvelope ? unwrapExactEnvelope(candidate, ['claims']) : candidate;
   if (!hasOnlyKeys(result, ['claims']) || !Array.isArray(result.claims)) {
     return reject('claims-invalid');
   }
@@ -234,6 +244,65 @@ function inspectClaimSet(
     return reject('duplicate-claim-id');
   }
   return accept({ claims });
+}
+
+interface ChildClaimContext {
+  allowedInputClaimIds: Set<string>;
+  ordinalStart: number;
+  ordinalEnd: number;
+  rangesById: Map<string, GroundedOrdinalRange[]>;
+}
+
+function inspectChildClaimContext(
+  childClaims: GroundedClaim[],
+): GroundedStageOutputInspection<ChildClaimContext> {
+  if (!Array.isArray(childClaims) || childClaims.length === 0) {
+    return reject('child-claims-invalid');
+  }
+  const ids = childClaims.map((claim) => claim?.id);
+  if (
+    ids.some((id) => typeof id !== 'string' || !CLAIM_ID_PATTERN.test(id))
+    || new Set(ids).size !== ids.length
+  ) return reject('child-claims-invalid');
+
+  const rangesById = new Map<string, GroundedOrdinalRange[]>();
+  const allRanges: GroundedOrdinalRange[] = [];
+  for (const claim of childClaims) {
+    if (!Array.isArray(claim.sourceRanges) || claim.sourceRanges.length === 0) {
+      return reject('child-claims-invalid');
+    }
+    const ranges: GroundedOrdinalRange[] = [];
+    for (const range of claim.sourceRanges) {
+      if (
+        !range
+        || !Number.isSafeInteger(range.start)
+        || !Number.isSafeInteger(range.end)
+        || range.start < 0
+        || range.end < range.start
+      ) return reject('child-claims-invalid');
+      ranges.push(range);
+      allRanges.push(range);
+    }
+    rangesById.set(claim.id, ranges);
+  }
+  return accept({
+    allowedInputClaimIds: new Set(ids),
+    ordinalStart: Math.min(...allRanges.map((range) => range.start)),
+    ordinalEnd: Math.max(...allRanges.map((range) => range.end)),
+    rangesById,
+  });
+}
+
+function hasValidSourceLineage(
+  claims: GroundedClaim[],
+  rangesById: Map<string, GroundedOrdinalRange[]>,
+): boolean {
+  return claims.every((claim) => {
+    const allowedRanges = claim.inputClaimIds.flatMap((id) => rangesById.get(id) ?? []);
+    return claim.sourceRanges.every((range) => allowedRanges.some((candidate) => (
+      candidate.start <= range.start && candidate.end >= range.end
+    )));
+  });
 }
 
 export function inspectMapStageOutput(
@@ -272,30 +341,31 @@ export function normalizeReduceStageOutput(
   childClaims: GroundedClaim[],
   canonicalIdPrefix?: string,
 ): GroundedClaimSet | null {
-  if (
-    childClaims.length === 0
-    || new Set(childClaims.map((claim) => claim.id)).size !== childClaims.length
-  ) return null;
+  const inspected = inspectReduceStageOutput(raw, childClaims, canonicalIdPrefix);
+  return inspected.ok ? inspected.value : null;
+}
+
+export function inspectReduceStageOutput(
+  raw: string,
+  childClaims: GroundedClaim[],
+  canonicalIdPrefix?: string,
+): GroundedStageOutputInspection<GroundedClaimSet> {
+  const childContext = inspectChildClaimContext(childClaims);
+  if (!childContext.ok) return childContext;
   const parsed = inspectJsonObject(raw, MAX_HIERARCHICAL_STAGE_OUTPUT_CHARACTERS);
-  const ordinalStart = Math.min(...childClaims.flatMap((claim) => claim.sourceRanges.map((range) => range.start)));
-  const ordinalEnd = Math.max(...childClaims.flatMap((claim) => claim.sourceRanges.map((range) => range.end)));
-  const inspected = parsed.ok ? inspectClaimSet(parsed.value, {
-    allowedOrdinalStart: ordinalStart,
-    allowedOrdinalEnd: ordinalEnd,
-    allowedInputClaimIds: new Set(childClaims.map((claim) => claim.id)),
+  if (!parsed.ok) return parsed;
+  const inspected = inspectClaimSet(parsed.value, {
+    allowedOrdinalStart: childContext.value.ordinalStart,
+    allowedOrdinalEnd: childContext.value.ordinalEnd,
+    allowedInputClaimIds: childContext.value.allowedInputClaimIds,
     canonicalIdPrefix,
     allowEnvelope: true,
-  }) : parsed;
-  if (!inspected.ok) return null;
-
-  const childRanges = new Map(childClaims.map((claim) => [claim.id, claim.sourceRanges]));
-  for (const claim of inspected.value.claims) {
-    const allowed = claim.inputClaimIds.flatMap((id) => childRanges.get(id) ?? []);
-    if (claim.sourceRanges.some((range) => !allowed.some((candidate) => (
-      candidate.start <= range.start && candidate.end >= range.end
-    )))) return null;
+  });
+  if (!inspected.ok) return inspected;
+  if (!hasValidSourceLineage(inspected.value.claims, childContext.value.rangesById)) {
+    return reject('source-lineage-invalid');
   }
-  return inspected.value;
+  return inspected;
 }
 
 export function normalizeFinalStageOutput(
@@ -303,39 +373,55 @@ export function normalizeFinalStageOutput(
   childClaims: GroundedClaim[],
   canonicalIdPrefix?: string,
 ): FinalGroundedSummary | null {
-  if (
-    childClaims.length === 0
-    || new Set(childClaims.map((claim) => claim.id)).size !== childClaims.length
-  ) return null;
+  const inspected = inspectFinalStageOutput(raw, childClaims, canonicalIdPrefix);
+  return inspected.ok ? inspected.value : null;
+}
+
+export function inspectFinalStageOutput(
+  raw: string,
+  childClaims: GroundedClaim[],
+  canonicalIdPrefix?: string,
+): GroundedStageOutputInspection<FinalGroundedSummary> {
+  const childContext = inspectChildClaimContext(childClaims);
+  if (!childContext.ok) return childContext;
   const parsed = inspectJsonObject(raw, MAX_FINAL_MARKDOWN_CHARACTERS + 20_000);
-  if (!parsed.ok || !hasOnlyKeys(parsed.value, ['markdown', 'groundingManifest'])) return null;
-  const markdown = typeof parsed.value.markdown === 'string' ? parsed.value.markdown.trim() : '';
-  if (!markdown || markdown.length > MAX_FINAL_MARKDOWN_CHARACTERS || /<\/?[a-z][\s\S]*>/i.test(markdown)) {
-    return null;
+  if (!parsed.ok) return parsed;
+  const finalOutput = unwrapExactEnvelope(parsed.value, ['markdown', 'groundingManifest']);
+  if (!hasOnlyKeys(finalOutput, ['markdown', 'groundingManifest'])) {
+    return reject('final-shape-invalid');
   }
-  const childOrdinalStart = Math.min(...childClaims.flatMap((claim) => claim.sourceRanges.map((range) => range.start)));
-  const childOrdinalEnd = Math.max(...childClaims.flatMap((claim) => claim.sourceRanges.map((range) => range.end)));
-  const groundingManifest = inspectClaimSet(parsed.value.groundingManifest, {
-    allowedOrdinalStart: childOrdinalStart,
-    allowedOrdinalEnd: childOrdinalEnd,
-    allowedInputClaimIds: new Set(childClaims.map((claim) => claim.id)),
+  const markdown = typeof finalOutput.markdown === 'string' ? finalOutput.markdown.trim() : '';
+  if (!markdown || markdown.length > MAX_FINAL_MARKDOWN_CHARACTERS || /<\/?[a-z][\s\S]*>/i.test(markdown)) {
+    return reject('markdown-invalid');
+  }
+  const groundingManifest = inspectClaimSet(finalOutput.groundingManifest, {
+    allowedOrdinalStart: childContext.value.ordinalStart,
+    allowedOrdinalEnd: childContext.value.ordinalEnd,
+    allowedInputClaimIds: childContext.value.allowedInputClaimIds,
     canonicalIdPrefix,
   });
-  if (!groundingManifest.ok) return null;
+  if (!groundingManifest.ok) return groundingManifest;
+  if (!hasValidSourceLineage(groundingManifest.value.claims, childContext.value.rangesById)) {
+    return reject('source-lineage-invalid');
+  }
 
   const sensitiveClaims = groundingManifest.value.claims.filter((claim) => (
     claim.kind === 'formula' || claim.kind === 'number' || claim.kind === 'question'
   ));
-  if (sensitiveClaims.some((claim) => claim.inputClaimIds.length === 0)) return null;
+  if (sensitiveClaims.some((claim) => claim.inputClaimIds.length === 0)) {
+    return reject('input-claim-ids-invalid');
+  }
   if (/\d/.test(markdown) && !groundingManifest.value.claims.some((claim) => (
     claim.kind === 'number' || claim.kind === 'formula'
-  ))) return null;
+  ))) return reject('number-grounding-missing');
   if (/\?/.test(markdown) && !groundingManifest.value.claims.some((claim) => claim.kind === 'question')) {
-    return null;
+    return reject('question-grounding-missing');
   }
   if (/[=±×÷]|\b(?:sin|cos|log|sqrt)\b/i.test(markdown)
-    && !groundingManifest.value.claims.some((claim) => claim.kind === 'formula')) return null;
-  return { markdown, groundingManifest: groundingManifest.value };
+    && !groundingManifest.value.claims.some((claim) => claim.kind === 'formula')) {
+    return reject('formula-grounding-missing');
+  }
+  return accept({ markdown, groundingManifest: groundingManifest.value });
 }
 
 export function parseStoredClaimSet(value: string): GroundedClaimSet | null {

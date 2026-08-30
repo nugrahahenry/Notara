@@ -11,9 +11,9 @@ import { authorizeAiRequest, authorizeAuthenticatedUser } from '@/lib/api/ai-acc
 import { BoundedJsonBodyError, readBoundedJsonBody } from '@/lib/api/bounded-json';
 import { readHierarchicalEvidenceSnapshot } from '@/lib/summary/hierarchical-evidence';
 import {
+  inspectFinalStageOutput,
   inspectMapStageOutput,
-  normalizeFinalStageOutput,
-  normalizeReduceStageOutput,
+  inspectReduceStageOutput,
   parseStoredClaimSet,
   serializeGroundedClaimSet,
   type GroundedClaimSet,
@@ -396,28 +396,28 @@ export async function POST(request: NextRequest) {
       }
       storedOutput = serializeGroundedClaimSet(inspected.value);
     } else if (claimed.stageKind === 'reduce') {
-      const normalized = normalizeReduceStageOutput(content, childClaims, `reduce_${claimed.stageIndex}_c`);
-      if (!normalized) {
+      const inspected = inspectReduceStageOutput(content, childClaims, `reduce_${claimed.stageIndex}_c`);
+      if (!inspected.ok) {
         await failStage(supabase, claimed, 'invalid_output');
-        reportRejectedOutput(claimed, 'reduce-invalid');
+        reportRejectedOutput(claimed, 'reduce-invalid', inspected.reason);
         return NextResponse.json(
           { code: 'stage_output_invalid', error: 'Reduksi tahap kehilangan rujukan sumber.' },
           { status: 502 },
         );
       }
-      storedOutput = serializeGroundedClaimSet(normalized);
+      storedOutput = serializeGroundedClaimSet(inspected.value);
     } else {
-      const normalized = normalizeFinalStageOutput(content, childClaims, `final_${claimed.stageIndex}_c`);
-      if (!normalized) {
+      const inspected = inspectFinalStageOutput(content, childClaims, `final_${claimed.stageIndex}_c`);
+      if (!inspected.ok) {
         await failStage(supabase, claimed, 'invalid_output');
-        reportRejectedOutput(claimed, 'final-invalid');
+        reportRejectedOutput(claimed, 'final-invalid', inspected.reason);
         return NextResponse.json(
           { code: 'stage_output_invalid', error: 'Rangkuman akhir belum memiliki grounding yang valid.' },
           { status: 502 },
         );
       }
-      storedOutput = normalized.markdown;
-      groundingManifest = JSON.parse(serializeGroundedClaimSet(normalized.groundingManifest));
+      storedOutput = inspected.value.markdown;
+      groundingManifest = JSON.parse(serializeGroundedClaimSet(inspected.value.groundingManifest));
     }
 
     const { error: completionError } = await supabase.rpc(
