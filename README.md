@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Source lokal Nalira v0.14.6 memperluas diagnosis struktur aman dari map ke tahap reduce dan final, termasuk validasi lineage sumber, bentuk Markdown, serta grounding angka/formula/pertanyaan. v0.14.5 sudah berada di `origin/main`; production terakhir yang diverifikasi langsung masih v0.14.4. Workflow `AI1` tetap dijeda aman pada 1/6 dan rangkuman aktif tidak berubah. Tidak ada request Groq, browser acceptance, push, atau deploy pada checkpoint ini. Terakhir diverifikasi lokal: 31 Agustus 2026.
+> Status: Source lokal Nalira v0.15.0 menyatukan visual produk ke Luminous Fold, memakai Quiet Editorial pada Study Canvas, memasang Balanced Fold mark canonical, dan mengganti ilustrasi Home dengan Outward Bloom yang state-aware. Nalira v0.14.6 sudah berada di `origin/main`; checkpoint visual ini belum dipush atau dideploy. Tidak ada perubahan backend, schema, provider, auth, billing, atau data pengguna. Terakhir diverifikasi lokal: 5 September 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -12,7 +12,7 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - Login email/password dan Google melalui Supabase Auth, onboarding, profil, serta MFA di dashboard.
 - Rekam satu sumber fokus dari mikrofon kelas atau audio tab Chrome untuk Zoom/Meet, atau unggah audio/video; setelah itu Nalira membuat transkripsi Bahasa Indonesia dan rangkuman terstruktur.
 - Tes sumber 10 detik membantu memastikan sinyal yang benar terdengar sebelum rekaman panjang. Audio tab dan mikrofon tidak dicampur; pilihan tab hanya menyimpan track audio, bukan video yang dibagikan Chrome.
-- App Shell responsif dengan tema System/Light/Dark, sidebar desktop/mobile, Home, Mata Kuliah, Dibagikan, Tanya Nalira, dan Capture sebagai workspace yang jelas.
+- App Shell responsif dengan tema System/Light/Dark, Luminous Fold sebagai atmosfer produk, Quiet Editorial pada area baca, sidebar desktop/mobile, Home, Mata Kuliah, Dibagikan, Tanya Nalira, dan Capture sebagai workspace yang jelas.
 - Antrean Capture maksimal tiga file secara sekuensial, dengan preview metadata, validasi, progress yang hanya muncul saat benar-benar terukur, kegagalan per item, serta retry dari awal tanpa menghapus hasil item lain.
 - Pemrosesan berkas di atas 20 MB dilakukan di browser: audio di-resample menjadi mono 16 kHz lalu dipotong sekitar dua menit per bagian agar tiap request tetap di bawah batas platform. Prompt kecil dirangkum sekali; prompt panjang disimpan bersama timestamp lalu dialihkan ke workflow hierarkis tanpa memotong isi atau mengulang transkripsi.
 - Saat material disimpan, Nalira menyimpan processing run dan segmen bertimestamp secara privat serta idempoten. Timestamp antarchunk tetap mengacu ke posisi rekaman asal, dan pemilik dapat meninjau status kualitas, alasan peringatan, serta segmen bertanda waktu melalui pagination.

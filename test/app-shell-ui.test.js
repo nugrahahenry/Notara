@@ -88,10 +88,25 @@ test('central visual hooks render truthful Nalira output', () => {
   assert.match(wordmark, />nalira</);
   assert.doesNotMatch(wordmark, />Notara</i);
 
+  const mark = renderToStaticMarkup(React.createElement(brandModule.BrandMark));
+  assert.match(mark, /data-nl-identity="mark"/);
+  assert.match(mark, /nalira-mark-standard\.svg/);
+  assert.match(mark, /nalira-mark-reversed-indigo\.svg/);
+  assert.doesNotMatch(mark, /data-brand-placeholder/);
+
+  const ambient = renderToStaticMarkup(React.createElement(artworkModule.AmbientArtwork, {
+    daypart: 'pagi',
+    state: 'continuation',
+  }));
+  assert.match(ambient, /data-state="continuation"/);
+  assert.match(ambient, /data-phase="final"/);
+  assert.match(ambient, /nalira-home-outward-bloom-continuation\.svg/);
+
   const processing = renderToStaticMarkup(
     React.createElement(artworkModule.ProcessingVisual, { state: 'processing' }),
   );
   assert.match(processing, /data-state="processing"/);
+  assert.doesNotMatch(processing, /notara-brand-mark--animated/);
   assert.doesNotMatch(processing, /\d+%/);
 });
 
@@ -156,6 +171,41 @@ test('operational workspaces use customer language instead of implementation jar
   assert.doesNotMatch(visibleCopy, /fallback|contract|foundation visual|adapter existing/i);
   assert.doesNotMatch(visibleCopy, /Learning landscape/i);
   assert.match(visibleCopy, /Nalira/);
+});
+
+test('canonical Nalira identity and Home ambient assets are installed', () => {
+  const publicRoot = path.join(__dirname, '..', 'public');
+  const assets = [
+    'favicon.svg',
+    'assets/nalira/brand/nalira-mark-standard.svg',
+    'assets/nalira/brand/nalira-mark-reversed-indigo.svg',
+    'assets/nalira/ambient/nalira-home-outward-bloom-master.svg',
+    'assets/nalira/ambient/nalira-home-outward-bloom-multiple.svg',
+    'assets/nalira/ambient/nalira-home-outward-bloom-continuation.svg',
+    'assets/nalira/ambient/nalira-home-outward-bloom-empty.svg',
+  ];
+
+  for (const asset of assets) {
+    assert.equal(fs.existsSync(path.join(publicRoot, asset)), true, `${asset} must exist`);
+  }
+
+  const layout = fs.readFileSync(path.join(__dirname, '..', 'app', 'layout.tsx'), 'utf8');
+  const studyCanvas = fs.readFileSync(
+    path.join(__dirname, '..', 'app', 'components', 'workspace', 'StudyCanvasBoundary.tsx'),
+    'utf8',
+  );
+  assert.match(layout, /data-atmosphere="luminous"/);
+  assert.match(layout, /data-motion="calm"/);
+  assert.match(studyCanvas, /data-nl-atmosphere="quiet"/);
+  assert.match(studyCanvas, /data-nl-surface="reading"/);
+
+  const visualSystem = fs.readFileSync(
+    path.join(__dirname, '..', 'app', 'styles', 'nalira-visual-system.css'),
+    'utf8',
+  );
+  assert.match(visualSystem, /data-phase="live"/);
+  assert.match(visualSystem, /@keyframes nl-home-bloom-arrive/);
+  assert.match(visualSystem, /data-motion="reduced"[^}]*\.notara-home-ambient-scene/s);
 });
 
 test('Home gives one primary daily action while keeping capture within reach', () => {

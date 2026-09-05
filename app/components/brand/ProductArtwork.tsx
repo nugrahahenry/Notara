@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties, RefObject } from 'react';
+import Image from 'next/image';
 import { BrandMark } from './BrandPrimitives';
 
 export type RecordingVisualState = 'idle' | 'recording' | 'paused' | 'ready';
@@ -34,7 +35,7 @@ export function ProcessingVisual({ state = 'processing', size = 112 }: Processin
     <span className="notara-processing-visual" data-state={state} style={visualStyle} aria-hidden="true">
       <span className="notara-processing-visual__orbit" />
       <span className="notara-processing-visual__orbit notara-processing-visual__orbit--inner" />
-      <BrandMark size={size} animated={state === 'processing'} aria-hidden="true" />
+      <BrandMark size={size} aria-hidden="true" />
     </span>
   );
 }
@@ -58,21 +59,33 @@ export function EmptyStateArtwork({ variant, size = 88 }: EmptyStateArtworkProps
 }
 
 export type AmbientArtworkDaypart = 'pagi' | 'siang' | 'sore' | 'malam';
+export type AmbientArtworkState = 'new-one' | 'new-multiple' | 'continuation' | 'empty';
 
-export function AmbientArtwork({ daypart }: { daypart: AmbientArtworkDaypart }) {
+const ambientAssetByState: Record<AmbientArtworkState, string> = {
+  'new-one': '/assets/nalira/ambient/nalira-home-outward-bloom-master.svg',
+  'new-multiple': '/assets/nalira/ambient/nalira-home-outward-bloom-multiple.svg',
+  continuation: '/assets/nalira/ambient/nalira-home-outward-bloom-continuation.svg',
+  empty: '/assets/nalira/ambient/nalira-home-outward-bloom-empty.svg',
+};
+
+export function AmbientArtwork({
+  daypart,
+  state,
+  phase = 'final',
+}: {
+  daypart: AmbientArtworkDaypart;
+  state: AmbientArtworkState;
+  phase?: 'initial' | 'live' | 'final';
+}) {
   return (
-    <div className="notara-home-ambient-scene" data-daypart={daypart} aria-hidden="true">
-      <span className="notara-home-sky-orbit notara-home-sky-orbit--wide" />
-      <span className="notara-home-sky-orbit notara-home-sky-orbit--narrow" />
-      <span className="notara-home-sky-body" />
-      <span className="notara-home-horizon" />
-      <span className="notara-home-star notara-home-star--one" />
-      <span className="notara-home-star notara-home-star--two" />
-      <span className="notara-home-star notara-home-star--three" />
-      <svg className="notara-home-scene-signal" viewBox="0 0 190 92" fill="none">
-        <path d="M10 62c22-27 38 18 60-4s36 18 58-4 34 12 52-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-        <path d="M16 74h58c29 0 48-8 48-30v34l15-10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity=".66" />
-      </svg>
+    <div
+      className="notara-home-ambient-scene nl-home-outward-bloom"
+      data-daypart={daypart}
+      data-state={state}
+      data-phase={phase}
+      aria-hidden="true"
+    >
+      <Image src={ambientAssetByState[state]} alt="" width={620} height={360} priority />
     </div>
   );
 }

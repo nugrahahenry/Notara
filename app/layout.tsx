@@ -4,9 +4,17 @@ import Script from 'next/script';
 import { PRODUCT_IDENTITY, resolvePublicSiteUrl } from '../lib/brand/identity';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import './globals.css';
+import './styles/nalira-visual-system.css';
 
 const themeInitializationScript = `
   (function () {
+    var reducedMotion = true;
+    try {
+      reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (_) {}
+    document.documentElement.dataset.atmosphere = 'luminous';
+    document.documentElement.dataset.motion = reducedMotion ? 'reduced' : 'calm';
+
     try {
       var preference = localStorage.getItem('notara-theme') || 'system';
       if (preference !== 'light' && preference !== 'dark') preference = 'system';
@@ -77,6 +85,8 @@ export default function RootLayout({
   return (
     <html
       lang="id"
+      data-atmosphere="luminous"
+      data-motion="calm"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >

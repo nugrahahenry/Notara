@@ -4,7 +4,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.14.6.
+Belum ada perubahan setelah Nalira v0.15.0.
+
+## [0.15.0] - 2026-09-05
+### Added
+- Balanced Fold mark canonical, favicon, dan empat varian Outward Bloom sekarang menjadi aset produksi terpusat di `public/assets/nalira`.
+- Root visual contract menetapkan atmosfer `luminous` dan motion `calm`, lalu otomatis beralih ke `reduced` mengikuti preferensi sistem.
+
+### Changed
+- Token warna shell, surface, teks, border, aksi, serta state semantik disatukan ke Luminous Fold untuk tema terang dan gelap tanpa mengganti identifier teknis legacy.
+- Home memakai visual Outward Bloom yang membedakan keadaan kosong dan kelanjutan secara jujur. Study Canvas, transkrip, dan evidence memakai permukaan Quiet Editorial agar sesi baca lebih tenang.
+- `BrandMark`, `BrandWordmark`, dan `BrandLockup` tetap menjadi pintu komponen tunggal; wordmark tetap text-only `nalira` dan mark placeholder telah dihapus.
+
+### Quality
+- Kontrak baru melindungi keberadaan aset canonical, pemetaan state Home, Luminous/Quiet hooks, serta ketiadaan placeholder mark.
+- QA visual lokal mencakup desktop terang/gelap dan mobile 390 px. Browser console bersih dan detector Impeccable tidak menemukan pola anti-slop.
+- Tidak ada perubahan backend, database, Supabase, provider AI, authentication, billing, atau data pengguna.
 
 ## [0.14.6] - 2026-08-31
 ### Fixed

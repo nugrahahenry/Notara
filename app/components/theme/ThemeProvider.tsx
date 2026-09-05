@@ -43,13 +43,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const initialPreference = normalizeTheme(
-      document.documentElement.dataset.themePreference
-        ?? localStorage.getItem(THEME_STORAGE_KEY),
-    );
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let storedPreference: string | null = null;
+    try {
+      storedPreference = localStorage.getItem(THEME_STORAGE_KEY);
+    } catch {
+      storedPreference = null;
+    }
+    const initialPreference = normalizeTheme(
+      document.documentElement.dataset.themePreference ?? storedPreference,
+    );
     const handleSystemThemeChange = () => {
       if (preferenceRef.current === 'system') applyTheme('system');
+    };
+    const applyMotionPreference = () => {
+      document.documentElement.dataset.motion = motionQuery.matches ? 'reduced' : 'calm';
     };
 
     preferenceRef.current = initialPreference;
@@ -57,15 +66,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       ? undefined
       : window.setTimeout(() => setPreferenceState(initialPreference), 0);
     applyTheme(initialPreference);
+    document.documentElement.dataset.atmosphere = 'luminous';
+    applyMotionPreference();
     mediaQuery.addEventListener('change', handleSystemThemeChange);
+    motionQuery.addEventListener('change', applyMotionPreference);
     return () => {
       if (preferenceSyncTimer !== undefined) window.clearTimeout(preferenceSyncTimer);
       mediaQuery.removeEventListener('change', handleSystemThemeChange);
+      motionQuery.removeEventListener('change', applyMotionPreference);
     };
   }, [applyTheme]);
 
   const setPreference = useCallback((nextPreference: ThemePreference) => {
-    localStorage.setItem(THEME_STORAGE_KEY, nextPreference);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, nextPreference);
+    } catch {
+      // The current tab can still honor the choice when persistent storage is blocked.
+    }
     preferenceRef.current = nextPreference;
     setPreferenceState(nextPreference);
     applyTheme(nextPreference);

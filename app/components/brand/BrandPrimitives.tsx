@@ -1,31 +1,44 @@
 'use client';
 
-import type { ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithoutRef, CSSProperties } from 'react';
+import Image from 'next/image';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 
-export interface BrandMarkProps extends ComponentPropsWithoutRef<'svg'> {
+export interface BrandMarkProps extends ComponentPropsWithoutRef<'span'> {
   size?: number;
   animated?: boolean;
 }
 
-export function BrandMark({ size = 32, animated = false, className = '', ...props }: BrandMarkProps) {
+export function BrandMark({ size = 32, animated = false, className = '', style, ...props }: BrandMarkProps) {
+  const visualStyle = {
+    '--nalira-brand-size': `${size}px`,
+    ...style,
+  } as CSSProperties;
+
   return (
-    <svg
-      viewBox="0 0 32 32"
-      width={size}
-      height={size}
+    <span
       className={`notara-brand-mark ${animated ? 'notara-brand-mark--animated' : ''} ${className}`}
       role="img"
-      aria-label={`${PRODUCT_IDENTITY.name} placeholder mark`}
-      data-brand-placeholder="neutral"
+      aria-label={`${PRODUCT_IDENTITY.name} mark`}
+      data-nl-identity="mark"
+      style={visualStyle}
       {...props}
     >
-      <rect className="notara-brand-mark__frame" x="4" y="4" width="24" height="24" rx="9" />
-      <path className="notara-brand-mark__signal" d="M10 11.5h12" />
-      <path className="notara-brand-mark__fold" d="M10 16h8" />
-      <path className="notara-brand-mark__note" d="M10 20.5h12" />
-      <circle className="notara-brand-mark__source" cx="22" cy="16" r="1.75" />
-    </svg>
+      <Image
+        className="notara-brand-asset notara-brand-asset--light"
+        src="/assets/nalira/brand/nalira-mark-standard.svg"
+        alt=""
+        width={size}
+        height={size}
+      />
+      <Image
+        className="notara-brand-asset notara-brand-asset--dark"
+        src="/assets/nalira/brand/nalira-mark-reversed-indigo.svg"
+        alt=""
+        width={size}
+        height={size}
+      />
+    </span>
   );
 }
 
@@ -36,7 +49,7 @@ export interface BrandWordmarkProps {
 
 export function BrandWordmark({ compact = false, className = '' }: BrandWordmarkProps) {
   return (
-    <span className={`notara-wordmark-v4 ${compact ? 'notara-wordmark-v4--compact' : ''} ${className}`}>
+    <span data-nl-identity="wordmark" className={`notara-wordmark-v4 ${compact ? 'notara-wordmark-v4--compact' : ''} ${className}`}>
       nalira
     </span>
   );
@@ -78,7 +91,7 @@ export function ProcessingMark({ size = 112 }: { size?: number }) {
       role="status"
       aria-label={`${PRODUCT_IDENTITY.name} sedang memproses`}
     >
-      <BrandMark size={size} animated aria-hidden="true" />
+      <BrandMark size={size} aria-hidden="true" />
     </span>
   );
 }

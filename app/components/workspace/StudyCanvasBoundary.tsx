@@ -159,6 +159,8 @@ export function StudyCanvasBoundary({
   return (
     <section
       className="notara-study-canvas-boundary"
+      data-nl-atmosphere="quiet"
+      data-nl-surface="study-canvas"
       aria-label={`Materi: ${summary.title}`}
       onKeyDown={handleBoundaryKeyDown}
     >
@@ -174,7 +176,7 @@ export function StudyCanvasBoundary({
 
       <div className="notara-study-layout">
         <div className="notara-study-stage">
-          <article className="notara-editorial-canvas">
+          <article className="notara-editorial-canvas nl-surface-reading" data-nl-surface="reading">
             <header className="notara-document-header">
               <div className="notara-document-heading-layout">
                 <div className="notara-document-heading-main">

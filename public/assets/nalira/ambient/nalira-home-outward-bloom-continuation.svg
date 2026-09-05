@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="nl-ha-title nl-ha-desc" data-system="nalira-home-ambient" data-version="0.3" data-depth="outward" data-state="continuation">
+  <title id="nl-ha-title">Nalira Folded Light Outward Bloom</title>
+  <desc id="nl-ha-desc">Source fragments settle into a clearly open book. The right page opens outward and light radiates away from the spine.</desc>
+  <defs>
+    <linearGradient id="nl-ha-left-page" x1="104" y1="72" x2="330" y2="354" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset=".62" stop-color="#FBFAFF"/>
+      <stop offset="1" stop-color="#EEEAFB"/>
+    </linearGradient>
+    <linearGradient id="nl-ha-right-page" x1="330" y1="205" x2="572" y2="205" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4D43C8"/>
+      <stop offset=".38" stop-color="#7265E4"/>
+      <stop offset=".78" stop-color="#AFA3FA"/>
+      <stop offset="1" stop-color="#D9D4FF"/>
+    </linearGradient>
+    <linearGradient id="nl-ha-right-back" x1="338" y1="210" x2="560" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3933A6" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#AA9EF5" stop-opacity=".14"/>
+    </linearGradient>
+    <linearGradient id="nl-ha-rim" x1="548" y1="48" x2="572" y2="311" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".96"/>
+      <stop offset=".48" stop-color="#EAE7FF" stop-opacity=".8"/>
+      <stop offset="1" stop-color="#BDB4FF" stop-opacity=".4"/>
+    </linearGradient>
+    <linearGradient id="nl-ha-shadow-fill" x1="100" y1="318" x2="584" y2="397" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#30286D" stop-opacity=".08"/>
+      <stop offset=".48" stop-color="#433A92" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#8D80E8" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="nl-ha-right-shadow-fill" x1="330" y1="354" x2="606" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2D2764" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#7D70D7" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="nl-ha-ray-indigo" x1="332" y1="210" x2="635" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#786CE5" stop-opacity=".3"/>
+      <stop offset=".58" stop-color="#AA9FF4" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#D9D5FF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="nl-ha-ray-warm" x1="332" y1="210" x2="635" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F6C983" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#FFE8BA" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="nl-ha-bloom" cx="0" cy="0" r="1" gradientTransform="translate(360 222) rotate(6) scale(286 184)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".78"/>
+      <stop offset=".28" stop-color="#E9E5FF" stop-opacity=".38"/>
+      <stop offset=".72" stop-color="#C6BEFF" stop-opacity=".1"/>
+      <stop offset="1" stop-color="#B5ACFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="nl-ha-shadow" x="-25%" y="-40%" width="170%" height="210%">
+      <feGaussianBlur stdDeviation="13"/>
+    </filter>
+    <filter id="nl-ha-card-shadow" x="-40%" y="-45%" width="190%" height="210%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#322A72" flood-opacity=".15"/>
+    </filter>
+    <filter id="nl-ha-soft-glow" x="-90%" y="-90%" width="280%" height="280%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <style>
+  .nl-ha-multi-stack,.nl-ha-progress-state,.nl-ha-empty-state{display:none}
+  [data-state="new-multiple"] .nl-ha-multi-stack{display:inline}
+  [data-state="continuation"] .nl-ha-completion-cue{display:none}
+  [data-state="continuation"] .nl-ha-progress-state{display:inline}
+  [data-state="continuation"] .nl-ha-source-fragments{opacity:.2}
+  [data-state="empty"] .nl-ha-completion-cue,[data-state="empty"] .nl-ha-source-links,[data-state="empty"] .nl-ha-book-lines,[data-state="empty"] .nl-ha-source-fragments{display:none}
+  [data-state="empty"] .nl-ha-empty-state{display:inline}
+  [data-state="empty"] .nl-ha-book{opacity:.62}
+</style>
+  </defs>
+
+  <g class="nl-ha-outward-rays" aria-hidden="true">
+    <ellipse class="nl-ha-bloom-field" cx="396" cy="226" rx="236" ry="154" fill="url(#nl-ha-bloom)"/>
+    <path class="nl-ha-ray nl-ha-ray-1" d="M336 152 L638 54 L638 94 Z" fill="url(#nl-ha-ray-warm)"/>
+    <path class="nl-ha-ray nl-ha-ray-2" d="M338 180 L638 105 L638 148 Z" fill="url(#nl-ha-ray-indigo)"/>
+    <path class="nl-ha-ray nl-ha-ray-3" d="M338 214 L638 172 L638 216 Z" fill="url(#nl-ha-ray-indigo)" opacity=".86"/>
+    <path class="nl-ha-ray nl-ha-ray-4" d="M338 244 L638 239 L638 286 Z" fill="url(#nl-ha-ray-indigo)" opacity=".72"/>
+    <path class="nl-ha-ray nl-ha-ray-5" d="M336 276 L632 310 L632 358 Z" fill="url(#nl-ha-ray-indigo)" opacity=".62"/>
+    <path class="nl-ha-ray nl-ha-ray-6" d="M334 300 L566 420 L500 420 Z" fill="url(#nl-ha-ray-warm)" opacity=".76"/>
+  </g>
+
+  <g class="nl-ha-cast-shadow" aria-hidden="true" filter="url(#nl-ha-shadow)">
+    <path d="M96 322 C190 335 270 365 334 381 C423 405 535 385 616 338 C550 405 432 425 292 416 C190 409 116 376 76 344 Z" fill="url(#nl-ha-shadow-fill)"/>
+    <path d="M330 354 C404 344 480 330 558 311 L606 344 C515 392 424 399 327 374 Z" fill="url(#nl-ha-right-shadow-fill)"/>
+  </g>
+
+  <g class="nl-ha-source-links" fill="none" stroke-linecap="round" aria-hidden="true">
+    <path class="nl-ha-link nl-ha-link-a" d="M86 95 C156 94 196 118 250 139" stroke="#6B5FE2" stroke-width="3" opacity=".54"/>
+    <path class="nl-ha-link nl-ha-link-b" d="M119 190 C179 188 214 192 273 209" stroke="#218F96" stroke-width="3" opacity=".48"/>
+    <path class="nl-ha-link nl-ha-link-c" d="M100 278 C165 270 218 266 281 274" stroke="#6B5FE2" stroke-width="3" opacity=".4"/>
+  </g>
+
+  <g class="nl-ha-source-fragments" filter="url(#nl-ha-card-shadow)">
+    <g class="nl-ha-fragment nl-ha-fragment-a" transform="translate(20 64)">
+      <rect width="70" height="48" rx="12" fill="#FFFFFF" stroke="#C9C5EB" stroke-width="2"/>
+      <path d="M16 28V20M23 33V15M30 27V21M37 35V13M44 28V20M51 31V17" stroke="#5B50E6" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="58" cy="13" r="4" fill="#2F9B87"/>
+    </g>
+    <g class="nl-ha-fragment nl-ha-fragment-b" transform="translate(47 155)">
+      <rect width="84" height="56" rx="13" fill="#FFFFFF" stroke="#C9C5EB" stroke-width="2"/>
+      <path d="M16 17H62M16 28H69M16 39H50" stroke="#7770C9" stroke-width="4" stroke-linecap="round" opacity=".76"/>
+      <rect x="58" y="36" width="12" height="6" rx="3" fill="#2F9B87" opacity=".8"/>
+    </g>
+    <g class="nl-ha-fragment nl-ha-fragment-c" transform="translate(16 248)">
+      <rect width="92" height="60" rx="14" fill="#FFFFFF" stroke="#C9C5EB" stroke-width="2"/>
+      <rect x="15" y="13" width="28" height="34" rx="7" fill="#ECE9FF"/>
+      <path d="M54 18H76M54 29H72M54 40H79" stroke="#5B50E6" stroke-width="4" stroke-linecap="round" opacity=".64"/>
+      <circle cx="26" cy="26" r="5" fill="#2F9B87" opacity=".78"/>
+    </g>
+  </g>
+
+  <g class="nl-ha-multi-stack" aria-hidden="true" opacity=".52">
+    <path d="M350 100 C416 83 493 66 552 54 L558 297 C491 315 420 328 348 340 Z" fill="#F1EFFF" stroke="#BDB7EE" stroke-width="2" transform="translate(18 -10)"/>
+    <path d="M350 100 C416 83 493 66 552 54 L558 297 C491 315 420 328 348 340 Z" fill="#E8E4FF" stroke="#AEA6E9" stroke-width="2" transform="translate(9 -5)"/>
+  </g>
+
+  <g class="nl-ha-book" filter="url(#nl-ha-card-shadow)">
+    <g class="nl-ha-left-page">
+      <path d="M118 80 C190 72 262 80 330 104 L330 354 C254 339 182 330 116 318 Q104 316 104 304 L104 96 Q104 83 118 80 Z" fill="url(#nl-ha-left-page)" stroke="#C8C5DF" stroke-width="2"/>
+      <path d="M118 86 C190 79 258 87 323 107" fill="none" stroke="#FFFFFF" stroke-width="3" opacity=".92"/>
+      <path d="M111 316 C182 327 252 336 324 350" fill="none" stroke="#D7D3EA" stroke-width="3" opacity=".7"/>
+      <g class="nl-ha-book-lines" fill="none" stroke-linecap="round">
+        <path d="M146 140 C194 137 239 141 282 151" stroke="#7B70D8" stroke-width="11" opacity=".66"/>
+        <path d="M146 170 C188 169 226 174 263 183" stroke="#6F63CF" stroke-width="10" opacity=".72"/>
+        <path d="M146 200 C188 200 230 207 273 216" stroke="#2F9B9A" stroke-width="9" opacity=".6"/>
+        <path d="M146 232 C190 232 225 238 259 247" stroke="#8D85D9" stroke-width="9" opacity=".52"/>
+        <path d="M146 262 C191 263 227 269 268 278" stroke="#7D75CD" stroke-width="9" opacity=".48"/>
+      </g>
+      <g class="nl-ha-progress-state" aria-hidden="true">
+        <path d="M136 136V279" stroke="#D8D4EE" stroke-width="4" stroke-linecap="round"/>
+        <path d="M136 136V226" stroke="#5B50E6" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="136" cy="226" r="8" fill="#FFFFFF" stroke="#5B50E6" stroke-width="4"/>
+      </g>
+      <g class="nl-ha-empty-state" aria-hidden="true" fill="none" stroke-linecap="round">
+        <path d="M148 164 C190 160 226 164 260 172" stroke="#BBB6D8" stroke-width="7" stroke-dasharray="2 14" opacity=".65"/>
+        <path d="M148 204 C190 201 226 206 274 216" stroke="#C9C5DF" stroke-width="7" stroke-dasharray="2 14" opacity=".5"/>
+        <circle cx="206" cy="257" r="20" stroke="#7B70D8" stroke-width="3" opacity=".48"/>
+      </g>
+    </g>
+
+    <g class="nl-ha-right-page">
+      <path class="nl-ha-right-back" d="M338 112 C408 94 487 76 552 60 L560 297 C490 315 415 329 338 340 Z" fill="url(#nl-ha-right-back)"/>
+      <path d="M330 104 C398 86 480 66 548 48 Q560 46 562 60 L572 292 Q573 307 558 311 C480 330 404 344 330 354 Z" fill="url(#nl-ha-right-page)" stroke="#8276DD" stroke-width="2"/>
+      <path class="nl-ha-rim-light" d="M548 48 Q560 46 562 60 L572 292 Q573 307 558 311" fill="none" stroke="url(#nl-ha-rim)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M340 116 C400 100 474 82 538 64" fill="none" stroke="#EAE7FF" stroke-width="3" opacity=".55"/>
+      <path d="M343 342 C417 332 489 318 555 302" fill="none" stroke="#BDB5F4" stroke-width="3" opacity=".4"/>
+    </g>
+
+    <g class="nl-ha-spine" aria-hidden="true">
+      <path d="M330 104 C326 160 326 294 330 354" fill="none" stroke="#342E87" stroke-width="8" stroke-linecap="round" opacity=".38"/>
+      <path d="M330 104 C326 160 326 294 330 354" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity=".92"/>
+      <path d="M339 110 C336 170 336 294 339 348" fill="none" stroke="#A49AEE" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+    </g>
+  </g>
+
+  <g class="nl-ha-completion-cue" transform="translate(548 62)" filter="url(#nl-ha-card-shadow)">
+    <circle r="22" fill="#F5FFF9" stroke="#2F9872" stroke-width="3"/>
+    <path d="M-9 0 L-3 7 L11 -10" fill="none" stroke="#2F9872" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="nl-ha-clarity-point" transform="translate(345 132)" fill="#FFFFFF" opacity=".86">
+    <path d="M0-12 C1.2-4.6 4.6-1.2 12 0 C4.6 1.2 1.2 4.6 0 12 C-1.2 4.6-4.6 1.2-12 0 C-4.6-1.2-1.2-4.6 0-12 Z"/>
+  </g>
+</svg>

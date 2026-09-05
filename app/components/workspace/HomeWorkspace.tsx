@@ -96,7 +96,7 @@ function AmbientScene({
   activeMaterial,
 }: {
   daypart: Daypart;
-  firstName: string;
+      firstName: string;
   firstUse: boolean;
   dateLabel: string;
   activeMaterial: string | null;
@@ -108,7 +108,12 @@ function AmbientScene({
       : daypartCopy[daypart];
 
   return (
-    <header className="notara-home-ambient" data-daypart={daypart} aria-labelledby="home-greeting">
+    <header
+      className="notara-home-ambient nl-surface-product"
+      data-daypart={daypart}
+      data-nl-surface="home-completion"
+      aria-labelledby="home-greeting"
+    >
       <div className="notara-home-ambient-copy">
         <h1 id="home-greeting">{greetingByDaypart[daypart]}, {firstName}.</h1>
         <p>{subcopy}</p>
@@ -118,7 +123,7 @@ function AmbientScene({
           <span><i aria-hidden="true" /> {firstUse ? 'Siap membuat materi pertama' : 'Fokus hari ini: 1 materi aktif'}</span>
         </div>
       </div>
-      <AmbientArtwork daypart={daypart} />
+      <AmbientArtwork daypart={daypart} state={firstUse ? 'empty' : 'continuation'} />
     </header>
   );
 }
