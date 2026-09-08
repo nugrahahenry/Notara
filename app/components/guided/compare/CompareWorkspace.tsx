@@ -28,6 +28,7 @@ interface CompareWorkspaceProps {
   draft: CompareDraft;
   sourceChanged: boolean;
   onEvent: Dispatch<GuidedFoundationEvent>;
+  onAskTutor: (question: string) => void;
 }
 
 type PendingAction = { slot: CompareSlot; action: 'replace' | 'clear' } | null;
@@ -37,6 +38,7 @@ export function CompareWorkspace({
   draft,
   sourceChanged,
   onEvent,
+  onAskTutor,
 }: CompareWorkspaceProps) {
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const actionRefs = {
@@ -149,11 +151,7 @@ export function CompareWorkspace({
       aria-describedby="compare-lifecycle-note"
     >
       <header className="notara-compare-intro">
-        <span className="notara-guided-node-kind">
-          <SemanticIcon name="relationship" size={18} />
-          Bandingkan dua bagian
-        </span>
-        <h3 id="compare-workspace-heading" ref={headingRef} tabIndex={-1}>Pilih dua bagian sumber</h3>
+        <h3 id="compare-workspace-heading" ref={headingRef} tabIndex={-1}>Bandingkan dua bagian sumber</h3>
         <p>Pilih dua bagian dari materi aktif, lalu lihat keduanya berdampingan sebelum menulis catatanmu.</p>
       </header>
 
@@ -287,6 +285,17 @@ export function CompareWorkspace({
                 placeholder="Tulis pertanyaan yang masih tersisa."
               />
             </label>
+            <div className="notara-compare-tutor-handoff">
+              <span>Pertanyaan tetap milikmu dan tidak dikirim otomatis.</span>
+              <button
+                type="button"
+                className="notara-secondary-button"
+                disabled={!currentDraft.notes.remainingQuestion.trim()}
+                onClick={() => onAskTutor(currentDraft.notes.remainingQuestion.trim())}
+              >
+                Bawa ke Tanya Materi
+              </button>
+            </div>
           </div>
         </>
       ) : (

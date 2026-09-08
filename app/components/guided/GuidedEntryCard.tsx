@@ -66,13 +66,13 @@ export function GuidedEntryCard({
         <SemanticIcon name="learning-path" size={20} />
       </span>
       <div className="notara-guided-entry-copy">
-        <strong id="guided-entry-title">Lanjut dengan belajar terpandu</strong>
-        <p>Pilih tujuan, lihat rute, lalu lanjutkan satu langkah pada satu waktu.</p>
+        <strong id="guided-entry-title">Ubah bacaan menjadi sesi belajar</strong>
+        <p>Pilih tujuan, tinjau rute, lalu kerjakan satu langkah dengan sumber materi tetap terlihat.</p>
       </div>
       <div className="notara-guided-entry-continue">
-        <small>Lima langkah · satu materi</small>
+        <small>Lima langkah · satu materi · tanpa skor otomatis</small>
         <button ref={buttonRef} type="button" onClick={onStart} className="notara-guided-entry-action">
-          Bantu aku lanjut <ArrowRight className="h-4 w-4" />
+          Mulai rute belajar <ArrowRight className="h-4 w-4" />
         </button>
       </div>
     </aside>

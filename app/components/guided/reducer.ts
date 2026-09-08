@@ -20,6 +20,7 @@ export function createGuidedFoundationState(materialId: string): GuidedFoundatio
     objective: null,
     route: null,
     activeNodeIndex: 0,
+    visitedNodeIndexes: [],
     responsesByNode: {},
     check: { ...EMPTY_GUIDED_CHECK },
     compare: createCompareDraft(materialId),
@@ -44,6 +45,7 @@ export function guidedFoundationReducer(
         objective: event.objective,
         route: null,
         activeNodeIndex: 0,
+        visitedNodeIndexes: [],
         responsesByNode: {},
         check: { ...EMPTY_GUIDED_CHECK },
         compare: createCompareDraft(state.materialId, state.compare.sourceSignature),
@@ -56,7 +58,14 @@ export function guidedFoundationReducer(
     }
 
     case 'START_SESSION':
-      return state.route ? { ...state, stage: 'session', activeNodeIndex: 0 } : state;
+      if (!state.route) return state;
+      return {
+        ...state,
+        stage: 'session',
+        visitedNodeIndexes: state.visitedNodeIndexes.includes(state.activeNodeIndex)
+          ? state.visitedNodeIndexes
+          : [...state.visitedNodeIndexes, state.activeNodeIndex].sort((a, b) => a - b),
+      };
 
     case 'BACK':
       if (state.stage === 'session') return { ...state, stage: 'route' };
@@ -73,9 +82,13 @@ export function guidedFoundationReducer(
 
     case 'GO_TO_NODE':
       if (!state.route) return state;
+      const nextNodeIndex = Math.max(0, Math.min(state.route.nodes.length - 1, event.index));
       return {
         ...state,
-        activeNodeIndex: Math.max(0, Math.min(state.route.nodes.length - 1, event.index)),
+        activeNodeIndex: nextNodeIndex,
+        visitedNodeIndexes: state.visitedNodeIndexes.includes(nextNodeIndex)
+          ? state.visitedNodeIndexes
+          : [...state.visitedNodeIndexes, nextNodeIndex].sort((a, b) => a - b),
       };
 
     case 'SOURCE_SIGNATURE_CHANGED':

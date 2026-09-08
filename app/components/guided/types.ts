@@ -54,6 +54,7 @@ export interface GuidedFoundationState {
   objective: GuidedObjectiveDraft | null;
   route: GuidedRouteDraft | null;
   activeNodeIndex: number;
+  visitedNodeIndexes: number[];
   responsesByNode: Partial<Record<GuidedRouteNodeKind, string>>;
   check: GuidedCheckReflection;
   compare: CompareDraft;

@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Source lokal Nalira v0.15.0 menyatukan visual produk ke Luminous Fold, memakai Quiet Editorial pada Study Canvas, memasang Balanced Fold mark canonical, dan mengganti ilustrasi Home dengan Outward Bloom yang state-aware. Nalira v0.14.6 sudah berada di `origin/main`; checkpoint visual ini belum dipush atau dideploy. Tidak ada perubahan backend, schema, provider, auth, billing, atau data pengguna. Terakhir diverifikasi lokal: 5 September 2026.
+> Status: Source lokal Nalira v0.16.0 menghubungkan Material Review ke Objective, rute lima langkah, sesi belajar, perbandingan sumber, dan handoff pertanyaan ke Tutor yang sudah ada. Progres sesi masih sementara di tab dan tidak mengklaim skor atau penguasaan otomatis. Nalira v0.15.0 sudah berada di `origin/main`; checkpoint ini belum dipush atau dideploy. Tidak ada perubahan backend, schema, provider, auth, billing, atau data pengguna. Terakhir diverifikasi lokal: 8 September 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -21,6 +21,7 @@ Nalira membantu mahasiswa Indonesia mengubah rekaman kuliah menjadi transkrip, r
 - Folder/mata kuliah, pencarian, pengelolaan rangkuman, ekspor Word, dan riwayat chat.
 - Chat streaming dengan scope satu rangkuman, satu folder, atau koleksi pengguna.
 - Study Canvas, Study Dock, serta slot Learning Lab untuk konsep, rumus, visual, quiz, dan pembicara sudah memiliki fondasi UI; kemampuan analisis Learning Lab belum tersedia.
+- Material Review dapat membuka Guided Learning untuk satu materi milik pengguna: pilih tujuan, tinjau rute lima langkah, tulis catatan sementara, bandingkan dua kutipan sumber, lakukan cek diri, dan bawa pertanyaan yang belum terjawab ke composer Tutor. Progres dan catatan belum disimpan setelah reload, dan Nalira tidak memberi skor atau klaim penguasaan otomatis.
 - Share page publik yang dapat diaktifkan pemilik rangkuman dan tombol fork untuk pengguna yang login.
 - Study group dan berbagi folder di dalam grup.
 - UI checkout Midtrans, webhook bertanda tangan, dan pipeline subscription sudah diamankan di source v0.3.20. **Billing nyata belum boleh dipakai** sampai secret server dan migration privilege/RLS diterapkan serta diuji end-to-end di production.
@@ -139,9 +140,9 @@ npm run build
 
 ## Roadmap terdekat
 
-1. Push dan deploy source v0.14.1, lalu pastikan satu upload panjang berhenti pada dialog penyimpanan transkrip—bukan Groq 413—tanpa mengulang transkripsi.
-2. Setelah materi panjang tersimpan, lakukan satu acceptance terukur dengan jumlah tahap yang diungkap UI. Jangan menjalankan real multi-call test tanpa konfirmasi baru atas materi, destination Groq, dan maksimum call.
+1. Setelah push/deploy v0.16.0, lakukan acceptance satu materi nyata pada desktop dan mobile: pilih tujuan, buka kelima langkah, bandingkan dua kutipan, lalu bawa satu pertanyaan ke Tutor tanpa pengiriman otomatis.
+2. Putuskan kontrak penyimpanan Guided Learning sebelum menambah progress lintas perangkat, skor, route adaptif, quiz AI, atau rekomendasi otomatis.
 3. Saat kelas online berikutnya tersedia, lakukan acceptance `Tab Zoom / Meet` dengan memilih satu tab Chrome yang sedang mengeluarkan suara dan mengaktifkan audio tab.
-4. Selesaikan acceptance preview → gunakan → pulihkan pada satu materi nyata sebelum memperluas regenerasi ke transkrip kelas panjang atau menghubungkannya ke workstream Learning System/Brand.
+4. Selesaikan acceptance preview rangkuman → gunakan → pulihkan pada satu materi nyata sebelum memperluas regenerasi ke materi lain.
 
 Catatan produk, desain, dan prototype internal sengaja disimpan terpisah dari repository publik.

@@ -4,7 +4,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.15.0.
+Belum ada perubahan setelah Nalira v0.16.0.
+
+## [0.16.0] - 2026-09-08
+### Added
+- Guided Learning kini menghubungkan Material Review, pemilihan Objective, pratinjau rute lima langkah, sesi belajar, perbandingan dua kutipan, dan cek diri dalam satu alur berbasis materi.
+- Panel sumber dapat dibuka di tempat tanpa meninggalkan sesi, dan pertanyaan yang belum terjawab dapat dipindahkan ke composer Tutor materi yang sudah ada tanpa dikirim otomatis.
+
+### Changed
+- Navigasi sesi membedakan langkah yang sedang dibuka dan yang pernah dibuka tanpa mengubah aktivitas tersebut menjadi skor, persentase, atau klaim penguasaan.
+- Tutor menjadi alat pertama pada rail sesi, sementara rangkuman/transkrip tetap menjadi sumber pendamping yang dapat diperluas.
+
+### Quality
+- State Guided tetap sementara di memori tab dan dibersihkan saat materi, identitas auth, atau sumber berubah; tidak ada persistence terselubung.
+- QA visual mencakup desktop dan mobile 390 px. Detector Impeccable bersih; finish review menutup kontras aksi tema gelap, heading redundan, perlindungan draft Tutor, dan kesinambungan langkah saat sesi dilanjutkan.
+- Seluruh 295 test, ESLint, TypeScript standalone, production build, `git diff --check`, conflict-marker scan, dan literal-secret scan lulus.
+- Tidak ada perubahan backend, database, migration, Supabase, provider AI, authentication, billing, atau data pengguna.
 
 ## [0.15.0] - 2026-09-05
 ### Added

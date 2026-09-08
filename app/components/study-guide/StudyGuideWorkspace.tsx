@@ -73,6 +73,19 @@ export function StudyGuideWorkspace({
   const previousAuthRef = useRef(viewerUserId);
   const previousStageRef = useRef(guidedState.stage);
 
+  const askTutor = (question: string) => {
+    const cleanQuestion = question.trim();
+    if (!cleanQuestion) return;
+    const currentDraft = tutor.input.trim();
+    const nextDraft = !currentDraft
+      ? cleanQuestion
+      : currentDraft.includes(cleanQuestion)
+        ? tutor.input
+        : `${tutor.input.trimEnd()}\n\n${cleanQuestion}`;
+    tutor.onInputChange(nextDraft);
+    window.requestAnimationFrame(() => tutor.textareaRef.current?.focus());
+  };
+
   useEffect(() => {
     if (previousMaterialRef.current === material.id) return;
     previousMaterialRef.current = material.id;
@@ -182,6 +195,7 @@ export function StudyGuideWorkspace({
           {...tutor}
         />
       )}
+      onAskTutor={askTutor}
       onEvent={dispatchGuided}
     />
   );

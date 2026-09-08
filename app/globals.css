@@ -21,6 +21,7 @@
   --brand-secondary: #596ee6;
   --action-primary: #4661d8;
   --action-primary-hover: #394fc0;
+  --action-emphasis: #4661d8;
   --knowledge-accent: #0f7379;
   --review-accent: #996316;
   --success-accent: #24734f;
@@ -75,8 +76,9 @@
 
   --brand-primary: #9b86f7;
   --brand-secondary: #8493f4;
-  --action-primary: #7d8bf2;
-  --action-primary-hover: #929df7;
+  --action-primary: #5366d4;
+  --action-primary-hover: #4d5fc6;
+  --action-emphasis: #a7b0ff;
   --knowledge-accent: #58b9be;
   --review-accent: #d7a35a;
   --success-accent: #70bb93;
@@ -885,7 +887,7 @@ body {
   justify-content: center;
   gap: 6px;
   padding: 0 8px;
-  color: var(--action-primary);
+  color: var(--action-emphasis);
   font-size: 11px;
   font-weight: 850;
 }
@@ -2950,7 +2952,7 @@ body {
 .notara-onboarding-source strong { font-size: 13px; }
 .notara-onboarding-choice small,
 .notara-onboarding-source small { margin-top: 3px; color: var(--text-tertiary); font-size: 11px; line-height: 1.4; }
-.notara-onboarding-choice-check { width: 17px; height: 17px; color: var(--action-primary); }
+.notara-onboarding-choice-check { width: 17px; height: 17px; color: var(--action-emphasis); }
 
 .notara-onboarding-fields {
   display: grid;
@@ -3219,7 +3221,7 @@ body {
   border: 1px solid color-mix(in srgb, var(--action-primary) 35%, var(--border-subtle));
   border-radius: 11px;
   background: var(--surface-elevated);
-  color: var(--action-primary);
+  color: var(--action-emphasis);
   padding: 0 12px;
   font-size: 11px;
   font-weight: 850;
@@ -3451,7 +3453,7 @@ body {
 }
 
 .notara-guided-objective-check {
-  color: var(--action-primary);
+  color: var(--action-emphasis);
   opacity: 0;
   transition: opacity 160ms ease;
 }
@@ -4989,7 +4991,7 @@ body {
   min-height: 44px;
   border: 0;
   background: transparent;
-  color: var(--action-primary);
+  color: var(--action-emphasis);
   padding: 0 4px 0 8px;
 }
 
@@ -5517,5 +5519,174 @@ body {
 
   .notara-guided-entry-action:hover {
     transform: none;
+  }
+}
+
+/* ── Guided Learning Continuity V2: truthful step state and source handoff ── */
+.notara-guided-objective-route-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  border-block: 1px solid var(--border-subtle);
+  padding-block: 15px;
+}
+
+.notara-guided-objective-route-preview > span {
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.notara-guided-objective-route-preview > div {
+  display: grid;
+  grid-template-columns: auto minmax(14px, 1fr) auto minmax(14px, 1fr) auto minmax(14px, 1fr) auto minmax(14px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--brand-primary);
+}
+
+.notara-guided-objective-route-preview b {
+  font-size: 9px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.notara-guided-objective-route-preview i {
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-strong), color-mix(in srgb, var(--brand-primary) 48%, var(--border-subtle)));
+}
+
+.notara-guided-objective-route-preview p {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.notara-guided-node-nav button > span:last-child {
+  display: grid;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  place-items: initial;
+  gap: 2px;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+}
+
+.notara-guided-node-nav button small {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.notara-guided-node-nav button[data-visited="true"]:not([data-active="true"]) > span:first-child {
+  border-color: color-mix(in srgb, var(--knowledge-accent) 40%, var(--border-subtle));
+  color: var(--knowledge-accent);
+}
+
+.notara-guided-node-nav button[data-active="true"] small {
+  color: color-mix(in srgb, var(--brand-primary) 76%, var(--text-secondary));
+}
+
+.notara-guided-entry-copy > p,
+.notara-guided-entry-continue > small {
+  font-size: 10px;
+}
+
+.notara-guided-context-strip small {
+  font-size: 9px;
+}
+
+.notara-guided-context-strip strong {
+  font-size: 11px;
+}
+
+.notara-guided-context-disclosure,
+.notara-guided-objective-route-preview p {
+  font-size: 10px;
+}
+
+.notara-guided-source-surface[data-expanded="true"] p {
+  max-height: 340px;
+  overflow: auto;
+  padding-right: 5px;
+  scrollbar-color: color-mix(in srgb, var(--knowledge-accent) 38%, transparent) transparent;
+}
+
+.notara-guided-source-toggle {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--knowledge-accent) 24%, var(--border-subtle));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-tool) 94%, var(--knowledge-accent) 2%);
+  color: var(--knowledge-accent);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.notara-guided-source-toggle:hover {
+  background: color-mix(in srgb, var(--surface-tool) 88%, var(--knowledge-accent) 7%);
+}
+
+.notara-guided-tutor-handoff,
+.notara-compare-tutor-handoff {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+}
+
+.notara-guided-tutor-handoff > span,
+.notara-compare-tutor-handoff > span {
+  max-width: 46ch;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.notara-guided-tutor-handoff button,
+.notara-compare-tutor-handoff button {
+  flex: 0 0 auto;
+  min-height: 44px;
+}
+
+.notara-compare-tutor-handoff {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 767px) {
+  .notara-guided-objective-route-preview > div {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .notara-guided-objective-route-preview i {
+    width: 1px;
+    height: 8px;
+    margin-left: 4px;
+    background: color-mix(in srgb, var(--brand-primary) 38%, var(--border-subtle));
+  }
+
+  .notara-guided-tutor-handoff,
+  .notara-compare-tutor-handoff {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .notara-guided-tutor-handoff button,
+  .notara-compare-tutor-handoff button {
+    width: 100%;
   }
 }

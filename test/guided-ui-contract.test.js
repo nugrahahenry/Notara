@@ -132,3 +132,57 @@ test('Guided headings carry their own hierarchy without generic kicker labels', 
   assert.doesNotMatch(source, /notara-guided-label|notara-eyebrow/);
   assert.doesNotMatch(css, /\.notara-guided-label\s*\{/);
 });
+
+test('Guided session exposes truthful visited state without a score or completion claim', () => {
+  const workspace = read('app/components/guided/GuidedFoundationWorkspace.tsx');
+  const reducer = read('app/components/guided/reducer.ts');
+  assert.match(workspace, /visitedNodeIndexes\.includes\(index\)/);
+  assert.match(workspace, /Sudah dibuka/);
+  assert.match(reducer, /visitedNodeIndexes/);
+  assert.doesNotMatch(workspace, /\b\d+%\b|mastery|skor kamu/i);
+});
+
+test('Guided source can expand in place and Tutor is the first session rail tool', () => {
+  const workspace = read('app/components/guided/GuidedFoundationWorkspace.tsx');
+  const sourcePanel = read('app/components/guided/GuidedSourcePanel.tsx');
+  const css = read('app/globals.css');
+  const tutorPosition = workspace.indexOf('<section className="notara-guided-tutor-card"');
+  const sourcePosition = workspace.indexOf('<GuidedSourcePanel');
+  assert.ok(tutorPosition >= 0 && sourcePosition > tutorPosition);
+  assert.match(sourcePanel, /aria-expanded=\{expanded\}/);
+  assert.match(sourcePanel, /Perluas cuplikan/);
+  assert.match(css, /\.notara-guided-source-toggle\s*\{[^}]*min-height:\s*44px/s);
+});
+
+test('Compare and self-check can hand a user-authored question to the existing Tutor composer', () => {
+  const workspace = read('app/components/guided/GuidedFoundationWorkspace.tsx');
+  const compare = read('app/components/guided/compare/CompareWorkspace.tsx');
+  const controller = read('app/components/study-guide/StudyGuideWorkspace.tsx');
+  assert.match(workspace, /onAskTutor\(check\.remainingQuestion\)/);
+  assert.match(compare, /onAskTutor\(currentDraft\.notes\.remainingQuestion\.trim\(\)\)/);
+  assert.match(controller, /tutor\.input\.trim\(\)/);
+  assert.match(controller, /tutor\.input\.trimEnd\(\)/);
+  assert.match(controller, /tutor\.onInputChange\(nextDraft\)/);
+  assert.match(controller, /tutor\.textareaRef\.current\?\.focus\(\)/);
+  assert.match(compare, /tidak dikirim otomatis/i);
+});
+
+test('dark primary actions and text emphasis meet the contrast floor', () => {
+  const css = read('app/globals.css');
+  const darkBlock = css.match(/\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+  const color = (name) => darkBlock.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, 'i'))?.[1];
+  const luminance = (hex) => {
+    const channels = hex.slice(1).match(/../g).map((value) => parseInt(value, 16) / 255);
+    const linear = channels.map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  };
+  const contrast = (a, b) => {
+    const [bright, dark] = [luminance(a), luminance(b)].sort((left, right) => right - left);
+    return (bright + 0.05) / (dark + 0.05);
+  };
+
+  assert.ok(contrast(color('action-primary'), color('text-on-brand')) >= 4.5);
+  assert.ok(contrast(color('action-primary-hover'), color('text-on-brand')) >= 4.5);
+  assert.ok(contrast(color('action-emphasis'), color('surface-elevated')) >= 4.5);
+  assert.match(css, /\.notara-guided-entry-action\s*\{[^}]*color:\s*var\(--action-emphasis\)/s);
+});

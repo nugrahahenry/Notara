@@ -12,6 +12,7 @@ import { SemanticIcon, type NaliraSemanticIconName } from '../brand/SemanticIcon
 import { CompareWorkspace } from './compare/CompareWorkspace';
 import { createCompareDraft } from './compare/compare-state';
 import { canBuildComparePair, createCompareSourceBundle } from './compare/source-blocks';
+import { GuidedSourcePanel } from './GuidedSourcePanel';
 import {
   GUIDED_OBJECTIVE_OPTIONS,
   getGuidedObjectiveLabel,
@@ -34,6 +35,7 @@ interface GuidedFoundationWorkspaceProps {
   state: GuidedFoundationState;
   headingRef: RefObject<HTMLHeadingElement | null>;
   tutor: ReactNode;
+  onAskTutor: (question: string) => void;
   onEvent: Dispatch<GuidedFoundationEvent>;
 }
 
@@ -64,16 +66,6 @@ const reflectionChoices: readonly { value: GuidedReflectionChoice; label: string
   { value: 'partly', label: 'Sebagian' },
   { value: 'not-yet', label: 'Belum' },
 ];
-
-function excerpt(source: string, limit = 420): string {
-  const clean = source
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/[#*_>`~[\]()!-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (clean.length <= limit) return clean;
-  return `${clean.slice(0, limit).trimEnd()}…`;
-}
 
 function getCheckGuidance(check: GuidedCheckReflection): string {
   const answered = check.canExplainCore !== null || check.canGiveExample !== null || check.remainingQuestion.trim();
@@ -183,9 +175,18 @@ export function GuidedFoundationWorkspace({
   state,
   headingRef,
   tutor,
+  onAskTutor,
   onEvent,
 }: GuidedFoundationWorkspaceProps) {
-  const { stage, objective, route, activeNodeIndex, responsesByNode, check } = state;
+  const {
+    stage,
+    objective,
+    route,
+    activeNodeIndex,
+    visitedNodeIndexes,
+    responsesByNode,
+    check,
+  } = state;
   const activeStepButtonRef = useRef<HTMLButtonElement | null>(null);
   const compareBundle = useMemo(
     () => createCompareSourceBundle(state.materialId, summaryText, transcriptText),
@@ -293,6 +294,15 @@ export function GuidedFoundationWorkspace({
             </div>
           )}
 
+          <div className="notara-guided-objective-route-preview" role="note">
+            <span>Rute yang akan kamu jalani</span>
+            <div aria-label="Urutan rute belajar">
+              <b>Orientasi</b><i aria-hidden="true" /><b>Fokus</b><i aria-hidden="true" />
+              <b>Hubungkan</b><i aria-hidden="true" /><b>Recall</b><i aria-hidden="true" /><b>Cek diri</b>
+            </div>
+            <p>Urutan tetap terlihat dan dapat kamu tinggalkan kapan saja. Tidak ada penilaian otomatis.</p>
+          </div>
+
           <div className="notara-guided-stage-actions">
             <span>{objectiveIsValid ? `Tujuan: ${getGuidedObjectiveLabel(objective)}` : 'Pilih satu tujuan untuk melanjutkan.'}</span>
             <button
@@ -371,9 +381,9 @@ export function GuidedFoundationWorkspace({
   const isFirstNode = activeNodeIndex === 0;
   const isLastNode = activeNodeIndex === route.nodes.length - 1;
   const sourceText = activeNode.sourceSurface === 'summary'
-    ? excerpt(summaryText)
+    ? summaryText
     : activeNode.sourceSurface === 'transcript'
-      ? excerpt(transcriptText)
+      ? transcriptText
       : '';
   const response = responsesByNode[activeNode.kind] ?? '';
   const showDeterministicCompare = objective?.kind === 'compare-concepts'
@@ -424,29 +434,33 @@ export function GuidedFoundationWorkspace({
           </p>
 
           <nav className="notara-guided-node-nav" aria-label="Langkah rute belajar">
-            {route.nodes.map((node, index) => (
-              <button
-                key={node.id}
-                ref={index === activeNodeIndex ? activeStepButtonRef : undefined}
-                type="button"
-                data-active={index === activeNodeIndex}
-                aria-current={index === activeNodeIndex ? 'step' : undefined}
-                aria-label={`Langkah ${index + 1} dari ${route.nodes.length}: ${node.title}`}
-                aria-controls="guided-active-step"
-                onClick={() => onEvent({ type: 'GO_TO_NODE', index })}
-              >
-                <span>{index + 1}</span>
-                <strong>{node.title}</strong>
-              </button>
-            ))}
+            {route.nodes.map((node, index) => {
+              const isActive = index === activeNodeIndex;
+              const wasVisited = visitedNodeIndexes.includes(index);
+              return (
+                <button
+                  key={node.id}
+                  ref={isActive ? activeStepButtonRef : undefined}
+                  type="button"
+                  data-active={isActive}
+                  data-visited={wasVisited}
+                  aria-current={isActive ? 'step' : undefined}
+                  aria-label={`Langkah ${index + 1} dari ${route.nodes.length}: ${node.title}${wasVisited && !isActive ? ', sudah dibuka' : ''}`}
+                  aria-controls="guided-active-step"
+                  onClick={() => onEvent({ type: 'GO_TO_NODE', index })}
+                >
+                  <span>{index + 1}</span>
+                  <span>
+                    <strong>{node.title}</strong>
+                    <small>{isActive ? 'Sedang dibuka' : wasVisited ? 'Sudah dibuka' : sourceLabels[node.sourceSurface]}</small>
+                  </span>
+                </button>
+              );
+            })}
           </nav>
 
           <article id="guided-active-step" className="notara-guided-node-card" aria-labelledby={`guided-node-heading-${activeNode.id}`}>
             <header>
-              <span className="notara-guided-node-kind">
-                <SemanticIcon name={nodeIcons[activeNode.kind]} size={18} />
-                {activeNode.title}
-              </span>
               <h2 id={`guided-node-heading-${activeNode.id}`}>{activeNode.prompt}</h2>
             </header>
 
@@ -482,6 +496,17 @@ export function GuidedFoundationWorkspace({
                   <SemanticIcon name="checkpoint" size={18} />
                   <p>{getCheckGuidance(check)}</p>
                 </div>
+                <div className="notara-guided-tutor-handoff">
+                  <span>Pertanyaan tidak dikirim sebelum kamu menekan kirim di Tanya Materi.</span>
+                  <button
+                    type="button"
+                    className="notara-secondary-button"
+                    disabled={!check.remainingQuestion.trim()}
+                    onClick={() => onAskTutor(check.remainingQuestion)}
+                  >
+                    Bawa ke Tanya Materi
+                  </button>
+                </div>
               </div>
             ) : showDeterministicCompare && compareAvailable ? (
               <CompareWorkspace
@@ -490,6 +515,7 @@ export function GuidedFoundationWorkspace({
                 draft={effectiveCompareDraft}
                 sourceChanged={compareSourceSignatureMismatch && Boolean(state.compare.sourceSignature)}
                 onEvent={onEvent}
+                onAskTutor={onAskTutor}
               />
             ) : (
               <>
@@ -548,28 +574,17 @@ export function GuidedFoundationWorkspace({
         </div>
 
         <aside className="notara-guided-rail" aria-label="Sumber dan Tanya Materi">
-          <section className="notara-guided-source-card">
-            <header>
-              <span className="notara-guided-source-label">
-                <SemanticIcon name="source-evidence" size={18} />
-                Sumber sesi
-              </span>
-              <strong title={materialTitle}>{materialTitle}</strong>
-              <small title={courseName}>{courseName}</small>
-            </header>
-            <div className="notara-guided-source-surface">
-              <span>{sourceLabels[activeNode.sourceSurface]}</span>
-              {sourceText ? (
-                <p>{sourceText}</p>
-              ) : (
-                <p>Langkah ini meminta kamu menjelaskan kembali tanpa bergantung pada sumber terbuka.</p>
-              )}
-            </div>
-          </section>
-
           <section className="notara-guided-tutor-card" aria-label="Tanya Materi dalam sesi">
             {tutor}
           </section>
+
+          <GuidedSourcePanel
+            key={activeNode.id}
+            materialTitle={materialTitle}
+            courseName={courseName}
+            surface={activeNode.sourceSurface}
+            sourceText={sourceText}
+          />
         </aside>
       </div>
     </section>

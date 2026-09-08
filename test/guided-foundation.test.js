@@ -134,6 +134,7 @@ test('reducer follows review, objective, route, and session transitions', () => 
   state = reducer.guidedFoundationReducer(state, { type: 'START_SESSION' });
   assert.equal(state.stage, 'session');
   assert.equal(state.activeNodeIndex, 0);
+  assert.deepEqual(state.visitedNodeIndexes, [0]);
 });
 
 test('reducer stores only transient responses and clamps node navigation', () => {
@@ -143,12 +144,21 @@ test('reducer stores only transient responses and clamps node navigation', () =>
   state = reducer.guidedFoundationReducer(state, { type: 'START_SESSION' });
   state = reducer.guidedFoundationReducer(state, { type: 'GO_TO_NODE', index: 99 });
   assert.equal(state.activeNodeIndex, 4);
+  assert.deepEqual(state.visitedNodeIndexes, [0, 4]);
+  state = reducer.guidedFoundationReducer(state, { type: 'GO_TO_NODE', index: 4 });
+  assert.deepEqual(state.visitedNodeIndexes, [0, 4]);
   state = reducer.guidedFoundationReducer(state, { type: 'SET_NODE_RESPONSE', node: 'focus', response: 'Respons sementara' });
   state = reducer.guidedFoundationReducer(state, {
     type: 'SET_CHECK_REFLECTION', field: 'canExplainCore', value: 'partly',
   });
   assert.equal(state.responsesByNode.focus, 'Respons sementara');
   assert.equal(state.check.canExplainCore, 'partly');
+
+  state = reducer.guidedFoundationReducer(state, { type: 'BACK' });
+  state = reducer.guidedFoundationReducer(state, { type: 'START_SESSION' });
+  assert.equal(state.activeNodeIndex, 4);
+  assert.deepEqual(state.visitedNodeIndexes, [0, 4]);
+  assert.equal(state.responsesByNode.focus, 'Respons sementara');
 });
 
 test('exit, source reset, and source unavailable discard the Guided draft', () => {
@@ -166,6 +176,7 @@ test('exit, source reset, and source unavailable discard the Guided draft', () =
     assert.equal(next.objective, null);
     assert.equal(next.route, null);
     assert.deepEqual(next.responsesByNode, {});
+    assert.deepEqual(next.visitedNodeIndexes, []);
     assert.equal(next.materialId, event.type === 'RESET_SOURCE' ? 'summary-next' : 'summary-owned');
   }
 });
