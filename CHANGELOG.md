@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.16.1.
+Belum ada perubahan setelah Nalira v0.16.2.
+
+## [0.16.2] - 2026-09-27
+### Fixed
+- Durasi rekaman browser kini memakai timer capture sebagai fallback ketika metadata container WebM belum tersedia, sehingga material tersimpan tidak lagi kehilangan durasi untuk rekaman yang berhasil diproses.
+
+### Quality
+- E2E production Chrome Henry berhasil melewati capture mikrofon, upload, transkripsi, rangkuman, penyimpanan material, dan evidence bertimestamp ke Supabase. Tidak ada perubahan schema, migration, endpoint, provider, billing, atau retensi audio.
+- 295 test, ESLint, TypeScript standalone, production build, dan `git diff --check` lulus.
 
 ## [0.16.1] - 2026-09-27
 ### Fixed

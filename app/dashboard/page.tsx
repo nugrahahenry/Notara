@@ -81,7 +81,7 @@ import {
 import type { Folder as FolderType, Summary as SummaryType, ChatMessage, ChatThread, StudyGroup, GroupMember } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import { bufferToWav, getAudioDuration, sliceAudioBuffer } from '@/lib/capture/audio';
+import { bufferToWav, getAudioDuration, resolveCaptureDuration, sliceAudioBuffer } from '@/lib/capture/audio';
 import {
   CHUNK_DURATION_SECONDS,
   CHUNK_THRESHOLD_BYTES,
@@ -2801,9 +2801,13 @@ export default function Home() {
     setStatusMessage(`Audio sedang dikirim untuk ditranskrip dan dirangkum${fileLabel}.`);
 
     try {
-      const duration = sourceFile.size > 0
+      const measuredDuration = sourceFile.size > 0
         ? await getAudioDuration(sourceFile)
-        : recordingDuration;
+        : 0;
+      const duration = resolveCaptureDuration(
+        measuredDuration,
+        queueIndex === null ? recordingDuration : 0,
+      );
       
       const formData = new FormData();
       formData.append('file', sourceFile, name);

@@ -113,6 +113,20 @@ export function getAudioDuration(file: File | Blob): Promise<number> {
   });
 }
 
+/** Prefer container metadata, then use the trusted live-recorder timer. */
+export function resolveCaptureDuration(
+  measuredDuration: number,
+  fallbackDuration: number,
+): number {
+  if (Number.isFinite(measuredDuration) && measuredDuration > 0) {
+    return Math.round(measuredDuration);
+  }
+  if (Number.isFinite(fallbackDuration) && fallbackDuration > 0) {
+    return Math.round(fallbackDuration);
+  }
+  return 0;
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
 
