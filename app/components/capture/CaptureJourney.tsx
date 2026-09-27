@@ -1,0 +1,47 @@
+'use client';
+
+interface CaptureJourneyProps {
+  isRecordingMode: boolean;
+  hasInput: boolean;
+}
+
+const STEPS = ['Pilih cara', 'Siapkan materi', 'Buat rangkuman'];
+
+export function CaptureJourney({ isRecordingMode, hasInput }: CaptureJourneyProps) {
+  const currentStep = hasInput ? 2 : 1;
+  const modeLabel = isRecordingMode ? 'Rekam suara' : 'Upload file';
+
+  return (
+    <nav className="notara-capture-journey" aria-label="Langkah menambahkan materi">
+      <ol>
+        {STEPS.map((label, index) => {
+          const step = index + 1;
+          const isComplete = step < currentStep;
+          const isCurrent = step === currentStep;
+          const detail = step === 1
+            ? modeLabel
+            : step === 2
+              ? hasInput ? 'Siap diproses' : 'Belum ada file atau rekaman'
+              : 'Setelah proses selesai';
+
+          return (
+            <li
+              key={label}
+              data-state={isComplete ? 'complete' : isCurrent ? 'current' : 'upcoming'}
+              aria-current={isCurrent ? 'step' : undefined}
+            >
+              <span className="notara-capture-journey__marker" aria-hidden="true">
+                {isComplete ? '✓' : step}
+              </span>
+              <span className="notara-capture-journey__copy">
+                <strong>{label}</strong>
+                <small>{detail}</small>
+              </span>
+              {step < STEPS.length && <span className="notara-capture-journey__line" aria-hidden="true" />}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}

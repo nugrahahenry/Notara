@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.16.2.
+Belum ada perubahan setelah Nalira v0.17.0.
+
+## [0.17.0] - 2026-09-28
+### Added
+- Capture memiliki journey rail tiga langkah yang menjelaskan posisi pengguna dari pemilihan cara sampai rangkuman tanpa mengubah perilaku pipeline.
+- Tab Upload/Rekam kini memakai ikon yang konsisten, `aria-controls`, dan state visual yang lebih jelas pada desktop maupun mobile.
+
+### Quality
+- Preview lokal desktop memverifikasi hierarchy Capture, state sumber mikrofon, dan keterbacaan tindakan utama pada tema System gelap.
+- 295 test, ESLint, TypeScript standalone, production build, `git diff --check`, serta detector Impeccable terarah lulus untuk batch ini. Detector tetap melaporkan pola legacy di area dashboard yang tidak disentuh batch ini.
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, atau data pengguna.
 
 ## [0.16.2] - 2026-09-27
 ### Fixed

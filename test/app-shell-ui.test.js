@@ -15,6 +15,7 @@ let notaraModule;
 let recordingModule;
 let processingModule;
 let sourceTabsModule;
+let journeyModule;
 let appShellModule;
 let ambientHeaderModule;
 let moduleLoadError;
@@ -37,6 +38,7 @@ try {
   recordingModule = require('../build/app/components/capture/RecordingPanel.js');
   processingModule = require('../build/app/components/capture/ProcessingView.js');
   sourceTabsModule = require('../build/app/components/capture/CaptureSourceTabs.js');
+  journeyModule = require('../build/app/components/capture/CaptureJourney.js');
   appShellModule = require('../build/app/components/shell/AppShell.js');
   ambientHeaderModule = require('../build/app/components/workspace/WorkspaceAmbientHeader.js');
 } catch (error) {
@@ -425,6 +427,10 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
     onSelectUpload: noop,
     onSelectRecording: noop,
   }));
+  const journey = renderToStaticMarkup(React.createElement(journeyModule.CaptureJourney, {
+    isRecordingMode: true,
+    hasInput: false,
+  }));
 
   assert.match(recording, /notara-recording-visual/);
   assert.match(recording, /Pilih yang ingin didengar Nalira/);
@@ -461,4 +467,7 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   assert.match(tabs, /role="tablist"/);
   assert.equal((tabs.match(/role="tab"/g) || []).length, 2);
   assert.equal((tabs.match(/type="button"/g) || []).length, 2);
+  assert.match(journey, /Langkah menambahkan materi/);
+  assert.match(journey, /Rekam suara/);
+  assert.equal((journey.match(/notara-capture-journey__marker/g) || []).length, 3);
 });

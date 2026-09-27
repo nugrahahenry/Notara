@@ -1688,6 +1688,90 @@ body {
 .notara-workspace-ambient[data-ambient-state="record"] .notara-workspace-ambient__capture-wave i { opacity: 0.9; }
 .notara-workspace-ambient[data-ambient-state="upload"] .notara-workspace-ambient__capture-notes i { opacity: 0.8; }
 
+.notara-capture-journey {
+  margin: 0 auto 1.5rem;
+  max-width: 46rem;
+  padding: 0.15rem 0.25rem;
+}
+.notara-capture-journey ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notara-capture-journey li {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--text-tertiary);
+}
+.notara-capture-journey li:not(:last-child) { padding-right: 1.25rem; }
+.notara-capture-journey__marker {
+  display: inline-flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-tool);
+  color: var(--text-tertiary);
+  font-size: 0.6875rem;
+  font-weight: 800;
+}
+.notara-capture-journey__copy { display: flex; min-width: 0; flex-direction: column; gap: 0.125rem; }
+.notara-capture-journey__copy strong { overflow: hidden; color: inherit; font-size: 0.75rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.notara-capture-journey__copy small { overflow: hidden; color: var(--text-tertiary); font-size: 0.6875rem; text-overflow: ellipsis; white-space: nowrap; }
+.notara-capture-journey__line { position: absolute; top: 0.875rem; right: 0.75rem; left: 2.25rem; height: 1px; background: var(--border-subtle); }
+.notara-capture-journey li[data-state="complete"],
+.notara-capture-journey li[data-state="current"] { color: var(--text-primary); }
+.notara-capture-journey li[data-state="complete"] .notara-capture-journey__marker { border-color: color-mix(in srgb, var(--success-accent) 42%, var(--border-subtle)); background: color-mix(in srgb, var(--success-accent) 12%, var(--surface-tool)); color: var(--success-accent); }
+.notara-capture-journey li[data-state="current"] .notara-capture-journey__marker { border-color: var(--action-primary); background: var(--action-primary); color: var(--text-on-brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--action-primary) 12%, transparent); }
+.notara-capture-journey li[data-state="current"] .notara-capture-journey__copy small { color: var(--action-primary); font-weight: 700; }
+
+.notara-capture-mode-tabs {
+  display: flex;
+  gap: 0.25rem;
+  max-width: 21rem;
+  margin: 0 auto 1.75rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  background: var(--surface-tool);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.notara-capture-mode-tabs button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 0.75rem;
+  color: var(--text-secondary);
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.notara-capture-mode-tabs button:hover:not(:disabled) { color: var(--text-primary); }
+.notara-capture-mode-tabs button[aria-selected="true"] { background: var(--surface-elevated); color: var(--nav-selected-text); box-shadow: 0 1px 3px color-mix(in srgb, var(--text-primary) 10%, transparent); }
+.notara-capture-mode-tabs button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.notara-capture-mode-tabs button:disabled { cursor: not-allowed; opacity: 0.6; }
+
+@media (max-width: 640px) {
+  .notara-capture-journey { margin-bottom: 1.25rem; padding-inline: 0; }
+  .notara-capture-journey ol { gap: 0.25rem; }
+  .notara-capture-journey li { gap: 0.4rem; }
+  .notara-capture-journey li:not(:last-child) { padding-right: 0.5rem; }
+  .notara-capture-journey__copy small { display: none; }
+  .notara-capture-journey__line { right: 0.3rem; left: 1.95rem; }
+  .notara-capture-mode-tabs { margin-bottom: 1.5rem; }
+}
+
 @keyframes notara-ambient-capture-wave {
   to { opacity: 0.95; transform: scaleY(0.52); }
 }

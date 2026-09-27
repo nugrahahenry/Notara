@@ -23,6 +23,7 @@ import { NaliraBrand } from '../components/brand/NaliraBrand';
 import { OnboardingModal } from '../components/ui/OnboardingModal';
 import { VersionUpdateBanner } from '../components/ui/VersionUpdateBanner';
 import { CaptureSourceTabs } from '../components/capture/CaptureSourceTabs';
+import { CaptureJourney } from '../components/capture/CaptureJourney';
 import { CaptureTaskList } from '../components/capture/CaptureTaskList';
 import { ProcessingView } from '../components/capture/ProcessingView';
 import { RecordingPanel } from '../components/capture/RecordingPanel';
@@ -4962,6 +4963,11 @@ export default function Home() {
                         <span><strong>Tanpa audio</strong> tersimpan</span>
                       </>
                     )}
+                  />
+
+                  <CaptureJourney
+                    isRecordingMode={isRecordingMode}
+                    hasInput={isRecordingMode ? Boolean(audioBlob) : uploadCaptureTasks.length > 0}
                   />
 
                   {/* Upload vs Recording Selector Toggle */}

@@ -63,8 +63,11 @@ export function RecordingPanel({
 
   return (
     <section
+      id="capture-recording-panel"
+      data-recording-state={visualState}
       className="relative flex flex-col items-center gap-6 overflow-hidden rounded-3xl border border-[var(--border-strong)] bg-[var(--surface-canvas)] p-6 text-center animate-in zoom-in-95 duration-200 sm:p-8 md:p-12"
       aria-labelledby="recording-panel-title"
+      role="tabpanel"
     >
       <h2 id="recording-panel-title" className="sr-only">Perekam suara Nalira</h2>
 
