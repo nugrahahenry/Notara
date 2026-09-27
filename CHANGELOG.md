@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.16.0.
+Belum ada perubahan setelah Nalira v0.16.1.
+
+## [0.16.1] - 2026-09-27
+### Fixed
+- Boundary auth Next.js kini memvalidasi klaim sesi melalui `getClaims()` dan meneruskan cookie hasil refresh. Sesi aktif yang lama tidak dibuka kembali tidak lagi dianggap logout hanya karena access token perlu diperbarui.
+- Sesi yang benar-benar kedaluwarsa tetap diarahkan ke login ulang tanpa menyentuh database, RLS, atau provider AI.
+
+### Quality
+- 295 test, ESLint, TypeScript standalone, dan production build lulus.
+- Tidak ada perubahan schema, migration, endpoint, billing, provider, atau data pengguna.
 
 ## [0.16.0] - 2026-09-08
 ### Added

@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Source lokal Nalira v0.16.0 menghubungkan Material Review ke Objective, rute lima langkah, sesi belajar, perbandingan sumber, dan handoff pertanyaan ke Tutor yang sudah ada. Progres sesi masih sementara di tab dan tidak mengklaim skor atau penguasaan otomatis. Nalira v0.15.0 sudah berada di `origin/main`; checkpoint ini belum dipush atau dideploy. Tidak ada perubahan backend, schema, provider, auth, billing, atau data pengguna. Terakhir diverifikasi lokal: 8 September 2026.
+> Status: Nalira v0.16.1 mempertahankan Guided Learning dan memperbaiki boundary refresh sesi Supabase melalui klaim JWT terverifikasi. Sesi aktif yang lama tidak dibuka kembali dapat diperbarui oleh proxy; token yang benar-benar kedaluwarsa tetap meminta login ulang. Tidak ada perubahan schema, migration, endpoint, provider AI, billing, atau data pengguna. Terakhir diverifikasi lokal: 27 September 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -140,7 +140,7 @@ npm run build
 
 ## Roadmap terdekat
 
-1. Setelah push/deploy v0.16.0, lakukan acceptance satu materi nyata pada desktop dan mobile: pilih tujuan, buka kelima langkah, bandingkan dua kutipan, lalu bawa satu pertanyaan ke Tutor tanpa pengiriman otomatis.
+1. Setelah publikasi v0.16.1, lakukan acceptance login dan satu materi nyata pada desktop dan mobile: pilih tujuan, buka kelima langkah, bandingkan dua kutipan, lalu bawa satu pertanyaan ke Tutor tanpa pengiriman otomatis.
 2. Putuskan kontrak penyimpanan Guided Learning sebelum menambah progress lintas perangkat, skor, route adaptif, quiz AI, atau rekomendasi otomatis.
 3. Saat kelas online berikutnya tersedia, lakukan acceptance `Tab Zoom / Meet` dengan memilih satu tab Chrome yang sedang mengeluarkan suara dan mengaktifkan audio tab.
 4. Selesaikan acceptance preview rangkuman → gunakan → pulihkan pada satu materi nyata sebelum memperluas regenerasi ke materi lain.

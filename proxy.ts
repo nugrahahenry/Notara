@@ -59,10 +59,17 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: getUser() wajib dipanggil untuk menyinkronkan session cookie
+  // `getClaims()` memvalidasi token di server dan tetap memberi kesempatan
+  // kepada createServerClient untuk memperbarui cookie ketika access token
+  // mendekati kedaluwarsa. Ini menghindari logout semu pada sesi yang lama
+  // tidak membuka Nalira, tanpa pernah mempercayai `getSession()` mentah.
+  // Jika refresh token memang sudah kedaluwarsa/invalid, claims akan kosong
+  // dan jalur di bawah mengarahkan user untuk login ulang secara aman.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: claimsData,
+    error: claimsError,
+  } = await supabase.auth.getClaims();
+  const user = claimsError || !claimsData?.claims?.sub ? null : claimsData.claims;
 
   const url = request.nextUrl.clone();
   const isLandingPage = url.pathname === '/';
@@ -95,7 +102,7 @@ export async function proxy(request: NextRequest) {
       url.search = '';
       url.searchParams.set('redirect', requestedDestination);
       const redirectResponse = NextResponse.redirect(url);
-      // Bawa cookie sesi yang mungkin baru di-refresh oleh getUser(), kalau tidak
+      // Bawa cookie sesi yang mungkin baru di-refresh oleh getClaims(), kalau tidak
       // cookie itu hilang di response redirect dan session jadi desync.
       supabaseResponse.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
       return redirectResponse;

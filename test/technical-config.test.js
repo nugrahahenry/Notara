@@ -47,7 +47,8 @@ test('Next.js 16 auth boundary uses the proxy file convention', () => {
   assert.match(source, /export async function proxy\(request: NextRequest\)/);
   assert.match(source, /buildOAuthRecoveryUrl\(request\.nextUrl\)/);
   assert.match(source, /isPublicOperationalRoute\(request\.nextUrl\.pathname\)/);
-  assert.match(source, /supabase\.auth\.getUser\(\)/);
+  assert.match(source, /supabase\.auth\.getClaims\(\)/);
+  assert.doesNotMatch(source, /supabase\.auth\.getSession\(\)/);
 });
 
 test('Turbopack is pinned to the Nalira project root', () => {
