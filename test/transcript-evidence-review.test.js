@@ -80,5 +80,10 @@ test('Study Canvas exposes evidence only for a durable owner summary', () => {
   assert.match(review, /readTranscriptEvidencePage/);
   assert.match(review, /Bagian kurang jelas/);
   assert.match(review, /Audio tidak disimpan/);
+  assert.match(review, /const evidenceBusy = state\.status === 'loading'/);
+  assert.match(review, /aria-busy=\{evidenceBusy\}/);
+  assert.match(review, /aria-label="Tampilkan semua bagian"/);
+  assert.match(review, /Menampilkan \{pageRange\.from\}–\{pageRange\.to\}/);
+  assert.match(review, /Halaman \{data\.page\} dari \{totalPages\}/);
   assert.doesNotMatch(review, /dosen|mahasiswa|speaker|playAudio|seek/i);
 });

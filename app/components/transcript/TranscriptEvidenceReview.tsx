@@ -127,6 +127,8 @@ export function TranscriptEvidenceReview({
     return { from, to };
   }, [state]);
 
+  const evidenceBusy = state.status === 'loading';
+
   if (!evidenceEnabled) {
     return <AggregateTranscript transcript={aggregateTranscript} />;
   }
@@ -175,7 +177,11 @@ export function TranscriptEvidenceReview({
   };
 
   return (
-    <section className="notara-transcript-evidence" aria-labelledby="transcript-evidence-title">
+    <section
+      className="notara-transcript-evidence"
+      aria-labelledby="transcript-evidence-title"
+      aria-busy={evidenceBusy}
+    >
       <header className="notara-transcript-evidence-header">
         <div>
           <h2 id="transcript-evidence-title">Transkrip bertanda waktu</h2>
@@ -218,11 +224,11 @@ export function TranscriptEvidenceReview({
 
       <div className="notara-transcript-filter-row">
         <div role="group" aria-label="Saring bagian transkrip">
-          <button type="button" aria-pressed={filter === 'all'} onClick={() => changeFilter('all')}>Semua bagian</button>
-          <button type="button" aria-pressed={filter === 'unclear'} onClick={() => changeFilter('unclear')}>Bagian kurang jelas</button>
+          <button type="button" aria-label="Tampilkan semua bagian" aria-pressed={filter === 'all'} onClick={() => changeFilter('all')}>Semua bagian</button>
+          <button type="button" aria-label="Tampilkan bagian kurang jelas" aria-pressed={filter === 'unclear'} onClick={() => changeFilter('unclear')}>Bagian kurang jelas</button>
         </div>
         {pageRange && (
-          <span aria-live="polite">{pageRange.from}–{pageRange.to} dari {new Intl.NumberFormat('id-ID').format(data.total)}</span>
+          <span aria-live="polite" aria-atomic="true">Menampilkan {pageRange.from}–{pageRange.to} dari {new Intl.NumberFormat('id-ID').format(data.total)} bagian</span>
         )}
       </div>
 
@@ -254,7 +260,7 @@ export function TranscriptEvidenceReview({
           <button type="button" disabled={data.page <= 1} onClick={() => changePage(data.page - 1)}>
             <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Sebelumnya
           </button>
-          <span>Halaman {data.page} dari {totalPages}</span>
+          <span aria-live="polite" aria-atomic="true">Halaman {data.page} dari {totalPages}</span>
           <button type="button" disabled={data.page >= totalPages} onClick={() => changePage(data.page + 1)}>
             Berikutnya <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
