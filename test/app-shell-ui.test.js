@@ -441,6 +441,7 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   assert.match(recording, /Tes 10 detik/);
   assert.match(recording, /Preview tes sumber/);
   assert.match(recording, /tidak dikirim ke Nalira/);
+  assert.match(recording, /aria-label="Hapus preview tes sumber"/);
   assert.equal((recording.match(/type="radio"/g) || []).length, 2);
 
   const readyRecording = renderToStaticMarkup(React.createElement(recordingModule.RecordingPanel, {

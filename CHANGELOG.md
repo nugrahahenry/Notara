@@ -4,7 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.18.1.
+Belum ada perubahan setelah Nalira v0.18.2.
+
+## [0.18.2] - 2026-09-28
+### Fixed
+- Preview tes sumber tetap terbungkus dengan rapi pada layar sempit dan tombol hapus memiliki target sentuh 44px serta focus ring keyboard yang terlihat.
+
+### Quality
+- UI Capture tetap browser-only; tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, atau data pengguna.
 
 ## [0.18.1] - 2026-09-28
 ### Fixed

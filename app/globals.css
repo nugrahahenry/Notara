@@ -2783,6 +2783,7 @@ body {
 
 .notara-source-check-preview__heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -2812,9 +2813,11 @@ body {
 .notara-source-check-preview__heading span { margin-top: 2px; color: var(--text-tertiary); font-size: 10px; line-height: 1.4; }
 .notara-source-check-preview__clear {
   display: inline-flex;
-  min-height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   flex: 0 0 auto;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   border-radius: 9px;
   padding: 0 9px;
@@ -2823,6 +2826,10 @@ body {
   font-weight: 800;
 }
 .notara-source-check-preview__clear:hover { background: color-mix(in srgb, var(--danger-accent) 9%, transparent); color: var(--danger-accent); }
+.notara-source-check-preview__clear:focus-visible {
+  outline: 2px solid var(--action-primary);
+  outline-offset: 2px;
+}
 .notara-source-check-preview audio { min-height: 40px; }
 .notara-source-check-preview > p { margin: 0; color: var(--text-tertiary); font-size: 10px; line-height: 1.5; }
 
