@@ -12,6 +12,7 @@ interface RecordingSourcePickerProps {
   checkStatus: RecordingSourceCheckStatus;
   checkRemainingSeconds: number | null;
   error: string | null;
+  hasPreview: boolean;
   disabled: boolean;
   onSourceChange: (source: RecordingSourceKind) => void;
   onTestSource: () => void;
@@ -41,6 +42,7 @@ function getStatusCopy(
   status: RecordingSourceCheckStatus,
   remainingSeconds: number | null,
   source: RecordingSourceKind,
+  hasPreview: boolean,
 ): string {
   if (status === 'requesting') {
     return source === 'browser-tab'
@@ -51,7 +53,9 @@ function getStatusCopy(
     return `Mendengarkan sumber selama ${remainingSeconds ?? 10} detik…`;
   }
   if (status === 'ready') {
-    return 'Sumber siap. Gelombang suara terdeteksi dan izin tetap aktif.';
+    return hasPreview
+      ? 'Sumber siap. Gelombang suara terdeteksi; preview 10 detik bisa diputar ulang di bawah.'
+      : 'Sumber siap. Gelombang suara terdeteksi dan izin tetap aktif.';
   }
   if (status === 'silent') {
     return 'Sumber terhubung, tetapi belum ada suara yang terdeteksi. Putar Zoom atau bicara dekat mikrofon lalu tes ulang.';
@@ -64,6 +68,7 @@ export function RecordingSourcePicker({
   checkStatus,
   checkRemainingSeconds,
   error,
+  hasPreview,
   disabled,
   onSourceChange,
   onTestSource,
@@ -153,7 +158,7 @@ export function RecordingSourcePicker({
             }`} aria-hidden="true" />
           )}
           <p className="text-xs leading-5 text-[var(--text-secondary)]">
-            {error ?? getStatusCopy(checkStatus, checkRemainingSeconds, source)}
+            {error ?? getStatusCopy(checkStatus, checkRemainingSeconds, source, hasPreview)}
           </p>
         </div>
 

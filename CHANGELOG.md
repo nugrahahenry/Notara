@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.18.0.
+Belum ada perubahan setelah Nalira v0.18.1.
+
+## [0.18.1] - 2026-09-28
+### Fixed
+- Status sumber yang sudah lulus tes kini memberi tahu bahwa preview 10 detik tersedia di bawah, sehingga hasil tes tidak terasa terputus dari kontrol playback.
+
+### Quality
+- 295 test, ESLint, TypeScript standalone, production build, `git diff --check`, dan detector Impeccable terarah lulus.
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, atau data pengguna.
 
 ## [0.18.0] - 2026-09-28
 ### Added

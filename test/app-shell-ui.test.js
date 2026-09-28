@@ -443,6 +443,30 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   assert.match(recording, /tidak dikirim ke Nalira/);
   assert.equal((recording.match(/type="radio"/g) || []).length, 2);
 
+  const readyRecording = renderToStaticMarkup(React.createElement(recordingModule.RecordingPanel, {
+    canvasRef: { current: null },
+    isRecording: false,
+    isPaused: false,
+    audioBlob: null,
+    audioUrl: null,
+    sourceCheckAudioUrl: 'blob:test-source-preview',
+    formattedDuration: '00:00',
+    recordingSource: 'microphone',
+    sourceCheckStatus: 'ready',
+    sourceCheckRemainingSeconds: null,
+    sourceError: null,
+    onRecordingSourceChange: noop,
+    onTestSource: noop,
+    onStart: noop,
+    onPause: noop,
+    onResume: noop,
+    onStop: noop,
+    onDownload: noop,
+    onReset: noop,
+    onClearSourceCheckPreview: noop,
+  }));
+  assert.match(readyRecording, /preview 10 detik bisa diputar ulang di bawah/);
+
   const requestingRecording = renderToStaticMarkup(React.createElement(recordingModule.RecordingPanel, {
     canvasRef: { current: null },
     isRecording: false,

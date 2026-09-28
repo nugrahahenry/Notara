@@ -80,6 +80,7 @@ export function RecordingPanel({
         checkStatus={sourceCheckStatus}
         checkRemainingSeconds={sourceCheckRemainingSeconds}
         error={sourceError}
+        hasPreview={Boolean(sourceCheckAudioUrl)}
         disabled={isRecording || Boolean(audioBlob)}
         onSourceChange={onRecordingSourceChange}
         onTestSource={onTestSource}
