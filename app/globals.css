@@ -2042,6 +2042,7 @@ body {
 .notara-canvas-tabs button { min-height: 44px; border-radius: 10px; padding: 0 14px; color: var(--text-secondary); font-size: 12px; font-weight: 800; }
 .notara-filter-tabs button[aria-selected="true"],
 .notara-canvas-tabs button[aria-selected="true"] { background: var(--surface-elevated); color: var(--nav-selected-text); box-shadow: 0 1px 2px rgba(24, 33, 54, 0.08); }
+.notara-canvas-tabs button:focus-visible { outline: 2px solid var(--knowledge-accent); outline-offset: 2px; }
 
 .notara-sharing-directions { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; color: var(--text-tertiary); font-size: 12px; font-weight: 800; }
 .notara-sharing-directions span { display: flex; align-items: center; gap: 6px; }

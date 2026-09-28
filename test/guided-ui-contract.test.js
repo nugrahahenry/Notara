@@ -100,6 +100,17 @@ test('Material Review preserves reading width for long titles and compact mobile
   assert.match(css, /@media \(max-width:\s*767px\)[\s\S]*\.notara-document-meta\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
 });
 
+test('Material Review tabs expose a complete keyboard and screen-reader contract', () => {
+  const canvas = read('app/components/workspace/StudyCanvasBoundary.tsx');
+  const css = read('app/globals.css');
+  assert.match(canvas, /role="tablist" aria-label="Isi materi"/);
+  assert.match(canvas, /id="study-tab-summary"[\s\S]*role="tab"[\s\S]*aria-controls="study-panel-summary"/);
+  assert.match(canvas, /id="study-tab-transcript"[\s\S]*role="tab"[\s\S]*aria-controls="study-panel-transcript"/);
+  assert.match(canvas, /ArrowRight|ArrowLeft/);
+  assert.match(canvas, /id=\{`study-panel-\$\{activeTab\}`\}[\s\S]*role="tabpanel"[\s\S]*aria-labelledby=\{`study-tab-\$\{activeTab\}`\}/);
+  assert.match(css, /\.notara-canvas-tabs button:focus-visible/);
+});
+
 test('Guided transitions and material menus preserve intentional keyboard focus', () => {
   const workspace = read('app/components/study-guide/StudyGuideWorkspace.tsx');
   const canvas = read('app/components/workspace/StudyCanvasBoundary.tsx');

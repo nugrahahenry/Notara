@@ -139,6 +139,35 @@ export function StudyCanvasBoundary({
     window.requestAnimationFrame(() => actionsButtonRef.current?.focus());
   };
 
+  const moveCanvasTab = (direction: 'next' | 'previous' | 'first' | 'last') => {
+    const tabs = ['summary', 'transcript'] as const;
+    const currentIndex = tabs.indexOf(activeTab);
+    const nextIndex = direction === 'first'
+      ? 0
+      : direction === 'last'
+        ? tabs.length - 1
+        : (currentIndex + (direction === 'next' ? 1 : -1) + tabs.length) % tabs.length;
+    const nextTab = tabs[nextIndex];
+    onTabChange(nextTab);
+    window.requestAnimationFrame(() => document.getElementById(`study-tab-${nextTab}`)?.focus());
+  };
+
+  const handleCanvasTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      moveCanvasTab('next');
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveCanvasTab('previous');
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      moveCanvasTab('first');
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      moveCanvasTab('last');
+    }
+  };
+
   const handleBoundaryKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== 'Escape') return;
     if (courseOpen) {
@@ -169,8 +198,26 @@ export function StudyCanvasBoundary({
           <ArrowLeft className="h-4 w-4" /> Kembali ke Mata Kuliah
         </button>
         <div className="notara-canvas-tabs" role="tablist" aria-label="Isi materi">
-          <button type="button" role="tab" aria-selected={activeTab === 'summary'} onClick={() => onTabChange('summary')}>Rangkuman</button>
-          <button type="button" role="tab" aria-selected={activeTab === 'transcript'} onClick={() => onTabChange('transcript')}>Transkrip</button>
+          <button
+            id="study-tab-summary"
+            type="button"
+            role="tab"
+            tabIndex={activeTab === 'summary' ? 0 : -1}
+            aria-selected={activeTab === 'summary'}
+            aria-controls="study-panel-summary"
+            onKeyDown={handleCanvasTabKeyDown}
+            onClick={() => onTabChange('summary')}
+          >Rangkuman</button>
+          <button
+            id="study-tab-transcript"
+            type="button"
+            role="tab"
+            tabIndex={activeTab === 'transcript' ? 0 : -1}
+            aria-selected={activeTab === 'transcript'}
+            aria-controls="study-panel-transcript"
+            onKeyDown={handleCanvasTabKeyDown}
+            onClick={() => onTabChange('transcript')}
+          >Transkrip</button>
         </div>
       </header>
 
@@ -324,7 +371,13 @@ export function StudyCanvasBoundary({
               )}
             </header>
 
-            <div className="notara-document-body" role="tabpanel">
+            <div
+              className="notara-document-body"
+              id={`study-panel-${activeTab}`}
+              role="tabpanel"
+              aria-labelledby={`study-tab-${activeTab}`}
+              tabIndex={0}
+            >
               {content}
             </div>
           </article>

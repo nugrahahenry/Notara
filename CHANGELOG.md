@@ -4,7 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.19.0.
+Belum ada perubahan setelah Nalira v0.19.1.
+
+## [0.19.1] - 2026-09-28
+### Fixed
+- Tab Rangkuman/Transkrip pada Material Review sekarang memiliki relasi tab-panel yang eksplisit, navigasi panah/Home/End, dan focus ring yang terlihat.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, atau data pengguna.
 
 ## [0.19.0] - 2026-09-28
 ### Added
