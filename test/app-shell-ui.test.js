@@ -495,6 +495,8 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   assert.match(requestingRecording, /disabled=""/);
   assert.match(requestingRecording, /disabled:cursor-wait/);
   assert.match(processing, /notara-processing-visual/);
+  assert.match(processing, /Tahap pemrosesan materi/);
+  assert.equal((processing.match(/Menyiapkan audio|Mentranskrip sumber|Menyusun rangkuman/g) || []).length, 3);
   assert.match(tabs, /role="tablist"/);
   assert.equal((tabs.match(/role="tab"/g) || []).length, 2);
   assert.equal((tabs.match(/type="button"/g) || []).length, 2);

@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronRight, Loader2, TriangleAlert } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Circle, Loader2, TriangleAlert } from 'lucide-react';
 import { ProcessingVisual } from '../brand/ProductArtwork';
 
 interface ProcessingViewProps {
@@ -14,6 +14,29 @@ interface ProcessingViewProps {
   thinkingLog: string[];
   showThinkingPanel: boolean;
   onToggleThinkingPanel: () => void;
+}
+
+type ProcessingStageKey = 'preparing' | 'transcribing' | 'summarizing';
+
+const PROCESSING_STAGES: Array<{ key: ProcessingStageKey; label: string }> = [
+  { key: 'preparing', label: 'Menyiapkan audio' },
+  { key: 'transcribing', label: 'Mentranskrip sumber' },
+  { key: 'summarizing', label: 'Menyusun rangkuman' },
+];
+
+function getProcessingStage(
+  isChunkProcessing: boolean,
+  chunkProgress: string,
+  statusMessage: string,
+): ProcessingStageKey {
+  const copy = `${chunkProgress} ${statusMessage}`.toLowerCase();
+  if (copy.includes('rangkuman') || copy.includes('hasil akhir') || copy.includes('siap disimpan')) {
+    return 'summarizing';
+  }
+  if (isChunkProcessing || copy.includes('transkrip') || copy.includes('mendengarkan')) {
+    return 'transcribing';
+  }
+  return 'preparing';
 }
 
 export function ProcessingView({
@@ -33,6 +56,8 @@ export function ProcessingView({
   const currentStatus = isChunkProcessing
     ? chunkProgress || 'Browser sedang menyiapkan rekaman...'
     : statusMessage || 'Audio sedang diproses...';
+  const activeStage = getProcessingStage(isChunkProcessing, chunkProgress, statusMessage);
+  const activeStageIndex = PROCESSING_STAGES.findIndex((stage) => stage.key === activeStage);
 
   return (
     <section
@@ -57,6 +82,35 @@ export function ProcessingView({
           {currentStatus}
         </p>
       </div>
+
+      <ol className="mt-5 grid w-full max-w-xl gap-2 text-left sm:grid-cols-3" aria-label="Tahap pemrosesan materi">
+        {PROCESSING_STAGES.map((stage, index) => {
+          const isComplete = index < activeStageIndex;
+          const isActive = index === activeStageIndex;
+          return (
+            <li
+              key={stage.key}
+              className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-xs transition-colors ${
+                isActive
+                  ? 'border-[var(--action-primary)]/35 bg-[var(--info-soft)] text-[var(--action-primary)]'
+                  : isComplete
+                    ? 'border-emerald-500/25 bg-emerald-500/10 text-[var(--success-accent)]'
+                    : 'border-[var(--border-subtle)] bg-[var(--surface-tool)] text-[var(--text-tertiary)]'
+              }`}
+              aria-current={isActive ? 'step' : undefined}
+            >
+              {isComplete ? (
+                <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
+              ) : isActive ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+              ) : (
+                <Circle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              )}
+              <span className="font-bold">{stage.label}</span>
+            </li>
+          );
+        })}
+      </ol>
 
       {hasMeasuredChunkProgress && measuredPercent !== null && (
         <div className="mt-5 w-full max-w-sm text-left">

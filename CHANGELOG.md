@@ -4,7 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.18.2.
+Belum ada perubahan setelah Nalira v0.19.0.
+
+## [0.19.0] - 2026-09-28
+### Added
+- Layar processing sekarang menampilkan rail tiga tahap: menyiapkan audio, mentranskrip sumber, dan menyusun rangkuman. Tahap aktif diturunkan dari status pipeline yang sudah ada; tidak ada persentase baru yang dibuat-buat.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, atau data pengguna.
 
 ## [0.18.2] - 2026-09-28
 ### Fixed
