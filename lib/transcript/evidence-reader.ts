@@ -80,6 +80,7 @@ export async function readTranscriptEvidencePage({
   let annotations = new Map<number, TranscriptContextAnnotation>();
   try {
     annotations = await readLatestTranscriptContextAnnotations(
+      summaryId,
       segments.map((segment) => segment.id),
     );
   } catch {

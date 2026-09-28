@@ -207,8 +207,9 @@ test('Transcript Evidence keeps context review inline, explicit, and reversible'
   assert.match(contextReview, /Simpan keputusan/);
   assert.match(contextReview, /Abaikan usulan/);
   assert.doesNotMatch(contextReview, /setSuggestions\(new Map\(\)\)/);
-  assert.match(contextReview, /controlsBusy = savingSegmentIds\.size > 0 \|\| analysisState === 'loading'/);
-  assert.match(contextReview, /analysisAbortRef\.current \|\| savingSegmentIdsRef\.current\.size > 0/);
+  assert.match(contextReview, /controlsBusy = savingSegmentIds\.has\(segment\.id\) \|\| analysisState === 'loading'/);
+  assert.match(contextReview, /analysisAbortRef\.current \|\| savingSegmentIdsRef\.current\.has\(segmentId\)/);
+  assert.match(contextReview, /analysisVersionRef/);
   assert.match(contextReview, /annotationsRef\.current\.get\(segment\.id\)/);
   assert.match(contextReview, /aria-busy=\{isSaving\}/);
   assert.match(contextReview, /Cek lebih dulu/);
@@ -225,6 +226,9 @@ test('an unavailable context migration never makes existing transcript evidence 
   const reader = read('lib/transcript/evidence-reader.ts');
 
   assert.match(reader, /try\s*{[\s\S]*readLatestTranscriptContextAnnotations/);
+  assert.match(reader, /readLatestTranscriptContextAnnotations\(\s*summaryId,/);
+  assert.match(read('lib/transcript/context-reader.ts'), /\.eq\('summary_id', summaryId\)/);
+  assert.match(read('lib/transcript/context-reader.ts'), /context-segment-scope-failed/);
   assert.match(reader, /catch\s*{[\s\S]*contextAvailable = false/);
   assert.match(reader, /\[transcript-context\] annotations unavailable/);
   assert.match(reader, /segments:\s*segments\.map/);

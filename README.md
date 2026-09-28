@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Nalira v0.19.3 mempertahankan Guided Learning, memperjelas alur Capture melalui langkah visual dan tab sumber berikon, serta menambahkan status rekaman yang jujur dan navigasi keyboard antar sumber. Beranda kini tidak mengklaim posisi belajar tersimpan; pengguna diarahkan membuka kembali materi di Study Canvas. Material Review dan Transcript Evidence tetap memiliki kontrak aksesibel yang eksplisit. Tidak ada perubahan schema, migration, endpoint, provider AI, billing, atau data pengguna. Terakhir diverifikasi lokal: 29 September 2026.
+> Status: Nalira v0.19.4 mempertahankan Guided Learning, memperketat Transcript Context Review agar tetap summary-scoped, concurrent per segmen, dan kebal terhadap respons analisis stale. Gate Speaker Context sudah memiliki kontrak label anonim, koreksi, retention, RLS, progress, idempotency, dan rollback, tetapi tetap implementation-blocked karena benchmark provider gagal dan audio production lane belum disetujui. Tidak ada speaker migration, audio storage, provider AI baru, billing, atau perubahan summary otomatis. Terakhir diverifikasi lokal: 29 September 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.

@@ -162,6 +162,7 @@ export function TranscriptContextReview({
   const [reviewMode, setReviewMode] = useState<ReviewMode>('all');
   const [expandedSegmentId, setExpandedSegmentId] = useState<number | null>(null);
   const analysisAbortRef = useRef<AbortController | null>(null);
+  const analysisVersionRef = useRef(0);
   const annotationsRef = useRef(annotations);
   const savingSegmentIdsRef = useRef<Set<number>>(new Set());
 
@@ -178,6 +179,7 @@ export function TranscriptContextReview({
   ), [prioritySegmentIds, reviewMode, segments]);
 
   useEffect(() => () => {
+    analysisVersionRef.current += 1;
     analysisAbortRef.current?.abort();
   }, []);
 
@@ -189,6 +191,8 @@ export function TranscriptContextReview({
       || segmentIds.length === 0
     ) return;
     const controller = new AbortController();
+    const analysisVersion = analysisVersionRef.current + 1;
+    analysisVersionRef.current = analysisVersion;
     analysisAbortRef.current = controller;
     setAnalysisState('loading');
     setAnalysisError(null);
@@ -224,7 +228,7 @@ export function TranscriptContextReview({
       setExpandedSegmentId(null);
       setAnalysisState('ready');
     } catch (error) {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || analysisVersion !== analysisVersionRef.current) return;
       const status = error instanceof ContextAnalysisRequestError ? error.status : null;
       setAnalysisError(getTranscriptContextAnalysisErrorCopy(
         status,
@@ -232,12 +236,14 @@ export function TranscriptContextReview({
       ));
       setAnalysisState('error');
     } finally {
-      if (analysisAbortRef.current === controller) analysisAbortRef.current = null;
+      if (analysisAbortRef.current === controller && analysisVersion === analysisVersionRef.current) {
+        analysisAbortRef.current = null;
+      }
     }
   };
 
   const updateDraft = (segmentId: number, update: Partial<DraftDecision>) => {
-    if (analysisAbortRef.current || savingSegmentIdsRef.current.size > 0) return;
+    if (analysisAbortRef.current || savingSegmentIdsRef.current.has(segmentId)) return;
     const suggestion = suggestions.get(segmentId);
     const annotation = annotations.get(segmentId) ?? null;
     setDrafts((current) => {
@@ -262,7 +268,7 @@ export function TranscriptContextReview({
   };
 
   const ignoreSuggestion = (segmentId: number) => {
-    if (analysisAbortRef.current || savingSegmentIdsRef.current.size > 0) return;
+    if (analysisAbortRef.current || savingSegmentIdsRef.current.has(segmentId)) return;
     setSuggestions((current) => {
       const next = new Map(current);
       next.delete(segmentId);
@@ -287,7 +293,7 @@ export function TranscriptContextReview({
   };
 
   const saveDecision = async (segmentId: number) => {
-    if (analysisAbortRef.current || savingSegmentIdsRef.current.size > 0) return;
+    if (analysisAbortRef.current || savingSegmentIdsRef.current.has(segmentId)) return;
     const draft = drafts.get(segmentId)
       ?? draftFrom(annotations.get(segmentId) ?? null, suggestions.get(segmentId));
     savingSegmentIdsRef.current.add(segmentId);
@@ -305,6 +311,7 @@ export function TranscriptContextReview({
 
     try {
       const saved = await saveTranscriptContextDecision({
+        summaryId,
         segmentId,
         contextLabel: draft.contextLabel,
         summaryTreatment: draft.summaryTreatment,
@@ -436,7 +443,7 @@ export function TranscriptContextReview({
           const showDecision = Boolean(suggestion || annotation);
           const isExpanded = expandedSegmentId === segment.id;
           const isSaving = savingSegmentIds.has(segment.id);
-          const controlsBusy = savingSegmentIds.size > 0 || analysisState === 'loading';
+          const controlsBusy = savingSegmentIds.has(segment.id) || analysisState === 'loading';
           const decisionChanged = !annotation
             || annotation.contextLabel !== draft.contextLabel
             || annotation.summaryTreatment !== draft.summaryTreatment;

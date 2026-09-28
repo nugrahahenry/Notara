@@ -4,7 +4,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.3 memperjelas status Capture dan bahasa kelanjutan di Beranda.
+Nalira v0.19.4 memperketat scope dan concurrency Transcript Context Review tanpa membuka speaker DB.
+
+## [0.19.4] - 2026-09-29
+### Fixed
+- Pembacaan keputusan konteks kini dibatasi ke summary yang sedang dibuka, dan penyimpanan menolak segment yang tidak berada di summary tersebut sebelum memanggil RPC.
+- Dua keputusan pada segmen berbeda dapat disimpan secara independen; spinner dan editor hanya mengunci baris yang sedang disimpan.
+- Respons analisis lama diabaikan setelah permintaan baru atau halaman ditinggalkan, sehingga hasil stale tidak dapat menimpa review terbaru.
+
+### Architecture
+- Gate database Speaker Context tetap design-complete tetapi implementation-blocked: label anonim, koreksi append-only, retention nol audio, RLS/RPC owner-only, progress bounded, idempotency, expiry, dan rollback sudah terdokumentasi; tidak ada speaker migration/provider baru pada checkpoint ini.
+
+### Quality
+- Perubahan tetap berada di Context Review/Application/Data-read boundary. Tidak ada speaker table, audio storage, provider, billing, atau perubahan summary otomatis.
 
 ## [0.19.3] - 2026-09-29
 ### Fixed
