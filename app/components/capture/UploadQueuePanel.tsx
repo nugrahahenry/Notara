@@ -69,7 +69,7 @@ export function UploadQueuePanel({
   }[dragState];
 
   return (
-    <section id="capture-upload-panel" data-tour="upload-area" className="space-y-5" aria-labelledby="capture-upload-title" role="tabpanel">
+    <section id="capture-upload-panel" data-tour="upload-area" className="space-y-5" aria-labelledby="capture-upload-tab capture-upload-title" role="tabpanel" tabIndex={0}>
       <div
         onDragEnter={onDrag}
         onDragOver={onDrag}

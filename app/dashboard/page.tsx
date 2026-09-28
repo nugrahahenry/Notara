@@ -5051,6 +5051,7 @@ export default function Home() {
 
                   <CaptureJourney
                     isRecordingMode={isRecordingMode}
+                    isRecording={isRecording}
                     hasInput={isRecordingMode ? Boolean(audioBlob) : uploadCaptureTasks.length > 0}
                   />
 

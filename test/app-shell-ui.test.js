@@ -236,6 +236,8 @@ test('Home gives one primary daily action while keeping capture within reach', (
 
   assert.match(returningHome, /data-home-primary="continue"/);
   assert.match(returningHome, /Buka Study Canvas/);
+  assert.match(returningHome, /Materi terakhirmu siap dibuka kembali di Study Canvas/);
+  assert.doesNotMatch(returningHome, /bagian terakhir|materi aktif/);
   assert.match(returningHome, /Rekam kuliah/);
   assert.match(returningHome, /Upload file/);
   assert.match(emptyHome, /data-home-primary="capture"/);
@@ -431,6 +433,7 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   }));
   const journey = renderToStaticMarkup(React.createElement(journeyModule.CaptureJourney, {
     isRecordingMode: true,
+    isRecording: true,
     hasInput: false,
   }));
 
@@ -467,6 +470,9 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
     onClearSourceCheckPreview: noop,
   }));
   assert.match(readyRecording, /preview 10 detik bisa diputar ulang di bawah/);
+  assert.match(tabs, /id="capture-upload-tab"/);
+  assert.match(tabs, /id="capture-recording-tab"/);
+  assert.match(journey, /Rekaman sedang berlangsung/);
 
   const requestingRecording = renderToStaticMarkup(React.createElement(recordingModule.RecordingPanel, {
     canvasRef: { current: null },

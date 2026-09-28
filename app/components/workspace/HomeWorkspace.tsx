@@ -96,7 +96,7 @@ function AmbientScene({
   activeMaterial,
 }: {
   daypart: Daypart;
-      firstName: string;
+  firstName: string;
   firstUse: boolean;
   dateLabel: string;
   activeMaterial: string | null;
@@ -104,7 +104,7 @@ function AmbientScene({
   const subcopy = firstUse
     ? 'Ruang belajarmu masih kosong. Mulai dari satu rekaman, lalu biarkan materi berkembang dari sana.'
     : activeMaterial
-      ? `${activeMaterial} siap dilanjutkan tanpa mencari ulang bagian terakhir.`
+      ? 'Materi terakhirmu siap dibuka kembali di Study Canvas.'
       : daypartCopy[daypart];
 
   return (
@@ -120,7 +120,7 @@ function AmbientScene({
         <div className="notara-home-ambient-meta">
           <span>{daypartLabel[daypart]}</span>
           <time>{dateLabel || 'Hari ini'}</time>
-          <span><i aria-hidden="true" /> {firstUse ? 'Siap membuat materi pertama' : 'Fokus hari ini: 1 materi aktif'}</span>
+          <span><i aria-hidden="true" /> {firstUse ? 'Siap membuat materi pertama' : 'Satu materi siap dibuka kembali'}</span>
         </div>
       </div>
       <AmbientArtwork daypart={daypart} state={firstUse ? 'empty' : 'continuation'} />

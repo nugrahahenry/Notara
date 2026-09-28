@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.19.2.
+Nalira v0.19.3 memperjelas status Capture dan bahasa kelanjutan di Beranda.
+
+## [0.19.3] - 2026-09-29
+### Fixed
+- Beranda tidak lagi mengklaim bahwa posisi belajar terakhir tersimpan; materi terakhir diarahkan untuk dibuka kembali di Study Canvas.
+- Journey Capture membedakan rekaman yang sedang berlangsung, rekaman siap diproses, antrean file, dan keadaan kosong.
+- Tab Upload/Rekam memiliki roving focus, navigasi Arrow/Home/End, serta relasi panel yang lebih eksplisit untuk keyboard dan screen reader.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, atau data pengguna.
 
 ## [0.19.2] - 2026-09-29
 ### Fixed

@@ -2,12 +2,13 @@
 
 interface CaptureJourneyProps {
   isRecordingMode: boolean;
+  isRecording: boolean;
   hasInput: boolean;
 }
 
 const STEPS = ['Pilih cara', 'Siapkan materi', 'Buat rangkuman'];
 
-export function CaptureJourney({ isRecordingMode, hasInput }: CaptureJourneyProps) {
+export function CaptureJourney({ isRecordingMode, isRecording, hasInput }: CaptureJourneyProps) {
   const currentStep = hasInput ? 2 : 1;
   const modeLabel = isRecordingMode ? 'Rekam suara' : 'Upload file';
 
@@ -21,7 +22,11 @@ export function CaptureJourney({ isRecordingMode, hasInput }: CaptureJourneyProp
           const detail = step === 1
             ? modeLabel
             : step === 2
-              ? hasInput ? 'Siap diproses' : 'Belum ada file atau rekaman'
+              ? isRecording
+                ? 'Rekaman sedang berlangsung'
+                : hasInput
+                  ? isRecordingMode ? 'Rekaman siap diproses' : 'File ada di antrean'
+                  : isRecordingMode ? 'Belum ada rekaman' : 'Belum ada file'
               : 'Setelah proses selesai';
 
           return (
