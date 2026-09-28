@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Belum ada perubahan setelah Nalira v0.17.0.
+Belum ada perubahan setelah Nalira v0.18.0.
+
+## [0.18.0] - 2026-09-28
+### Added
+- Tes sumber 10 detik kini merekam preview audio lokal yang dapat diputar ulang tanpa dikirim ke pipeline rangkuman atau disimpan permanen.
+- Visualizer Capture memakai bar amplitudo cermin yang lebih mudah dibaca seperti waveform voice note, dengan highlight ringan dan fallback reduced-motion untuk animasi dekoratif.
+
+### Quality
+- Preview Capture lokal dibuka di Chrome Henry pada desktop; alur produksi tidak disentuh dan tes rekaman kuliah ditunda sesuai rencana.
+- 295 test, ESLint, TypeScript standalone, production build, `git diff --check`, serta detector Impeccable terarah lulus. Detector tetap melaporkan pola legacy di area dashboard yang tidak disentuh batch ini.
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, atau data pengguna.
 
 ## [0.17.0] - 2026-09-28
 ### Added

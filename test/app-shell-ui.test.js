@@ -396,6 +396,7 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
     isPaused: false,
     audioBlob: null,
     audioUrl: null,
+    sourceCheckAudioUrl: 'blob:test-source-preview',
     formattedDuration: '00:00',
     recordingSource: 'microphone',
     sourceCheckStatus: 'idle',
@@ -409,6 +410,7 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
     onStop: noop,
     onDownload: noop,
     onReset: noop,
+    onClearSourceCheckPreview: noop,
   }));
   const processing = renderToStaticMarkup(React.createElement(processingModule.ProcessingView, {
     thinkingElapsed: 4,
@@ -437,6 +439,8 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   assert.match(recording, /Mikrofon kelas/);
   assert.match(recording, /Tab Zoom \/ Meet/);
   assert.match(recording, /Tes 10 detik/);
+  assert.match(recording, /Preview tes sumber/);
+  assert.match(recording, /tidak dikirim ke Nalira/);
   assert.equal((recording.match(/type="radio"/g) || []).length, 2);
 
   const requestingRecording = renderToStaticMarkup(React.createElement(recordingModule.RecordingPanel, {
@@ -445,6 +449,7 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
     isPaused: false,
     audioBlob: null,
     audioUrl: null,
+    sourceCheckAudioUrl: null,
     formattedDuration: '00:00',
     recordingSource: 'microphone',
     sourceCheckStatus: 'requesting',
@@ -458,6 +463,7 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
     onStop: noop,
     onDownload: noop,
     onReset: noop,
+    onClearSourceCheckPreview: noop,
   }));
   assert.match(requestingRecording, /Menunggu izin mikrofon dari Chrome/);
   assert.match(requestingRecording, /Menunggu izin/);

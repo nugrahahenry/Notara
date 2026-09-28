@@ -1,7 +1,7 @@
 'use client';
 
 import type { RefObject } from 'react';
-import { Check, FileAudio } from 'lucide-react';
+import { Check, FileAudio, Headphones, Trash2 } from 'lucide-react';
 import { RecordingVisual, type RecordingVisualState } from '../brand/ProductArtwork';
 import type {
   RecordingSourceCheckStatus,
@@ -16,6 +16,7 @@ interface RecordingPanelProps {
   isPaused: boolean;
   audioBlob: Blob | null;
   audioUrl: string | null;
+  sourceCheckAudioUrl: string | null;
   formattedDuration: string;
   recordingSource: RecordingSourceKind;
   sourceCheckStatus: RecordingSourceCheckStatus;
@@ -29,6 +30,7 @@ interface RecordingPanelProps {
   onStop: () => void;
   onDownload: () => void;
   onReset: () => void;
+  onClearSourceCheckPreview: () => void;
 }
 
 export function RecordingPanel({
@@ -37,6 +39,7 @@ export function RecordingPanel({
   isPaused,
   audioBlob,
   audioUrl,
+  sourceCheckAudioUrl,
   formattedDuration,
   recordingSource,
   sourceCheckStatus,
@@ -50,6 +53,7 @@ export function RecordingPanel({
   onStop,
   onDownload,
   onReset,
+  onClearSourceCheckPreview,
 }: RecordingPanelProps) {
   const visualState: RecordingVisualState = isRecording
     ? isPaused ? 'paused' : 'recording'
@@ -116,6 +120,39 @@ export function RecordingPanel({
       {audioUrl && !isRecording && (
         <div className="mt-1 w-full max-w-sm animate-in fade-in duration-300">
           <audio src={audioUrl} controls className="w-full focus:outline-none" aria-label="Pratinjau rekaman suara" />
+        </div>
+      )}
+
+      {sourceCheckAudioUrl && !isRecording && !audioBlob && (
+        <div className="notara-source-check-preview w-full max-w-xl text-left" aria-live="polite">
+          <div className="notara-source-check-preview__heading">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="notara-source-check-preview__icon" aria-hidden="true">
+                <Headphones className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <strong>Preview tes sumber</strong>
+                <span>10 detik · hanya tersimpan di tab ini</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClearSourceCheckPreview}
+              className="notara-source-check-preview__clear"
+              aria-label="Hapus preview tes sumber"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Hapus
+            </button>
+          </div>
+          <audio
+            src={sourceCheckAudioUrl}
+            controls
+            preload="metadata"
+            className="w-full focus:outline-none"
+            aria-label="Putar ulang preview tes sumber selama 10 detik"
+          />
+          <p>Preview ini tidak dikirim ke Nalira dan akan hilang saat tab ditutup.</p>
         </div>
       )}
 

@@ -316,6 +316,7 @@ export default function Home() {
   const [recordingDuration, setRecordingDuration] = useState<number>(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [sourceCheckAudioUrl, setSourceCheckAudioUrl] = useState<string | null>(null);
   const [recordingSource, setRecordingSource] = useState<RecordingSourceKind>('microphone');
   const [capturedRecordingSource, setCapturedRecordingSource] = useState<RecordingSourceKind>('microphone');
   const [sourceCheckStatus, setSourceCheckStatus] = useState<RecordingSourceCheckStatus>('idle');
@@ -342,6 +343,9 @@ export default function Home() {
   const sourceRequestTokenRef = useRef<number>(0);
   const sourceCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
   const sourceSignalDetectedRef = useRef<boolean>(false);
+  const sourceCheckRecorderRef = useRef<MediaRecorder | null>(null);
+  const sourceCheckAudioChunksRef = useRef<Blob[]>([]);
+  const sourceCheckAudioUrlRef = useRef<string | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   
   // Custom refs for deletion explosion effect
@@ -1367,6 +1371,16 @@ export default function Home() {
       if (sourceCheckTimerRef.current) {
         clearInterval(sourceCheckTimerRef.current);
       }
+      if (sourceCheckRecorderRef.current) {
+        const recorder = sourceCheckRecorderRef.current;
+        sourceCheckRecorderRef.current = null;
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        if (recorder.state !== 'inactive') recorder.stop();
+      }
+      if (sourceCheckAudioUrlRef.current) {
+        URL.revokeObjectURL(sourceCheckAudioUrlRef.current);
+      }
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         void audioContextRef.current.close();
       }
@@ -1851,6 +1865,62 @@ export default function Home() {
     setSourceCheckRemainingSeconds(null);
   };
 
+  const clearSourceCheckPreview = () => {
+    const recorder = sourceCheckRecorderRef.current;
+    sourceCheckRecorderRef.current = null;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.stop();
+    }
+    sourceCheckAudioChunksRef.current = [];
+    if (sourceCheckAudioUrlRef.current) {
+      URL.revokeObjectURL(sourceCheckAudioUrlRef.current);
+      sourceCheckAudioUrlRef.current = null;
+    }
+    setSourceCheckAudioUrl(null);
+  };
+
+  const startSourceCheckPreview = (stream: MediaStream) => {
+    if (typeof MediaRecorder === 'undefined') return;
+
+    const mimeType = getPreferredRecordingMimeType(MediaRecorder.isTypeSupported.bind(MediaRecorder));
+    if (!mimeType) return;
+
+    clearSourceCheckPreview();
+    const recorder = new MediaRecorder(stream, { mimeType });
+    sourceCheckAudioChunksRef.current = [];
+    sourceCheckRecorderRef.current = recorder;
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        sourceCheckAudioChunksRef.current.push(event.data);
+      }
+    };
+    recorder.onstop = () => {
+      if (sourceCheckRecorderRef.current !== recorder) return;
+      sourceCheckRecorderRef.current = null;
+      const blob = new Blob(sourceCheckAudioChunksRef.current, {
+        type: recorder.mimeType || mimeType,
+      });
+      sourceCheckAudioChunksRef.current = [];
+      if (blob.size === 0) return;
+      if (sourceCheckAudioUrlRef.current) {
+        URL.revokeObjectURL(sourceCheckAudioUrlRef.current);
+      }
+      const nextUrl = URL.createObjectURL(blob);
+      sourceCheckAudioUrlRef.current = nextUrl;
+      setSourceCheckAudioUrl(nextUrl);
+    };
+    recorder.start(250);
+  };
+
+  const stopSourceCheckPreviewRecorder = () => {
+    const recorder = sourceCheckRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+  };
+
   const teardownVisualizer = () => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -1882,6 +1952,7 @@ export default function Home() {
       sourceRequestTokenRef.current += 1;
     }
     clearSourceCheckTimer();
+    clearSourceCheckPreview();
     const prepared = preparedRecordingSourceRef.current;
     if (prepared) {
       discardPreparedRecordingSource(prepared);
@@ -2005,12 +2076,14 @@ export default function Home() {
       setSourceCheckStatus('checking');
       setSourceCheckRemainingSeconds(RECORDING_SOURCE_TEST_SECONDS);
       setupVisualizer(prepared.audioStream);
+      startSourceCheckPreview(prepared.audioStream);
       let remaining = RECORDING_SOURCE_TEST_SECONDS;
       sourceCheckTimerRef.current = setInterval(() => {
         remaining -= 1;
         setSourceCheckRemainingSeconds(Math.max(0, remaining));
         if (remaining <= 0) {
           clearSourceCheckTimer();
+          stopSourceCheckPreviewRecorder();
           setSourceCheckStatus(sourceSignalDetectedRef.current ? 'ready' : 'silent');
         }
       }, 1000);
@@ -2051,6 +2124,7 @@ export default function Home() {
     setRecordingDuration(0);
     setAudioBlob(null);
     setAudioUrl(null);
+    clearSourceCheckPreview();
     setError(null);
     setSourceError(null);
     setSourceCheckStatus('requesting');
@@ -2169,6 +2243,9 @@ export default function Home() {
     const dataArray = new Uint8Array(bufferLength);
     const themeStyles = getComputedStyle(document.documentElement);
     const waveformColor = themeStyles.getPropertyValue('--brand-primary').trim() || '#7058E8';
+    const waveformHighlight = themeStyles.getPropertyValue('--knowledge-accent').trim() || waveformColor;
+    const barCount = 48;
+    const levels = new Array<number>(barCount).fill(0.08);
     
     const draw = () => {
       if (!canvas || !analyser) return;
@@ -2186,28 +2263,35 @@ export default function Home() {
       }
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = waveformColor;
-      ctx.beginPath();
-      
-      const sliceWidth = canvas.width / bufferLength;
-      let x = 0;
-      
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = v * canvas.height / 2;
-        
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
+
+      const centerY = canvas.height / 2;
+      const step = Math.max(1, Math.floor(bufferLength / barCount));
+      const barWidth = canvas.width / barCount;
+      for (let index = 0; index < barCount; index += 1) {
+        let peak = 0;
+        const start = index * step;
+        const end = Math.min(bufferLength, start + step);
+        for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
+          peak = Math.max(peak, Math.abs(dataArray[sampleIndex] - 128) / 128);
         }
-        x += sliceWidth;
+
+        const target = Math.min(1, Math.max(0.08, peak * 3.2));
+        levels[index] = levels[index] * 0.66 + target * 0.34;
+        const barHeight = Math.max(5, levels[index] * canvas.height * 0.84);
+        const x = index * barWidth + barWidth * 0.28;
+        const width = Math.max(2, barWidth * 0.44);
+        const y = centerY - barHeight / 2;
+
+        ctx.fillStyle = index % 7 === 0 ? waveformHighlight : waveformColor;
+        const radius = Math.min(width / 2, 4);
+        if (typeof ctx.roundRect === 'function') {
+          ctx.beginPath();
+          ctx.roundRect(x, y, width, barHeight, radius);
+          ctx.fill();
+        } else {
+          ctx.fillRect(x, y, width, barHeight);
+        }
       }
-      
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
     };
     
     draw();
@@ -5013,6 +5097,7 @@ export default function Home() {
                       isPaused={isPaused}
                       audioBlob={audioBlob}
                       audioUrl={audioUrl}
+                      sourceCheckAudioUrl={sourceCheckAudioUrl}
                       formattedDuration={formatDuration(recordingDuration)}
                       recordingSource={recordingSource}
                       sourceCheckStatus={sourceCheckStatus}
@@ -5025,6 +5110,7 @@ export default function Home() {
                       onResume={resumeRecording}
                       onStop={stopRecording}
                       onDownload={handleDownloadAudio}
+                      onClearSourceCheckPreview={clearSourceCheckPreview}
                       onReset={() => {
                         releasePreparedRecordingSource();
                         setAudioBlob(null);
