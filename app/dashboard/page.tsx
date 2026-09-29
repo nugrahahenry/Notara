@@ -5299,6 +5299,7 @@ export default function Home() {
                 )}
                 transcriptContent={(
                   <TranscriptEvidenceReview
+                    key={`${user?.id ?? 'anonymous'}:${selectedSummary.id}`}
                     summaryId={selectedSummary.id}
                     aggregateTranscript={selectedSummary.transcript}
                     evidenceEnabled={Boolean(

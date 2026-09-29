@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.6 memperjelas batas review konteks berbasis teks tanpa membuka speaker DB.
+Nalira v0.19.7 memperketat pergantian materi pada Transcript Evidence dan mencegah respons analisis stale mengubah review yang sudah ditinggalkan.
+
+## [0.19.7] - 2026-09-29
+### Fixed
+- Transcript Evidence kini di-remount berdasarkan user dan materi aktif agar state loading, filter, serta Context Review tidak terbawa ketika pengguna berpindah materi.
+- Respons analisis konteks yang selesai setelah pembatalan atau pergantian lifecycle tidak lagi menulis suggestion baru ke UI.
+
+### Quality
+- Perubahan tetap berada di Experience/Application boundary. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau data pengguna.
 
 ## [0.19.6] - 2026-09-29
 ### Fixed

@@ -199,8 +199,10 @@ test('suggestion route re-reads owned segments and never trusts client transcrip
 test('Transcript Evidence keeps context review inline, explicit, and reversible', () => {
   const evidence = read('app/components/transcript/TranscriptEvidenceReview.tsx');
   const contextReview = read('app/components/transcript/TranscriptContextReview.tsx');
+  const dashboard = read('app/dashboard/page.tsx');
 
   assert.match(evidence, /TranscriptContextReview/);
+  assert.match(dashboard, /<TranscriptEvidenceReview\s+key=\{`\$\{user\?\.id \?\? 'anonymous'\}:\$\{selectedSummary\.id\}`\}/);
   assert.match(contextReview, /Analisis konteks halaman/);
   assert.match(contextReview, /berdasarkan teks, bukan pengenal suara/i);
   assert.match(contextReview, /Berbasis teks/);
@@ -211,6 +213,7 @@ test('Transcript Evidence keeps context review inline, explicit, and reversible'
   assert.match(contextReview, /controlsBusy = savingSegmentIds\.has\(segment\.id\) \|\| analysisState === 'loading'/);
   assert.match(contextReview, /analysisAbortRef\.current \|\| savingSegmentIdsRef\.current\.has\(segmentId\)/);
   assert.match(contextReview, /analysisVersionRef/);
+  assert.match(contextReview, /if \(controller\.signal\.aborted \|\| analysisVersion !== analysisVersionRef\.current\) return;\s+const nextSuggestions/);
   assert.match(contextReview, /annotationsRef\.current\.get\(segment\.id\)/);
   assert.match(contextReview, /aria-busy=\{isSaving\}/);
   assert.match(contextReview, /Cek lebih dulu/);

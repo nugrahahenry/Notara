@@ -217,6 +217,7 @@ export function TranscriptContextReview({
 
       const parsed = readSuggestions(body, new Set(segmentIds));
       if (!parsed) throw new ContextAnalysisRequestError(502);
+      if (controller.signal.aborted || analysisVersion !== analysisVersionRef.current) return;
 
       const nextSuggestions = new Map(parsed.map((suggestion) => [suggestion.segmentId, suggestion]));
       setSuggestions(nextSuggestions);
