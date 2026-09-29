@@ -407,6 +407,8 @@ export default function Home() {
   } | null>(null);
   const [showSaveFolderModal, setShowSaveFolderModal] = useState<boolean>(false);
   const [chosenSaveFolderId, setChosenSaveFolderId] = useState<string>('null');
+  const [isSavingPendingSummary, setIsSavingPendingSummary] = useState<boolean>(false);
+  const pendingSummarySaveRef = useRef<boolean>(false);
 
   // Inline folder creation inside Save Folder Modal
   const [isAddingFolderInline, setIsAddingFolderInline] = useState<boolean>(false);
@@ -2440,7 +2442,14 @@ export default function Home() {
 
   // Save pending summary (Sprint 7)
   const handleSavePendingSummary = async (folderId: string | null) => {
-    if (!pendingSummary) return;
+    if (!pendingSummary || pendingSummarySaveRef.current) return;
+    pendingSummarySaveRef.current = true;
+    setIsSavingPendingSummary(true);
+    const releaseSaveLock = () => {
+      pendingSummarySaveRef.current = false;
+      setIsSavingPendingSummary(false);
+    };
+
     const captureTaskId = pendingSummary.captureTaskId;
     const destinationFolder = folderId
       ? folders.find((folder) => folder.id === folderId) ?? null
@@ -2473,6 +2482,7 @@ export default function Home() {
       setSelectedSummary(localSummary);
       showToast('Rangkuman disimpan sementara di tab ini.', 'success');
       await completeSavedCaptureTask(captureTaskId);
+      releaseSaveLock();
       return;
     }
 
@@ -2489,6 +2499,7 @@ export default function Home() {
         }), 'Batas penyimpanan tercapai.');
         setPendingSummary(null);
         setShowSaveFolderModal(false);
+        releaseSaveLock();
         return;
       }
     }
@@ -2537,6 +2548,7 @@ export default function Home() {
       setShowSaveFolderModal(false);
     } finally {
       setLoading(false);
+      releaseSaveLock();
     }
   };
 
@@ -6141,16 +6153,17 @@ export default function Home() {
       {/* SAVE FOLDER ASSIGNMENT MODAL (Sprint 7) */}
       {showSaveFolderModal && pendingSummary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
+          <div
             className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" 
             onClick={() => {
+              if (isSavingPendingSummary) return;
               setShowSaveFolderModal(false);
               setPendingSummary(null);
               setIsAddingFolderInline(false);
             }} 
           />
           
-          <div className="relative w-full max-w-md rounded-3xl bg-[#0F0E17] border border-white/[0.05] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200 z-50 font-sans">
+          <div aria-busy={isSavingPendingSummary} className="relative w-full max-w-md rounded-3xl bg-[#0F0E17] border border-white/[0.05] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200 z-50 font-sans">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
                 <Folder className="h-5 w-5" />
@@ -6330,20 +6343,28 @@ export default function Home() {
 
             <div className="flex gap-2.5 justify-end pt-3 border-t border-white/5">
               <button
+                disabled={isSavingPendingSummary}
                 onClick={() => {
                   setShowSaveFolderModal(false);
                   setPendingSummary(null);
                   setIsAddingFolderInline(false);
                 }}
-                className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200"
+                className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Batal
               </button>
               <button
+                type="button"
+                disabled={isSavingPendingSummary}
                 onClick={() => handleSavePendingSummary(chosenSaveFolderId === 'null' ? null : chosenSaveFolderId)}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/20 transition-all duration-200"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide shadow-md shadow-violet-500/20 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {pendingSummary.requiresHierarchicalSummary ? 'Simpan Transkrip' : 'Simpan Rangkuman'}
+                {isSavingPendingSummary ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    Menyimpan...
+                  </span>
+                ) : (pendingSummary.requiresHierarchicalSummary ? 'Simpan Transkrip' : 'Simpan Rangkuman')}
               </button>
             </div>
           </div>

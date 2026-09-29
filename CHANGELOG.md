@@ -6,6 +6,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.22.2] - 2026-09-30
+### Fixed
+- Modal penyimpanan hasil capture kini memakai lock idempotensi selama request berjalan. Double-click tidak lagi memulai dua insert rangkuman, tombol Batal/backdrop ikut terkunci, dan state `Menyimpan...` diumumkan secara visual.
+
+### Quality
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio pipeline, atau speaker contract.
+- Production v0.22.1 sudah terdeteksi di Chrome Henry; Capture workspace dan pilihan sumber rekaman dapat dibuka tanpa memulai permission atau upload.
+
 ## [0.22.1] - 2026-09-29
 ### Changed
 - Landing page mengganti perbandingan platform yang tidak dapat diverifikasi dengan komitmen privasi yang dapat dijelaskan secara faktual.
