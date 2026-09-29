@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.9 memoles Study Canvas agar ruang baca memakai lebar penuh yang tersedia, konten tetap terukur, dan panel tab tetap semantik saat berpindah tampilan.
+Nalira v0.19.10 menyatukan Tutor materi dengan alur baca Study Canvas sebagai kelanjutan ruang baca yang ringan.
+
+## [0.19.10] - 2026-09-29
+### Changed
+- Tutor materi pada Material Review kini memakai pemisah editorial dan lebar baca yang sama, bukan kartu terpisah yang bersaing dengan dokumen.
+- Disclosure, saran pertanyaan, riwayat, dan composer tetap memakai perilaku serta kontrak data yang sama.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau data pengguna.
 
 ## [0.19.9] - 2026-09-29
 ### Fixed

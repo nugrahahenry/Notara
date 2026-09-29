@@ -5217,8 +5217,12 @@ body {
 }
 
 .notara-inline-tutor[data-surface="review"] {
-  border-color: color-mix(in srgb, var(--knowledge-accent) 18%, var(--border-subtle));
-  background: color-mix(in srgb, var(--surface-elevated) 98%, var(--knowledge-accent) 2%);
+  max-width: 760px;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--knowledge-accent) 22%, var(--border-subtle));
+  border-radius: 0;
+  background: transparent;
+  padding: 30px 0 0;
   box-shadow: none;
 }
 

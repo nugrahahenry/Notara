@@ -120,6 +120,8 @@ test('Material Review keeps the reading surface full-width and paragraphs comfor
   assert.match(css, /\.notara-study-canvas-boundary\[data-lab-open="true"\][\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(300px,\s*370px\)/);
   assert.match(css, /\.notara-study-summary-content\s*\{[^}]*max-width:\s*760px/s);
   assert.match(css, /\.notara-document-title-row h1\s*\{[^}]*overflow-wrap:\s*anywhere/s);
+  assert.match(css, /\.notara-inline-tutor\[data-surface="review"\]\s*\{[^}]*border:\s*0;[^}]*border-top:\s*1px/s);
+  assert.match(css, /\.notara-inline-tutor\[data-surface="review"\]\s*\{[^}]*background:\s*transparent/s);
 });
 
 test('Guided transitions and material menus preserve intentional keyboard focus', () => {
