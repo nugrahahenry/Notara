@@ -4,7 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.5 memoles header route operasional dan responsive action tanpa membuka speaker DB.
+Nalira v0.19.6 memperjelas batas review konteks berbasis teks tanpa membuka speaker DB.
+
+## [0.19.6] - 2026-09-29
+### Fixed
+- Workbench Transcript Context kini menampilkan penanda `Berbasis teks` agar batas kemampuan terlihat sebelum pengguna menjalankan analisis.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau data pengguna.
 
 ## [0.19.5] - 2026-09-29
 ### Fixed

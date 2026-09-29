@@ -203,6 +203,7 @@ test('Transcript Evidence keeps context review inline, explicit, and reversible'
   assert.match(evidence, /TranscriptContextReview/);
   assert.match(contextReview, /Analisis konteks halaman/);
   assert.match(contextReview, /berdasarkan teks, bukan pengenal suara/i);
+  assert.match(contextReview, /Berbasis teks/);
   assert.match(contextReview, /Belum mengubah rangkuman/i);
   assert.match(contextReview, /Simpan keputusan/);
   assert.match(contextReview, /Abaikan usulan/);

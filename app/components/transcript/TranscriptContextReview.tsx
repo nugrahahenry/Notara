@@ -351,7 +351,10 @@ export function TranscriptContextReview({
           <Sparkles className="h-5 w-5" />
         </div>
         <div className="notara-context-workbench-copy">
-          <h3 id="transcript-context-title">Tinjau konteks belajar</h3>
+          <div className="notara-context-workbench-heading">
+            <h3 id="transcript-context-title">Tinjau konteks belajar</h3>
+            <span className="notara-context-source-badge">Berbasis teks</span>
+          </div>
           <p>
             Nalira memberi usulan berdasarkan teks, bukan pengenal suara. Kamu tetap menentukan
             bagian yang penting. Belum mengubah rangkuman saat ini.
