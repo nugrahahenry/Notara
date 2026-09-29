@@ -51,7 +51,7 @@ test('all Groq routes authorize before reading input or provider secrets', () =>
   const routes = [
     ['app/api/summarize/route.ts', 'capture', 'request.formData()'],
     ['app/api/summarize-transcript/route.ts', 'summarize', 'readBoundedJsonBody<'],
-    ['app/api/chat/route.ts', 'chat', 'request.json()'],
+    ['app/api/chat/route.ts', 'chat', 'readBoundedJsonBody('],
   ];
 
   for (const [relativePath, operation, inputMarker] of routes) {

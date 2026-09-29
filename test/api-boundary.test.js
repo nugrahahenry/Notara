@@ -41,3 +41,19 @@ test('chat history keeps only entries with string content', () => {
   );
   assert.deepEqual(normalizeChatHistory({ role: 'user', content: 'bukan array' }), []);
 });
+
+test('chat history limits keep the newest bounded entries', () => {
+  const { normalizeChatHistory } = loadBoundary();
+
+  assert.deepEqual(
+    normalizeChatHistory([
+      { role: 'user', content: 'lama' },
+      { role: 'assistant', content: 'baru satu' },
+      { role: 'user', content: 'baru dua' },
+    ], { maxEntries: 2, maxContentChars: 5 }),
+    [
+      { role: 'assistant', content: 'baru ' },
+      { role: 'user', content: 'baru ' },
+    ],
+  );
+});

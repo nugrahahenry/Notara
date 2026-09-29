@@ -23,6 +23,8 @@
     "lib/capture/source.ts",
     "lib/capture/task.ts",
     "lib/chat/thread-state.ts",
+    "lib/chat/context.ts",
+    "lib/chat/sse.ts",
     "lib/auth/redirect.ts",
     "lib/auth/post-auth-experience.ts",
     "lib/api/boundary.ts",

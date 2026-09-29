@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_LLM_MODEL } from '../../../lib/ai';
 import { getErrorMessage, normalizeChatHistory } from '../../../lib/api/boundary';
+import { BoundedJsonBodyError, readBoundedJsonBody } from '../../../lib/api/bounded-json';
 import { authorizeAiRequest } from '../../../lib/api/ai-access';
 import { PRODUCT_IDENTITY } from '../../../lib/brand/identity';
 import { createAiUsageEvent } from '../../../lib/ai/usage';
 import { recordAiUsageSafely } from '../../../lib/ai/usage-recorder';
 import { observeGroqChatStream } from '../../../lib/ai/stream-usage';
+
+const MAX_CHAT_BODY_BYTES = 300_000;
+const MAX_MESSAGE_CHARS = 4_000;
+const MAX_CONTEXT_CHARS = 80_000;
+const MAX_FOLDER_NAME_CHARS = 160;
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,12 +27,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, contextTranscript, history, chatScope, folderName } = await request.json();
+    let body: unknown;
+    try {
+      body = await readBoundedJsonBody(request, MAX_CHAT_BODY_BYTES);
+    } catch (error) {
+      const status = error instanceof BoundedJsonBodyError && error.code === 'body-too-large' ? 413 : 400;
+      return NextResponse.json(
+        { error: status === 413 ? 'Pesan terlalu besar untuk diproses.' : 'Format permintaan tidak valid.' },
+        { status },
+      );
+    }
 
-    if (!message || message.trim() === '') {
+    if (typeof body !== 'object' || body === null) {
+      return NextResponse.json({ error: 'Format permintaan tidak valid.' }, { status: 400 });
+    }
+
+    const rawMessage = Reflect.get(body, 'message');
+    const rawContext = Reflect.get(body, 'contextTranscript');
+    const rawHistory = Reflect.get(body, 'history');
+    const rawScope = Reflect.get(body, 'chatScope');
+    const rawFolderName = Reflect.get(body, 'folderName');
+    const message = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+    const contextTranscript = typeof rawContext === 'string' ? rawContext : '';
+    const chatScope = rawScope === 'folder' || rawScope === 'summary' ? rawScope : 'global';
+    const folderName = typeof rawFolderName === 'string' ? rawFolderName.slice(0, MAX_FOLDER_NAME_CHARS) : '';
+
+    if (!message) {
       return NextResponse.json(
         { error: 'Pesan user tidak boleh kosong.' },
         { status: 400 }
+      );
+    }
+
+    if (message.length > MAX_MESSAGE_CHARS || contextTranscript.length > MAX_CONTEXT_CHARS) {
+      return NextResponse.json(
+        { error: 'Pesan atau konteks materi terlalu panjang.' },
+        { status: 413 },
       );
     }
 
@@ -59,7 +95,7 @@ ${contextTranscript || 'Tidak ada transkrip materi kuliah yang tersedia untuk se
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...normalizeChatHistory(history),
+      ...normalizeChatHistory(rawHistory, { maxEntries: 20, maxContentChars: 6_000 }),
       { role: 'user', content: message }
     ];
 

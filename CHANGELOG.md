@@ -6,6 +6,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.22.0] - 2026-09-29
+### Changed
+- Global Tanya Nalira kini memilih konteks materi secara deterministik berdasarkan kecocokan judul, mata kuliah, dan transkrip, dengan batas ukuran transkrip per materi dan total payload.
+- Copy scope, riwayat, dan empty state memakai bahasa pengguna tanpa istilah internal implementasi.
+
+### Fixed
+- Parser chat streaming mempertahankan event SSE yang terbelah antar-chunk dan mengabaikan event malformed tanpa memutus jawaban.
+- API chat membaca JSON melalui bounded reader, membatasi panjang pesan/konteks/riwayat, dan mengembalikan error 400/413 yang terstruktur.
+
+### Quality
+- Tidak ada perubahan schema, migration, provider, authentication, billing, audio, atau speaker contract.
+- QA: 307 test lulus, ESLint, production build, `git diff --check`, dan Impeccable detector lulus.
+
 ## [0.21.0] - 2026-09-29
 ### Changed
 - Workspace Courses, Shared, dan Tanya Nalira mendapat aturan responsive yang lebih tegas untuk filter, scope, history drawer, saran materi, dan composer pada layar sempit.

@@ -44,6 +44,8 @@ import { CoursesWorkspace } from '../components/workspace/CoursesWorkspace';
 import { SharedWorkspace } from '../components/workspace/SharedWorkspace';
 import { NotaraWorkspace } from '../components/workspace/NotaraWorkspace';
 import { WorkspaceAmbientHeader } from '../components/workspace/WorkspaceAmbientHeader';
+import { buildGlobalChatContext } from '@/lib/chat/context';
+import { ChatStreamParser } from '@/lib/chat/sse';
 import { StudyGuideWorkspace } from '../components/study-guide/StudyGuideWorkspace';
 import { SummaryRevisionPanel } from '../components/summary/SummaryRevisionPanel';
 import { TranscriptEvidenceReview } from '../components/transcript/TranscriptEvidenceReview';
@@ -1603,27 +1605,11 @@ export default function Home() {
       const folderSummaries = summaries.filter(s => s.folder_id === selectedSummary.folder_id);
       contextTranscript = folderSummaries.map(s => `[Dokumen: ${s.title}]\n${s.transcript}`).join('\n\n---\n\n');
     } else {
-      // Global Scope: Build Directory Map & Semantic Keyword Search across transcripts
-      const directoryMap = folders.map(f => {
-        const folderFiles = summaries.filter(s => s.folder_id === f.id);
-        return `- Folder: ${f.icon} ${f.name}\n${folderFiles.map(s => `  * Rangkuman: ${s.title}`).join('\n')}`;
-      }).join('\n') + `\n- Belum Dikategorikan:\n${summaries.filter(s => !s.folder_id).map(s => `  * Rangkuman: ${s.title}`).join('\n')}`;
-
-      const queryWords = userMessageText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-      const relevantSummaries = summaries.filter(s => {
-        const titleMatch = queryWords.some(w => s.title.toLowerCase().includes(w));
-        const transcriptMatch = queryWords.some(w => s.transcript.toLowerCase().includes(w));
-        const fName = s.folder_id ? (folders.find(f => f.id === s.folder_id)?.name || '') : '';
-        const folderMatch = queryWords.some(w => fName.toLowerCase().includes(w));
-        return titleMatch || folderMatch || (transcriptMatch && Math.random() < 0.35);
-      }).slice(0, 3);
-
-      const transcriptsContent = relevantSummaries.map(s => {
-        const fName = s.folder_id ? (folders.find(f => f.id === s.folder_id)?.name || 'Mata Kuliah') : 'Belum Dikategorikan';
-        return `[Dokumen: ${s.title} di Folder: ${fName}]\n${s.transcript}`;
-      }).join('\n\n---\n\n');
-
-      contextTranscript = `Daftar Struktur Berkas Mahasiswa (Henry):\n${directoryMap}\n\nTranskrip Berkas yang Relevan dengan Pertanyaan:\n${transcriptsContent || 'Tidak ada berkas yang relevan ditemukan untuk kata kunci tersebut.'}`;
+      contextTranscript = buildGlobalChatContext({
+        folders,
+        summaries,
+        question: userMessageText,
+      });
     }
 
     // 3. Create temp assistant message for streaming display
@@ -1665,36 +1651,25 @@ export default function Home() {
       const reader = response.body?.getReader();
       if (!reader) throw new Error('Streaming tidak didukung oleh browser Anda.');
 
-      const decoder = new TextDecoder();
+      const streamParser = new ChatStreamParser();
       let assistantText = '';
       
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('data: ')) {
-            const dataStr = trimmed.slice(6);
-            if (dataStr === '[DONE]') break;
-            
-            try {
-              const dataObj = JSON.parse(dataStr);
-               const content = dataObj.choices?.[0]?.delta?.content || '';
-              if (content) {
-                assistantText += content;
-                setChatMessages(prev => prev.map(m => 
-                  m.id === tempAssistantId ? { ...m, content: assistantText } : m
-                ));
-              }
-            } catch {
-              // chunk incomplete
-            }
-          }
+        for (const content of streamParser.push(value)) {
+          assistantText += content;
+          setChatMessages(prev => prev.map(m =>
+            m.id === tempAssistantId ? { ...m, content: assistantText } : m
+          ));
         }
+      }
+
+      for (const content of streamParser.finish()) {
+        assistantText += content;
+        setChatMessages(prev => prev.map(m =>
+          m.id === tempAssistantId ? { ...m, content: assistantText } : m
+        ));
       }
 
       // 6. Save completed assistant message to database

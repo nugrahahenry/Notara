@@ -98,14 +98,14 @@ export function NotaraWorkspace({
         <button type="button" aria-pressed="true">Semua materi</button>
         <button type="button" disabled title="Buka materi untuk memakai scope mata kuliah">Satu mata kuliah</button>
         <button type="button" disabled title="Buka materi untuk memakai scope materi">Satu materi</button>
-        <small>Scope mata kuliah/materi memakai adapter existing setelah kamu membuka sebuah materi. Full retrieval dan provenance belum menjadi contract produksi.</small>
+        <small>Filter mata kuliah atau materi akan aktif setelah kamu membuka konteksnya.</small>
       </section>
 
       <div className="notara-notara-layout" data-history-open={showHistory || historyPinned}>
         {(showHistory || historyPinned) && (
           <aside className="notara-history-utility" aria-label="Riwayat Nalira">
             <div className="flex items-center justify-between gap-2">
-              <div><span className="notara-eyebrow">Utility drawer</span><h2>Riwayat</h2></div>
+              <div><span className="notara-eyebrow">Panel riwayat</span><h2>Riwayat</h2></div>
               <button type="button" onClick={() => setHistoryPinned((value) => !value)} aria-pressed={historyPinned} title={historyPinned ? 'Lepas pin panel' : 'Pin panel di desktop'}>
                 {historyPinned ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
               </button>
@@ -119,12 +119,12 @@ export function NotaraWorkspace({
                     <MessageSquareText className="h-4 w-4" />
                     <span><strong>{thread.title}</strong><small>{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(thread.created_at))}</small></span>
                   </button>
-                  <span title="Pin per chat adalah foundation visual"><Pin className="h-3.5 w-3.5" /></span>
+                  <span title="Pin percakapan akan hadir di pengembangan berikutnya"><Pin className="h-3.5 w-3.5" /></span>
                   <button type="button" onClick={() => onDeleteThread(thread.id)} title="Hapus obrolan"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               ))}
             </div>
-            <p className="mt-4 text-xs text-[var(--text-tertiary)]">Rename, undo delete, dan pin per chat masih foundation visual; tidak ada capability persistence baru pada checkpoint ini.</p>
+            <p className="mt-4 text-xs text-[var(--text-tertiary)]">Pengelolaan nama, pin, dan pemulihan obrolan akan hadir di pengembangan berikutnya.</p>
           </aside>
         )}
 
@@ -145,7 +145,7 @@ export function NotaraWorkspace({
               <div className="notara-conversation-empty">
                 <Sparkles className="h-6 w-6" />
                 <h2>Tanyakan hubungan antar materi</h2>
-                <p>Mulai dari konsep, istilah, atau bagian kuliah yang ingin kamu hubungkan. Jawaban tetap memakai contract chat existing.</p>
+                <p>Nalira menghubungkan jawaban dengan materi yang sudah tersimpan agar kamu bisa belajar lintas sesi.</p>
                 <div className="notara-conversation-starters" aria-label="Contoh pertanyaan">
                   {starterPrompts.map((prompt) => (
                     <button key={prompt} type="button" onClick={() => onInputChange(prompt)} disabled={isSending}>
