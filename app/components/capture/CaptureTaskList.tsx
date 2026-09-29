@@ -209,7 +209,9 @@ export function CaptureTaskList({
                         aria-describedby={errorId}
                       >
                         <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                        Coba lagi dari awal
+                        {task.error?.retryMode === 'save'
+                          ? 'Coba simpan lagi'
+                          : 'Coba lagi dari awal'}
                       </button>
                     )}
 

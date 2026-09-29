@@ -199,6 +199,20 @@ test('capture retry is inline and available only for retryable failures', () => 
   assert.equal(finalFailure.canRetry, false);
 });
 
+test('capture save failures advertise a retry that reuses the processed summary', () => {
+  const presentation = getCaptureTaskPresentation(fakeTaskAdapter({
+    status: 'failed',
+    error: {
+      code: 'save-failed',
+      message: 'Belum tersimpan.',
+      retryable: true,
+      retryMode: 'save',
+    },
+  }));
+
+  assert.equal(presentation.canRetry, true);
+});
+
 test('capture success is terminal and never keeps a spinner or stale progress bar', () => {
   const presentation = getCaptureTaskPresentation(fakeTaskAdapter({
     status: 'succeeded',

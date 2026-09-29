@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.23.0] - 2026-09-30
+### Fixed
+- Kegagalan menyimpan hasil capture kini mempertahankan transkrip dan rangkuman yang sudah selesai diproses di tab aktif.
+- Retry dari task yang gagal menyimpan hanya membuka kembali alur pemilihan folder; audio tidak dikirim ulang dan provider tidak dipanggil ulang.
+- Copy aksi retry membedakan kegagalan pemrosesan yang memang dimulai dari awal dari kegagalan penyimpanan yang dapat dilanjutkan.
+
+### Quality
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio storage, atau speaker contract.
+- Verifikasi checkpoint: test suite, ESLint, production build, diff check, dan smoke UI capture terarah.
+
 ## [0.22.2] - 2026-09-30
 ### Fixed
 - Modal penyimpanan hasil capture kini memakai lock idempotensi selama request berjalan. Double-click tidak lagi memulai dua insert rangkuman, tombol Batal/backdrop ikut terkunci, dan state `Menyimpan...` diumumkan secara visual.

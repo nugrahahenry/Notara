@@ -21,6 +21,12 @@ export interface CaptureTaskError {
   code: string;
   message: string;
   retryable: boolean;
+  /**
+   * Tells the inline retry action which part of the capture journey must be
+   * repeated. A save retry reuses the already processed summary and must not
+   * send the source audio to the provider again.
+   */
+  retryMode?: 'reprocess' | 'save';
 }
 
 export type CaptureTaskProgress =

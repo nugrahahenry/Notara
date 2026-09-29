@@ -2393,14 +2393,18 @@ export default function Home() {
     taskId: string,
     error: unknown,
     fallbackMessage: string,
+    retryMode: CaptureTaskError['retryMode'] = 'reprocess',
   ) => {
     const pipelineError = toCapturePipelineError(error, fallbackMessage);
     const taskError: CaptureTaskError = {
       code: pipelineError.code,
       message: pipelineError.retryable
-        ? `${pipelineError.message} Coba lagi akan memulai ulang file ini dari awal.`
+        ? retryMode === 'save'
+          ? `${pipelineError.message} Coba simpan lagi; audio tidak akan dikirim ulang.`
+          : `${pipelineError.message} Coba lagi akan memulai ulang file ini dari awal.`
         : pipelineError.message,
       retryable: pipelineError.retryable,
+      retryMode,
     };
 
     setCaptureTasks((current) => patchCaptureTask(current, taskId, {
@@ -2543,9 +2547,11 @@ export default function Home() {
         code: 'save-failed',
         message: err instanceof Error ? err.message : 'Gagal menyimpan rangkuman.',
         retryable: true,
-      }), 'Gagal menyimpan rangkuman.');
-      setPendingSummary(null);
-      setShowSaveFolderModal(false);
+      }), 'Gagal menyimpan rangkuman.', 'save');
+      showToast(
+        'Rangkuman sudah selesai diproses, tetapi belum tersimpan. Pilih folder lalu coba simpan lagi; audio tidak dikirim ulang.',
+        'delete',
+      );
     } finally {
       setLoading(false);
       releaseSaveLock();
@@ -2990,6 +2996,18 @@ export default function Home() {
     if (taskIndex < 0) return;
     const task = captureTasks[taskIndex];
     if (task.status !== 'failed' || task.error?.retryable !== true) return;
+
+    if (
+      task.error.retryMode === 'save' &&
+      pendingSummary?.captureTaskId === taskId
+    ) {
+      setCaptureTaskStage(taskId, 'awaiting_save', {
+        destinationLabel: task.destinationLabel,
+      });
+      setCurrentQueueIndex(taskIndex);
+      setShowSaveFolderModal(true);
+      return;
+    }
 
     setPendingSummary(null);
     setShowSaveFolderModal(false);
@@ -3437,6 +3455,14 @@ export default function Home() {
   );
   const recordingCaptureTasks = captureTasksForDisplay.filter(
     (task) => task.source === 'recording',
+  );
+  const canResumePendingSave = Boolean(
+    pendingSummary &&
+      captureTasks.some(
+        (task) =>
+          task.id === pendingSummary.captureTaskId &&
+          task.error?.retryMode === 'save',
+      ),
   );
   const captureQueueBusy = isCaptureQueueBusy(captureTasksForDisplay);
   const captureActionsDisabled = loading || captureQueueBusy;
@@ -6158,7 +6184,7 @@ export default function Home() {
             onClick={() => {
               if (isSavingPendingSummary) return;
               setShowSaveFolderModal(false);
-              setPendingSummary(null);
+              if (!canResumePendingSave) setPendingSummary(null);
               setIsAddingFolderInline(false);
             }} 
           />
@@ -6346,7 +6372,7 @@ export default function Home() {
                 disabled={isSavingPendingSummary}
                 onClick={() => {
                   setShowSaveFolderModal(false);
-                  setPendingSummary(null);
+                  if (!canResumePendingSave) setPendingSummary(null);
                   setIsAddingFolderInline(false);
                 }}
                 className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white font-bold text-xs transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
