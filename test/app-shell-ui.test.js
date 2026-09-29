@@ -299,6 +299,56 @@ test('operational routes consume compact ambient headers without losing their co
   assert.match(ask, /Riwayat/);
 });
 
+test('theme control exposes a direct, accessible choice for every appearance mode', () => {
+  const themeSource = fs.readFileSync(
+    path.join(__dirname, '..', 'app', 'components', 'theme', 'ThemeSwitcher.tsx'),
+    'utf8',
+  );
+  const stylesheet = fs.readFileSync(path.join(__dirname, '..', 'app', 'globals.css'), 'utf8');
+
+  assert.match(themeSource, /aria-haspopup="listbox"/);
+  assert.match(themeSource, /role="listbox"/);
+  assert.match(themeSource, /role="option"/);
+  assert.match(themeSource, /Ikuti perangkat/);
+  assert.match(themeSource, /Latar terang/);
+  assert.match(themeSource, /Latar gelap/);
+  assert.match(stylesheet, /\.notara-theme-menu\s*\{/);
+  assert.match(stylesheet, /\.notara-theme-option\[aria-selected="true"\]/);
+  assert.match(stylesheet, /\.notara-brand-mark \.notara-brand-asset--light/);
+  assert.match(stylesheet, /\[data-theme="dark"\] \.notara-brand-mark \.notara-brand-asset--dark/);
+});
+
+test('Tanya Nalira makes the streaming thinking state visible and truthful', () => {
+  assert.ifError(moduleLoadError);
+
+  const thinking = renderToStaticMarkup(
+    React.createElement(notaraModule.NotaraWorkspace, {
+      folders: [folder],
+      summaries: [summary],
+      messages: [{ id: 'message-1', thread_id: 'thread-1', role: 'assistant', content: '', created_at: '2026-08-10T09:05:00.000Z' }],
+      threads: [],
+      activeThreadId: 'thread-1',
+      input: '',
+      isSending: true,
+      showHistory: false,
+      onInputChange: noop,
+      onSend: noop,
+      onCreateThread: noop,
+      onToggleHistory: noop,
+      onSelectThread: noop,
+      onDeleteThread: noop,
+      onOpenSummary: noop,
+      renderMessage: (content) => content,
+    }),
+  );
+
+  assert.match(thinking, /Ruang tanya lintas materi/);
+  assert.match(thinking, /Sedang menyusun/);
+  assert.match(thinking, /aria-busy="true"/);
+  assert.match(thinking, /notara-conversation-thinking/);
+  assert.match(thinking, /Nalira sedang menyusun jawaban/);
+});
+
 test('mobile navigation makes the background workspace unavailable to assistive technology', () => {
   assert.ifError(moduleLoadError);
 

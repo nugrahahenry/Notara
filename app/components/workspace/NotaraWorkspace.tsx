@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clock3,
   History,
+  Loader2,
   MessageSquareText,
   PanelLeftClose,
   PanelLeftOpen,
@@ -121,7 +122,18 @@ export function NotaraWorkspace({
         )}
 
         <div className="notara-conversation">
-          <div className="notara-conversation-messages" aria-live="polite">
+          <div className="notara-conversation-bar">
+            <div>
+              <span className="notara-eyebrow">Tanya Nalira</span>
+              <strong>Ruang tanya lintas materi</strong>
+            </div>
+            <span className="notara-conversation-status" data-thinking={isSending} role="status" aria-live="polite">
+              <span aria-hidden="true" />
+              {isSending ? 'Sedang menyusun' : 'Siap membantu'}
+            </span>
+          </div>
+
+          <div className="notara-conversation-messages" aria-live="polite" aria-busy={isSending}>
             {messages.length === 0 ? (
               <div className="notara-conversation-empty">
                 <Sparkles className="h-6 w-6" />
@@ -129,12 +141,17 @@ export function NotaraWorkspace({
                 <p>Mulai dari konsep, istilah, atau bagian kuliah yang ingin kamu hubungkan. Jawaban tetap memakai contract chat existing.</p>
               </div>
             ) : messages.map((message) => (
-              <article key={message.id} data-role={message.role}>
-                <span>{message.role === 'assistant' ? 'Nalira' : 'Kamu'}</span>
-                <div className="notara-conversation-message-body">
-                  {renderMessage(message.content || (isSending ? 'Menyiapkan jawaban…' : ''))}
-                </div>
-              </article>
+                <article key={message.id} data-role={message.role}>
+                  <span>{message.role === 'assistant' ? 'Nalira' : 'Kamu'}</span>
+                  <div className="notara-conversation-message-body">
+                    {message.role === 'assistant' && !message.content && isSending ? (
+                      <span className="notara-conversation-thinking" role="status">
+                        <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+                        <span>Nalira sedang menyusun jawaban…</span>
+                      </span>
+                    ) : message.content ? renderMessage(message.content) : null}
+                  </div>
+                </article>
             ))}
           </div>
 

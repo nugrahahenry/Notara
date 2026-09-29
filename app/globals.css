@@ -280,39 +280,119 @@ body {
 }
 
 .notara-theme-switcher {
+  position: relative;
   display: inline-flex;
   min-height: 44px;
   align-items: center;
-  gap: 7px;
+}
+
+.notara-theme-trigger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   background: var(--surface-elevated);
   color: var(--text-secondary);
-  padding: 0 9px;
-  transition: border-color 160ms ease, background-color 160ms ease;
-}
-
-.notara-theme-switcher:hover {
-  border-color: var(--border-strong);
-}
-
-.notara-theme-switcher select {
-  appearance: none;
-  min-width: 44px;
-  min-height: 44px;
-  border: 0;
-  background: transparent;
-  color: inherit;
+  padding: 0 11px;
   cursor: pointer;
-  font: inherit;
   font-size: 12px;
-  font-weight: 700;
-  outline: none;
+  font-weight: 780;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
 }
 
-.notara-theme-switcher option {
-  background: var(--surface-overlay);
+.notara-theme-trigger:hover,
+.notara-theme-trigger[aria-expanded="true"] {
+  border-color: var(--border-strong);
+  background: var(--surface-tool);
   color: var(--text-primary);
+}
+
+.notara-theme-trigger:focus-visible,
+.notara-theme-option:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.notara-theme-label {
+  min-width: 36px;
+  text-align: left;
+}
+
+.notara-theme-chevron {
+  color: var(--text-tertiary);
+  transition: transform 160ms ease;
+}
+
+.notara-theme-trigger[aria-expanded="true"] .notara-theme-chevron {
+  transform: rotate(180deg);
+}
+
+.notara-theme-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 70;
+  display: grid;
+  min-width: 190px;
+  gap: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-overlay);
+  padding: 6px;
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--text-primary) 14%, transparent);
+  animation: notara-theme-menu-in 160ms ease-out both;
+}
+
+.notara-theme-option {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 7px 9px;
+  text-align: left;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.notara-theme-option:hover,
+.notara-theme-option[aria-selected="true"] {
+  background: var(--nav-selected);
+  color: var(--nav-selected-text);
+}
+
+.notara-theme-option > span {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.notara-theme-option strong {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.notara-theme-option small {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.notara-theme-option-check {
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+@keyframes notara-theme-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .notara-brand-mark {
@@ -421,17 +501,19 @@ body {
 
   .notara-theme-switcher {
     position: relative;
+    width: auto;
+  }
+
+  .notara-theme-trigger {
     width: 44px;
     justify-content: center;
     padding: 0;
   }
 
-  .notara-theme-switcher select {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    opacity: 0;
-  }
+  .notara-theme-label,
+  .notara-theme-chevron { display: none; }
+
+  .notara-theme-menu { right: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -445,10 +527,10 @@ body {
   }
 }
 
-/* Global Custom Scrollbar for Dark Mode */
+/* Theme-aware browser surfaces keep the light mode readable too. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-color: color-mix(in srgb, var(--border-strong) 72%, transparent) transparent;
 }
 
 /* Webkit Scrollbars (Chrome, Safari, Edge, Opera) */
@@ -462,12 +544,52 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--border-strong) 72%, transparent);
   border-radius: 99px;
   border: 1px solid transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--brand-primary) 42%, var(--border-strong));
+}
+
+/* Legacy dashboard navigation is still rendered inside the canonical shell.
+   These scoped bridges prevent dark-only utility classes from disappearing in Light mode. */
+[data-theme="light"] .notara-shell-sidebar [class~="text-zinc-200"],
+[data-theme="light"] .notara-shell-sidebar [class~="text-zinc-300"],
+[data-theme="light"] .notara-shell-sidebar [class~="text-zinc-400"],
+[data-theme="light"] .notara-shell-sidebar [class~="text-zinc-500"],
+[data-theme="light"] .notara-shell-sidebar [class~="text-zinc-600"],
+[data-theme="light"] .notara-shell-sidebar [class~="text-white"],
+[data-theme="light"] .notara-shell-sidebar [class*="hover:text-white"],
+[data-theme="light"] .notara-shell-sidebar [class*="hover:text-zinc-"] {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .notara-shell-sidebar [class~="text-zinc-200"],
+[data-theme="light"] .notara-shell-sidebar [class~="text-white"] {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .notara-shell-sidebar [class*="bg-white/"],
+[data-theme="light"] .notara-shell-sidebar [class*="bg-black/"] {
+  background-color: color-mix(in srgb, var(--surface-tool) 78%, transparent) !important;
+}
+
+[data-theme="light"] .notara-shell-sidebar [class*="border-white/"],
+[data-theme="light"] .notara-shell-sidebar [class*="border-[#0F0E17]"] {
+  border-color: var(--border-subtle) !important;
+}
+
+[data-theme="dark"] * {
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.3);
 }
 
@@ -1374,7 +1496,20 @@ body {
     radial-gradient(circle at 86% 18%, var(--route-ambient-glow), transparent 32%),
     linear-gradient(118deg, var(--route-ambient-start), var(--route-ambient-end));
   padding: 22px 24px;
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--text-primary) 7%, transparent);
   isolation: isolate;
+}
+
+.notara-workspace-ambient::before {
+  position: absolute;
+  top: 0;
+  right: 24px;
+  left: 24px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--route-ambient-accent), var(--route-ambient-secondary));
+  content: '';
+  opacity: 0.78;
 }
 
 .notara-workspace-ambient::after {
@@ -2143,12 +2278,21 @@ body {
 .notara-history-row > button:last-child { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; color: var(--text-tertiary); }
 
 .notara-conversation { display: flex; min-width: 0; min-height: 580px; flex-direction: column; }
+.notara-conversation-bar { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-elevated) 62%, transparent); padding: 12px clamp(18px, 5vw, 56px); }
+.notara-conversation-bar > div { display: grid; min-width: 0; gap: 3px; }
+.notara-conversation-bar strong { color: var(--text-primary); font-size: 13px; font-weight: 850; }
+.notara-conversation-status { display: inline-flex; min-height: 30px; flex: 0 0 auto; align-items: center; gap: 7px; border: 1px solid var(--border-subtle); border-radius: 999px; background: var(--surface-tool); padding: 0 10px; color: var(--text-tertiary); font-size: 10px; font-weight: 800; }
+.notara-conversation-status > span { width: 6px; height: 6px; border-radius: 50%; background: var(--success-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success-accent) 14%, transparent); }
+.notara-conversation-status[data-thinking="true"] { border-color: color-mix(in srgb, var(--brand-primary) 40%, var(--border-subtle)); color: var(--nav-selected-text); }
+.notara-conversation-status[data-thinking="true"] > span { background: var(--brand-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 14%, transparent); animation: notara-thinking-pulse 1.2s ease-in-out infinite; }
 .notara-conversation-messages { min-height: 240px; flex: 1; overflow-y: auto; padding: 24px clamp(18px, 5vw, 56px); }
 .notara-conversation-messages article { max-width: 720px; margin: 0 auto 18px; }
 .notara-conversation-messages article > span { color: var(--text-tertiary); font-size: 11px; font-weight: 800; text-transform: uppercase; }
 .notara-conversation-message-body { margin-top: 7px; border-left: 2px solid var(--border-strong); padding-left: 14px; color: var(--text-secondary); line-height: 1.75; }
 .notara-conversation-message-body > :last-child { margin-bottom: 0; }
 .notara-conversation-messages article[data-role="assistant"] .notara-conversation-message-body { border-color: var(--brand-primary); color: var(--text-primary); }
+.notara-conversation-thinking { display: inline-flex; align-items: center; gap: 9px; color: var(--brand-primary); font-size: 13px; font-weight: 760; }
+.notara-conversation-thinking svg { flex: 0 0 auto; }
 .notara-conversation-empty { display: grid; min-height: 260px; place-items: center; align-content: center; text-align: center; }
 .notara-conversation-empty svg { color: var(--brand-primary); }
 .notara-conversation-empty h2 { margin-top: 12px; font-size: 21px; font-weight: 900; }
@@ -2166,6 +2310,11 @@ body {
 .notara-central-composer > button { position: absolute; right: 26px; top: 24px; display: grid; width: 40px; height: 40px; place-items: center; border-radius: 11px; background: var(--action-primary); color: var(--text-on-brand); }
 .notara-central-composer > button:disabled { opacity: 0.45; }
 .notara-central-composer small { position: absolute; bottom: 9px; left: 20px; color: var(--text-tertiary); font-size: 10px; }
+
+@keyframes notara-thinking-pulse {
+  0%, 100% { opacity: 0.56; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1); }
+}
 
 /* Checkpoint 8E: canonical Study Canvas */
 .notara-study-canvas-boundary {
@@ -3346,9 +3495,9 @@ body {
   .notara-topbar-context > span { display: none; }
   .notara-topbar-context > strong { font-size: 12px; }
   .notara-topbar-capture { display: none; }
-  .notara-theme-switcher { padding: 0; }
-  .notara-theme-switcher > svg { margin-left: 12px; }
-  .notara-theme-switcher select { width: 32px; min-width: 32px; color: transparent; }
+  .notara-theme-trigger { width: 40px; min-height: 40px; }
+  .notara-theme-label,
+  .notara-theme-chevron { display: none; }
   .notara-sidebar-scroll { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
   .notara-inline-tutor { margin-top: 22px; border-radius: 16px; padding: 14px; }
   .notara-inline-tutor-heading { align-items: center; }
@@ -3365,8 +3514,8 @@ body {
   .notara-topbar-icon-button,
   .notara-topbar-profile,
   .notara-topbar-search,
-  .notara-theme-switcher { width: 40px; height: 40px; min-height: 40px; }
-  .notara-theme-switcher > svg { margin-left: 10px; }
+  .notara-theme-switcher,
+  .notara-theme-trigger { width: 40px; height: 40px; min-height: 40px; }
   .notara-topbar-context > strong { max-width: 88px; }
 }
 
@@ -5094,15 +5243,20 @@ body {
   height: 17px;
 }
 
-.notara-brand-asset--dark {
+.notara-brand-mark .notara-brand-asset--light,
+.notara-brand-mark .notara-brand-asset--dark {
   display: none;
 }
 
-[data-theme="dark"] .notara-brand-asset--light {
+.notara-brand-mark .notara-brand-asset--light {
+  display: block;
+}
+
+[data-theme="dark"] .notara-brand-mark .notara-brand-asset--light {
   display: none;
 }
 
-[data-theme="dark"] .notara-brand-asset--dark {
+[data-theme="dark"] .notara-brand-mark .notara-brand-asset--dark {
   display: block;
 }
 

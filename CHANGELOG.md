@@ -4,7 +4,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.11 memperjelas landmark aksi dan pengumuman status copy pada Study Canvas.
+Pengembangan berikutnya belum dimulai.
+
+## [0.20.0] - 2026-09-29
+### Changed
+- Pemilih tema System/Light/Dark kini memakai menu tiga pilihan yang lebih mudah dipindai, mendukung keyboard, dan menunjukkan pilihan aktif.
+- Tanya Nalira memiliki bar status yang menjelaskan kesiapan ruang tanya dan state `Nalira sedang menyusun jawaban…` saat stream belum mengirim isi.
+- Header rute mendapat garis sinyal dan kedalaman permukaan yang lebih konsisten pada tema terang maupun gelap.
+
+### Fixed
+- Logo mark hanya menampilkan aset yang sesuai tema sehingga light mode tidak menggandakan logo.
+- Bridge warna sidebar lama memetakan utility class dark-only ke token tema agar label, skeleton, dan kontrol tetap terlihat di Light mode.
+- Scrollbar browser mengikuti token tema, bukan warna putih yang sulit dibaca di latar terang.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau user-data contract.
+- QA: 300 test lulus, lint lulus, production build lulus, `git diff --check` lulus, dan Impeccable detector terarah tidak menemukan temuan.
 
 ## [0.19.11] - 2026-09-29
 ### Fixed
