@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.21.0] - 2026-09-29
+### Changed
+- Workspace Courses, Shared, dan Tanya Nalira mendapat aturan responsive yang lebih tegas untuk filter, scope, history drawer, saran materi, dan composer pada layar sempit.
+- Empty state Tanya Nalira kini menyediakan tiga starter prompt yang mengisi composer tanpa mengirim data secara otomatis.
+
+### Fixed
+- Enter pada composer kosong atau saat stream berjalan tidak lagi memicu pengiriman palsu; Shift+Enter tetap membuat baris baru.
+- Error provider pada pesan assistant ditampilkan sebagai state yang jelas dengan aksi `Muat ulang pertanyaan`, bukan raw error yang menyatu dengan jawaban.
+- Composer global memiliki label dan deskripsi aksesibilitas yang bisa dibaca assistive technology.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau user-data contract.
+- QA: 302 test lulus, lint lulus, production build lulus, dan pemeriksaan responsive/style contract lulus.
+
 ## [0.20.0] - 2026-09-29
 ### Changed
 - Pemilih tema System/Light/Dark kini memakai menu tiga pilihan yang lebih mudah dipindai, mendukung keyboard, dan menunjukkan pilihan aktif.

@@ -2297,6 +2297,18 @@ body {
 .notara-conversation-empty svg { color: var(--brand-primary); }
 .notara-conversation-empty h2 { margin-top: 12px; font-size: 21px; font-weight: 900; }
 .notara-conversation-empty p { max-width: 520px; margin-top: 8px; color: var(--text-secondary); line-height: 1.7; }
+.notara-conversation-starters { display: grid; width: min(100%, 680px); grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+.notara-conversation-starters button { min-height: 50px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-tool); padding: 10px 12px; color: var(--text-secondary); font-size: 11px; font-weight: 760; line-height: 1.45; text-align: left; transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, transform 160ms ease; }
+.notara-conversation-starters button:hover { border-color: var(--brand-primary); background: var(--surface-elevated); color: var(--text-primary); transform: translateY(-1px); }
+.notara-conversation-starters button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.notara-conversation-starters button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
+.notara-conversation-messages article[data-state="error"] .notara-conversation-message-body { border-color: var(--danger-accent, #c94a5b); }
+.notara-conversation-error { display: grid; gap: 5px; color: var(--text-secondary); }
+.notara-conversation-error strong { color: var(--text-primary); font-size: 13px; }
+.notara-conversation-error p { margin: 0; font-size: 13px; line-height: 1.65; }
+.notara-conversation-error button { display: inline-flex; width: fit-content; min-height: 40px; align-items: center; gap: 6px; margin-top: 6px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-tool); padding: 0 10px; color: var(--text-secondary); font-size: 11px; font-weight: 800; }
+.notara-conversation-error button:hover { border-color: var(--brand-primary); color: var(--text-primary); }
+.notara-conversation-error button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .notara-material-suggestions { border-top: 1px solid var(--border-subtle); padding: 14px 18px; }
 .notara-material-suggestions > div { display: flex; gap: 8px; overflow-x: auto; padding-top: 9px; }
@@ -2838,18 +2850,37 @@ body {
 }
 
 @media (max-width: 767px) {
+  .notara-workspace-page { gap: 16px; }
   .notara-page-heading,
   .notara-notara-heading { align-items: flex-start; flex-direction: column; }
   .notara-empty-foundation { align-items: flex-start; flex-direction: column; }
   .notara-landscape-materials { padding-left: 12px; }
+  .notara-filter-tabs { display: flex; width: 100%; max-width: 100%; overflow-x: auto; }
+  .notara-filter-tabs button { flex: 1 0 auto; }
   .notara-sharing-directions { grid-template-columns: 1fr; }
   .notara-sharing-directions i { display: none; }
+  .notara-sharing-directions span { justify-content: center; }
   .notara-shared-list article { align-items: flex-start; flex-wrap: wrap; }
   .notara-shared-list article > div:last-child { width: 100%; padding-left: 52px; }
+  .notara-scope-foundation { align-items: stretch; }
+  .notara-scope-foundation > div { width: 100%; margin-right: 0; }
+  .notara-scope-foundation > button { flex: 1 1 calc(50% - 8px); }
+  .notara-scope-foundation > small { margin-top: 2px; }
   .notara-notara-layout[data-history-open="true"] { grid-template-columns: minmax(0, 1fr); }
-  .notara-history-utility { max-height: 260px; border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+  .notara-history-utility { max-height: 260px; border-right: 0; border-bottom: 1px solid var(--border-subtle); padding: 14px; }
   .notara-conversation { min-height: 520px; }
+  .notara-conversation-bar { align-items: flex-start; flex-direction: column; gap: 8px; padding: 14px 16px; }
+  .notara-conversation-status { align-self: flex-start; }
   .notara-conversation-messages { padding: 20px 16px; }
+  .notara-conversation-empty { min-height: 230px; padding: 24px 6px; }
+  .notara-conversation-empty p { font-size: 13px; }
+  .notara-conversation-starters { grid-template-columns: 1fr; }
+  .notara-material-suggestions { padding-inline: 14px; }
+  .notara-material-suggestions > div { display: grid; grid-template-columns: 1fr; overflow: visible; }
+  .notara-material-suggestions button { min-width: 0; width: 100%; }
+  .notara-central-composer { padding: 12px 58px 30px 14px; }
+  .notara-central-composer > button { right: 16px; top: 22px; }
+  .notara-central-composer small { left: 16px; font-size: 9px; }
   .notara-study-toolbar { align-items: stretch; flex-wrap: wrap; }
   .notara-study-back { flex: 1; }
   .notara-study-toolbar .notara-canvas-tabs { order: 3; width: 100%; margin-left: 0; }
@@ -2905,6 +2936,12 @@ body {
   .notara-study-dock { bottom: 0; border-radius: 16px 16px 0 0; margin-inline: 0; }
   .notara-study-dock-expanded { grid-template-columns: 1fr; }
   .notara-study-dock-expanded > button { grid-column: 1; grid-row: auto; width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .notara-scope-foundation > button { flex-basis: 100%; }
+  .notara-notara-layout { border-radius: 14px; }
+  .notara-conversation-bar strong { font-size: 12px; }
 }
 
 /* Nalira centralized product visuals */

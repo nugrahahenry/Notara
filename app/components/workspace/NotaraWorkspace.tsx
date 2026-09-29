@@ -12,6 +12,7 @@ import {
   PanelLeftOpen,
   Pin,
   Plus,
+  RotateCcw,
   Send,
   Sparkles,
   Trash2,
@@ -60,9 +61,15 @@ export function NotaraWorkspace({
   const recentMaterials = [...summaries]
     .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))
     .slice(0, 4);
+  const starterPrompts = [
+    'Apa hubungan konsep utama dari materi-materi ini?',
+    'Buatkan peta konsep singkat dari materi terbaru.',
+    'Bagian mana yang sebaiknya aku pelajari ulang?',
+  ];
+  const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user');
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && input.trim() && !isSending) {
       event.preventDefault();
       onSend();
     }
@@ -121,7 +128,7 @@ export function NotaraWorkspace({
           </aside>
         )}
 
-        <div className="notara-conversation">
+        <div className="notara-conversation" data-chat-state={isSending ? 'thinking' : 'ready'}>
           <div className="notara-conversation-bar">
             <div>
               <span className="notara-eyebrow">Tanya Nalira</span>
@@ -139,9 +146,16 @@ export function NotaraWorkspace({
                 <Sparkles className="h-6 w-6" />
                 <h2>Tanyakan hubungan antar materi</h2>
                 <p>Mulai dari konsep, istilah, atau bagian kuliah yang ingin kamu hubungkan. Jawaban tetap memakai contract chat existing.</p>
+                <div className="notara-conversation-starters" aria-label="Contoh pertanyaan">
+                  {starterPrompts.map((prompt) => (
+                    <button key={prompt} type="button" onClick={() => onInputChange(prompt)} disabled={isSending}>
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : messages.map((message) => (
-                <article key={message.id} data-role={message.role}>
+                <article key={message.id} data-role={message.role} data-state={message.role === 'assistant' && message.content.trimStart().startsWith('❌') ? 'error' : undefined}>
                   <span>{message.role === 'assistant' ? 'Nalira' : 'Kamu'}</span>
                   <div className="notara-conversation-message-body">
                     {message.role === 'assistant' && !message.content && isSending ? (
@@ -149,6 +163,16 @@ export function NotaraWorkspace({
                         <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                         <span>Nalira sedang menyusun jawaban…</span>
                       </span>
+                    ) : message.role === 'assistant' && message.content.trimStart().startsWith('❌') ? (
+                      <div className="notara-conversation-error" role="alert">
+                        <strong>Jawaban belum tersedia</strong>
+                        <p>{message.content.trim().replace(/^❌\s*/, '')}</p>
+                        {lastUserMessage && (
+                          <button type="button" onClick={() => onInputChange(lastUserMessage.content)} disabled={isSending}>
+                            <RotateCcw className="h-3.5 w-3.5" /> Muat ulang pertanyaan
+                          </button>
+                        )}
+                      </div>
                     ) : message.content ? renderMessage(message.content) : null}
                   </div>
                 </article>
@@ -168,18 +192,21 @@ export function NotaraWorkspace({
             </div>
           </div>
 
-          <div className="notara-central-composer">
+          <div className="notara-central-composer" data-sending={isSending}>
             <textarea
+              id="notara-global-chat-input"
               value={input}
               onChange={(event) => onInputChange(event.target.value)}
               onKeyDown={handleComposerKeyDown}
               placeholder="Tanya semua materi…"
+              aria-label="Pertanyaan untuk Nalira"
+              aria-describedby="notara-global-chat-hint"
               rows={2}
             />
             <button type="button" onClick={onSend} disabled={!input.trim() || isSending} aria-label="Kirim pertanyaan">
               {isSending ? <Clock3 className="h-4 w-4 animate-pulse" /> : <Send className="h-4 w-4" />}
             </button>
-            <small>Enter untuk kirim · Shift+Enter untuk baris baru</small>
+            <small id="notara-global-chat-hint">Enter untuk kirim · Shift+Enter untuk baris baru</small>
           </div>
         </div>
       </div>

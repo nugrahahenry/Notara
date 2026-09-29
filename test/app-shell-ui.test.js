@@ -349,6 +349,75 @@ test('Tanya Nalira makes the streaming thinking state visible and truthful', () 
   assert.match(thinking, /Nalira sedang menyusun jawaban/);
 });
 
+test('Tanya Nalira offers grounded starters, an accessible composer, and a recoverable error state', () => {
+  assert.ifError(moduleLoadError);
+
+  const empty = renderToStaticMarkup(
+    React.createElement(notaraModule.NotaraWorkspace, {
+      folders: [folder],
+      summaries: [summary],
+      messages: [],
+      threads: [],
+      activeThreadId: null,
+      input: '',
+      isSending: false,
+      showHistory: false,
+      onInputChange: noop,
+      onSend: noop,
+      onCreateThread: noop,
+      onToggleHistory: noop,
+      onSelectThread: noop,
+      onDeleteThread: noop,
+      onOpenSummary: noop,
+      renderMessage: (content) => content,
+    }),
+  );
+
+  assert.match(empty, /notara-conversation-starters/);
+  assert.match(empty, /Apa hubungan konsep utama/);
+  assert.match(empty, /aria-label="Pertanyaan untuk Nalira"/);
+  assert.match(empty, /aria-describedby="notara-global-chat-hint"/);
+  assert.match(empty, /id="notara-global-chat-hint"/);
+
+  const error = renderToStaticMarkup(
+    React.createElement(notaraModule.NotaraWorkspace, {
+      folders: [folder],
+      summaries: [summary],
+      messages: [
+        { id: 'message-user', thread_id: 'thread-1', role: 'user', content: 'Jelaskan gradient descent.', created_at: '2026-08-10T09:04:00.000Z' },
+        { id: 'message-error', thread_id: 'thread-1', role: 'assistant', content: '❌ Terjadi kesalahan: provider tidak merespons.', created_at: '2026-08-10T09:05:00.000Z' },
+      ],
+      threads: [],
+      activeThreadId: 'thread-1',
+      input: '',
+      isSending: false,
+      showHistory: false,
+      onInputChange: noop,
+      onSend: noop,
+      onCreateThread: noop,
+      onToggleHistory: noop,
+      onSelectThread: noop,
+      onDeleteThread: noop,
+      onOpenSummary: noop,
+      renderMessage: (content) => content,
+    }),
+  );
+
+  assert.match(error, /data-state="error"/);
+  assert.match(error, /Jawaban belum tersedia/);
+  assert.match(error, /Muat ulang pertanyaan/);
+  assert.doesNotMatch(error, /❌ Terjadi kesalahan/);
+});
+
+test('workspace routes keep dense controls usable on narrow screens', () => {
+  const stylesheet = fs.readFileSync(path.join(__dirname, '..', 'app', 'globals.css'), 'utf8');
+
+  assert.match(stylesheet, /\.notara-filter-tabs \{ display: flex; width: 100%; max-width: 100%; overflow-x: auto; \}/);
+  assert.match(stylesheet, /\.notara-scope-foundation > button \{ flex: 1 1 calc\(50% - 8px\); \}/);
+  assert.match(stylesheet, /\.notara-conversation-starters \{ grid-template-columns: 1fr; \}/);
+  assert.match(stylesheet, /\.notara-central-composer > button \{ right: 16px; top: 22px; \}/);
+});
+
 test('mobile navigation makes the background workspace unavailable to assistive technology', () => {
   assert.ifError(moduleLoadError);
 
