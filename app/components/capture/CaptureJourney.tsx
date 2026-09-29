@@ -1,5 +1,7 @@
 'use client';
 
+import { Check } from 'lucide-react';
+
 interface CaptureJourneyProps {
   isRecordingMode: boolean;
   isRecording: boolean;
@@ -9,7 +11,7 @@ interface CaptureJourneyProps {
 const STEPS = ['Pilih cara', 'Siapkan materi', 'Buat rangkuman'];
 
 export function CaptureJourney({ isRecordingMode, isRecording, hasInput }: CaptureJourneyProps) {
-  const currentStep = hasInput ? 2 : 1;
+  const currentStep = isRecording || hasInput ? 2 : 1;
   const modeLabel = isRecordingMode ? 'Rekam suara' : 'Upload file';
 
   return (
@@ -36,7 +38,7 @@ export function CaptureJourney({ isRecordingMode, isRecording, hasInput }: Captu
               aria-current={isCurrent ? 'step' : undefined}
             >
               <span className="notara-capture-journey__marker" aria-hidden="true">
-                {isComplete ? '✓' : step}
+                {isComplete ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : step}
               </span>
               <span className="notara-capture-journey__copy">
                 <strong>{label}</strong>

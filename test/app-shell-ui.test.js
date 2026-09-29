@@ -513,5 +513,7 @@ test('capture surfaces consume centralized visuals and accessible source tabs', 
   assert.equal((tabs.match(/type="button"/g) || []).length, 2);
   assert.match(journey, /Langkah menambahkan materi/);
   assert.match(journey, /Rekam suara/);
+  assert.match(journey, /data-state="complete"/);
+  assert.doesNotMatch(journey, />✓<\/span>/);
   assert.equal((journey.match(/notara-capture-journey__marker/g) || []).length, 3);
 });

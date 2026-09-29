@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.7 memperketat pergantian materi pada Transcript Evidence dan mencegah respons analisis stale mengubah review yang sudah ditinggalkan.
+Nalira v0.19.8 memperbaiki kejujuran state Capture Journey saat rekaman aktif dan menjaga ikon langkah tetap konsisten.
+
+## [0.19.8] - 2026-09-29
+### Fixed
+- Capture Journey kini menandai tahap `Siapkan materi` sebagai langkah aktif ketika rekaman sedang berlangsung atau input sudah tersedia.
+- Tanda centang langkah selesai menggunakan ikon Lucide, bukan glyph teks yang berbeda antar font/platform.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau data pengguna.
 
 ## [0.19.7] - 2026-09-29
 ### Fixed
