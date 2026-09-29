@@ -321,8 +321,8 @@ export function StudyCanvasBoundary({
                 )}
               </div>
 
-              <div className="notara-document-actions">
-                <button type="button" onClick={onCopy} className="notara-secondary-button notara-document-copy-action">
+              <div className="notara-document-actions" role="group" aria-label="Tindakan materi">
+                <button type="button" onClick={onCopy} className="notara-secondary-button notara-document-copy-action" aria-live="polite">
                   {copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
                   {copied ? 'Tersalin' : `Salin ${activeTab === 'summary' ? 'rangkuman' : 'transkrip'}`}
                 </button>

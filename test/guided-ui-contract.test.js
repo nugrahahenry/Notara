@@ -124,6 +124,12 @@ test('Material Review keeps the reading surface full-width and paragraphs comfor
   assert.match(css, /\.notara-inline-tutor\[data-surface="review"\]\s*\{[^}]*background:\s*transparent/s);
 });
 
+test('Material Review announces its action group and copy confirmation', () => {
+  const canvas = read('app/components/workspace/StudyCanvasBoundary.tsx');
+  assert.match(canvas, /className="notara-document-actions" role="group" aria-label="Tindakan materi"/);
+  assert.match(canvas, /className="notara-secondary-button notara-document-copy-action" aria-live="polite"/);
+});
+
 test('Guided transitions and material menus preserve intentional keyboard focus', () => {
   const workspace = read('app/components/study-guide/StudyGuideWorkspace.tsx');
   const canvas = read('app/components/workspace/StudyCanvasBoundary.tsx');

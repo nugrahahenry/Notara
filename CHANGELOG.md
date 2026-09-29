@@ -4,7 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.10 menyatukan Tutor materi dengan alur baca Study Canvas sebagai kelanjutan ruang baca yang ringan.
+Nalira v0.19.11 memperjelas landmark aksi dan pengumuman status copy pada Study Canvas.
+
+## [0.19.11] - 2026-09-29
+### Fixed
+- Kelompok aksi materi kini memiliki landmark semantik `Tindakan materi` untuk navigasi assistive technology.
+- Konfirmasi `Tersalin` diumumkan secara polite setelah pengguna menyalin rangkuman atau transkrip.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau data pengguna.
 
 ## [0.19.10] - 2026-09-29
 ### Changed
