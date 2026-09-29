@@ -136,6 +136,9 @@ test('compact ambient header exposes semantic route variants and display states'
     assert.match(output, /<header/);
     assert.match(output, new RegExp(`data-ambient-variant="${variant}"`));
     assert.match(output, new RegExp(`data-ambient-state="${state}"`));
+    assert.match(output, /data-has-actions="false"/);
+    assert.match(output, new RegExp(`aria-describedby="workspace-ambient-description-${variant}"`));
+    assert.match(output, new RegExp(`id="workspace-ambient-description-${variant}"`));
     assert.match(output, new RegExp(`<h1[^>]*>${title}<\\/h1>`));
     assert.match(output, /aria-hidden="true"/);
   }
@@ -387,6 +390,8 @@ test('compact ambient headers define responsive route motion with a reduced-moti
   assert.match(stylesheet, /@media \(max-width: 760px\)/);
   assert.match(stylesheet, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(stylesheet, /\.notara-workspace-ambient__scene[^}]*animation:\s*none/s);
+  assert.match(stylesheet, /data-ambient-state="record"/);
+  assert.match(stylesheet, /notara-ambient-record-pulse/);
 });
 
 test('capture surfaces consume centralized visuals and accessible source tabs', () => {

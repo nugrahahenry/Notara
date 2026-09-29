@@ -4,7 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.4 memperketat scope dan concurrency Transcript Context Review tanpa membuka speaker DB.
+Nalira v0.19.5 memoles header route operasional dan responsive action tanpa membuka speaker DB.
+
+## [0.19.5] - 2026-09-29
+### Fixed
+- Header Courses, Shared, Capture, dan Tanya Materi kini memakai hierarchy metadata yang lebih terstruktur, glow per konteks, serta penanda state record yang lebih terbaca.
+- Action header pada layar sempit memakai lebar yang konsisten dan tetap memiliki target sentuh serta focus ring yang jelas.
+- Header menghubungkan judul dan deskripsi dengan relasi semantik `aria-describedby` tanpa mengubah perilaku atau kontrak data.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau data pengguna.
 
 ## [0.19.4] - 2026-09-29
 ### Fixed

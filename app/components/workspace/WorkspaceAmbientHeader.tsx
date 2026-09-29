@@ -78,15 +78,19 @@ export function WorkspaceAmbientHeader({
   action,
   meta,
 }: WorkspaceAmbientHeaderProps) {
+  const descriptionId = `workspace-ambient-description-${variant}`;
+
   return (
     <header
       className="notara-workspace-ambient"
       data-ambient-variant={variant}
       data-ambient-state={state}
+      data-has-actions={action ? 'true' : 'false'}
+      aria-describedby={descriptionId}
     >
       <div className="notara-workspace-ambient__copy">
         <h1>{title}</h1>
-        <p>{description}</p>
+        <p id={descriptionId}>{description}</p>
         {(meta || action) && (
           <div className="notara-workspace-ambient__footer">
             {meta && <div className="notara-workspace-ambient__meta">{meta}</div>}

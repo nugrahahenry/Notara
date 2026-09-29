@@ -1354,12 +1354,13 @@ body {
   .notara-home-star { animation: none !important; }
 }
 
-/* Nalira v0.3.2: compact ambient route headers */
+/* Nalira v0.19.5: compact ambient route headers */
 .notara-workspace-ambient {
   --route-ambient-start: color-mix(in srgb, var(--surface-canvas) 93%, var(--brand-primary) 7%);
   --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 95%, var(--knowledge-accent) 5%);
   --route-ambient-accent: var(--brand-primary);
   --route-ambient-secondary: var(--knowledge-accent);
+  --route-ambient-glow: color-mix(in srgb, var(--route-ambient-secondary) 13%, transparent);
   position: relative;
   display: grid;
   min-height: 160px;
@@ -1369,7 +1370,9 @@ body {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border-subtle) 76%, var(--route-ambient-accent) 24%);
   border-radius: 16px;
-  background: linear-gradient(118deg, var(--route-ambient-start), var(--route-ambient-end));
+  background:
+    radial-gradient(circle at 86% 18%, var(--route-ambient-glow), transparent 32%),
+    linear-gradient(118deg, var(--route-ambient-start), var(--route-ambient-end));
   padding: 22px 24px;
   isolation: isolate;
 }
@@ -1392,6 +1395,7 @@ body {
   --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 94%, var(--action-primary) 6%);
   --route-ambient-accent: var(--knowledge-accent);
   --route-ambient-secondary: var(--action-primary);
+  --route-ambient-glow: color-mix(in srgb, var(--action-primary) 14%, transparent);
 }
 
 .notara-workspace-ambient[data-ambient-variant="shared"] {
@@ -1399,6 +1403,7 @@ body {
   --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 92%, var(--knowledge-accent) 8%);
   --route-ambient-accent: var(--brand-primary);
   --route-ambient-secondary: var(--knowledge-accent);
+  --route-ambient-glow: color-mix(in srgb, var(--knowledge-accent) 12%, transparent);
 }
 
 .notara-workspace-ambient[data-ambient-variant="capture"] {
@@ -1406,6 +1411,7 @@ body {
   --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 94%, var(--knowledge-accent) 6%);
   --route-ambient-accent: var(--review-accent);
   --route-ambient-secondary: var(--knowledge-accent);
+  --route-ambient-glow: color-mix(in srgb, var(--review-accent) 14%, transparent);
 }
 
 .notara-workspace-ambient[data-ambient-variant="ask"] {
@@ -1413,12 +1419,24 @@ body {
   --route-ambient-end: color-mix(in srgb, var(--surface-elevated) 94%, var(--brand-secondary) 6%);
   --route-ambient-accent: var(--brand-primary);
   --route-ambient-secondary: var(--brand-secondary);
+  --route-ambient-glow: color-mix(in srgb, var(--brand-secondary) 14%, transparent);
 }
 
 .notara-workspace-ambient__copy {
   position: relative;
   z-index: 2;
   min-width: 0;
+}
+
+.notara-workspace-ambient__copy::after {
+  display: block;
+  width: 42px;
+  height: 3px;
+  margin-top: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--route-ambient-accent), var(--route-ambient-secondary));
+  content: '';
+  opacity: 0.78;
 }
 
 .notara-workspace-ambient h1 {
@@ -1446,6 +1464,7 @@ body {
   align-items: center;
   gap: 14px;
   margin-top: 15px;
+  min-height: 44px;
 }
 
 .notara-workspace-ambient__meta,
@@ -1457,6 +1476,12 @@ body {
 }
 
 .notara-workspace-ambient__meta {
+  min-height: 36px;
+  align-content: center;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 70%, var(--route-ambient-secondary) 30%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-elevated) 62%, transparent);
+  padding: 7px 10px;
   color: var(--text-tertiary);
   font-size: 12px;
   font-weight: 700;
@@ -1494,6 +1519,24 @@ body {
 .notara-workspace-ambient__action .notara-secondary-button {
   border-color: color-mix(in srgb, var(--border-strong) 74%, var(--route-ambient-accent) 26%);
   background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+}
+
+.notara-workspace-ambient__action .notara-secondary-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.notara-workspace-ambient[data-ambient-state="record"] {
+  --route-ambient-glow: color-mix(in srgb, var(--review-accent) 20%, transparent);
+}
+
+.notara-workspace-ambient[data-ambient-state="record"] .notara-workspace-ambient__copy::after {
+  animation: notara-ambient-record-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes notara-ambient-record-pulse {
+  0%, 100% { opacity: 0.58; transform: scaleX(0.84); transform-origin: left; }
+  50% { opacity: 1; transform: scaleX(1); }
 }
 
 .notara-workspace-ambient__scene {
@@ -1855,10 +1898,21 @@ body {
   .notara-workspace-ambient__footer {
     align-items: flex-start;
     flex-direction: column;
+    gap: 10px;
+    margin-top: 13px;
   }
 
   .notara-workspace-ambient__action {
     margin-left: 0;
+    width: 100%;
+  }
+
+  .notara-workspace-ambient__action > * {
+    flex: 1 1 auto;
+  }
+
+  .notara-workspace-ambient__action .notara-secondary-button {
+    justify-content: center;
   }
 
   .notara-workspace-ambient__scene {
@@ -1878,8 +1932,10 @@ body {
 
   .notara-workspace-ambient__course-signal,
   .notara-workspace-ambient__share-packet,
-  .notara-workspace-ambient__ask-source {
+  .notara-workspace-ambient__ask-source,
+  .notara-workspace-ambient[data-ambient-state="record"] .notara-workspace-ambient__copy::after {
     opacity: 0.62;
+    animation: none !important;
   }
 }
 
