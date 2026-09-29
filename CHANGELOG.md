@@ -6,6 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.22.1] - 2026-09-29
+### Changed
+- Landing page mengganti perbandingan platform yang tidak dapat diverifikasi dengan komitmen privasi yang dapat dijelaskan secara faktual.
+- Login menambahkan jalur kembali ke beranda, status error/sukses yang diumumkan secara semantik, focus state yang jelas, dan penjelasan singkat tentang pemrosesan audio.
+
+### Quality
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication contract, billing, audio pipeline, atau speaker contract.
+- Database audit tetap menunjukkan core schema Supabase sudah tersedia; speaker, retention, dan durable progress tetap menunggu architecture gate.
+
 ## [0.22.0] - 2026-09-29
 ### Changed
 - Global Tanya Nalira kini memilih konteks materi secara deterministik berdasarkan kecocokan judul, mata kuliah, dan transkrip, dengan batas ukuran transkrip per materi dan total payload.

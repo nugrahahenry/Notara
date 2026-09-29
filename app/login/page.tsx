@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { buildAuthCallbackUrl, resolveAuthOrigin, sanitizeAuthDestination } from '@/lib/auth/redirect';
 import { getAuthCallbackError, getFriendlyAuthErrorMessage } from '@/lib/auth/errors';
-import { Mail, Lock, User, ArrowRight, Loader2, Zap, MessageSquare, FolderGit2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, ArrowRight, Loader2, Zap, MessageSquare, FolderGit2, AlertCircle } from 'lucide-react';
 import { NaliraBrand } from '../components/brand/NaliraBrand';
 import { LoginSuccessScreen } from '../components/ui/LoginSuccessScreen';
 import StarryBackground from '../components/ui/StarryBackground';
@@ -213,7 +214,7 @@ function LoginForm() {
   };
 
   return (
-    <main data-page="login" className="relative min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100 overflow-y-auto px-4 py-12 md:p-6 select-none font-sans">
+    <main data-page="login" className="relative min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100 overflow-y-auto px-4 py-12 md:p-6 font-sans">
       
 
       {/* Starry night cosmic background */}
@@ -230,7 +231,7 @@ function LoginForm() {
               <NaliraBrand variant="icon" size={28} />
             </div>
             <div>
-              <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-violet-200 via-fuchsia-200 to-white bg-clip-text text-transparent">
+              <span className="text-2xl font-black tracking-tight text-violet-200">
                 Nalira
               </span>
               <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-extrabold tracking-widest uppercase bg-violet-500/10 text-violet-300 border border-violet-500/20">
@@ -241,7 +242,7 @@ function LoginForm() {
 
           {/* Heading */}
           <div className="space-y-3">
-            <h1 className="text-4xl font-black tracking-tight leading-tight bg-gradient-to-r from-violet-300 via-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-black tracking-tight leading-tight text-violet-200">
               Ubah Rekaman Audio & Rapat Menjadi Rangkuman Instan
             </h1>
             <p className="text-zinc-400 text-sm leading-relaxed">
@@ -291,12 +292,20 @@ function LoginForm() {
             {/* Background glowing orb */}
             <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-24 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
 
+            <Link
+              href="/"
+              className="relative z-10 inline-flex items-center gap-2 self-start min-h-11 px-2 -ml-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Kembali ke beranda
+            </Link>
+
             {/* Header for Mobile */}
             <div className="flex flex-col items-center text-center lg:hidden space-y-2 mb-2">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-900/30">
                 <NaliraBrand variant="icon" size={20} />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-violet-200 to-white bg-clip-text text-transparent">
+              <span className="text-xl font-bold text-violet-200">
                 Nalira
               </span>
               <p className="text-xs text-zinc-400">
@@ -318,14 +327,14 @@ function LoginForm() {
 
             {/* Error / Success Notifications */}
             {errorMsg && (
-              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs md:text-sm flex items-start space-x-2.5 animate-fadeIn">
+              <div role="alert" aria-live="polite" className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs md:text-sm flex items-start space-x-2.5 animate-fadeIn">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
             {successMsg && (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs md:text-sm flex flex-col items-center text-center gap-3 animate-fadeIn">
+              <div role="status" aria-live="polite" className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs md:text-sm flex flex-col items-center text-center gap-3 animate-fadeIn">
                 <div className="h-10 w-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-950/20">
                   <NaliraBrand variant="icon" animated={true} motionState="idle" size={20} />
                 </div>
@@ -359,7 +368,7 @@ function LoginForm() {
             </div>
 
             {/* Email/Password Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+            <form onSubmit={handleSubmit} aria-busy={loading} className="flex flex-col space-y-4">
               {isSignUp && (
                 <div className="space-y-1.5 text-left">
                   <label htmlFor="notara-full-name" className="text-xs text-zinc-400 font-medium">Nama Lengkap</label>
@@ -522,7 +531,7 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 active:opacity-90 rounded-xl font-semibold text-sm text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.01] hover:animate-pulse transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none cursor-pointer group"
+                className="w-full mt-2 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 active:opacity-90 rounded-xl font-semibold text-sm text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.01] transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -565,6 +574,11 @@ function LoginForm() {
                 )}
               </button>
             </div>
+
+            <p className="flex items-center justify-center gap-2 text-[11px] leading-relaxed text-zinc-500 text-center">
+              <Lock className="w-3.5 h-3.5 text-emerald-400/80" aria-hidden="true" />
+              Audio diproses untuk transkripsi lalu tidak disimpan oleh Nalira.
+            </p>
           </div>
         </div>
       </div>

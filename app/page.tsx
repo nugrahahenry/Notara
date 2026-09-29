@@ -197,6 +197,7 @@ export default function LandingPage() {
           SECTION 1: GLASSMORPHIC NAVIGATION BAR
           ══════════════════════════════════════════════════════ */}
       <nav
+        aria-label="Navigasi utama"
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isNavScrolled
             ? 'bg-[#08070B]/80 backdrop-blur-2xl border-b border-white/[0.06] shadow-2xl shadow-violet-500/5'
@@ -216,7 +217,7 @@ export default function LandingPage() {
                 <button
                   key={item}
                   onClick={() => scrollToSection(item.toLowerCase())}
-                  className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-all duration-300 cursor-pointer"
+                  className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-all duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08070B]"
                 >
                   {item}
                 </button>
@@ -230,7 +231,7 @@ export default function LandingPage() {
                 className="group relative inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
                   bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500
                   text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40
-                  transition-all duration-300 hover:scale-[1.03]"
+                  transition-all duration-300 hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08070B]"
               >
                 {isAuthenticated ? 'Ke Dashboard' : 'Masuk / Daftar'}
                 <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" />
@@ -268,7 +269,7 @@ export default function LandingPage() {
             }}
           >
             <span className="block text-white">Ubah Rekaman Audio</span>
-            <span className="block bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            <span className="block text-violet-300">
               Menjadi Rangkuman AI
             </span>
             <span className="block text-white">Terstruktur</span>
@@ -396,7 +397,7 @@ export default function LandingPage() {
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-80">
           <span className="text-xs text-zinc-500 font-medium">Scroll ke bawah</span>
           <ChevronDown className="w-5 h-5 text-zinc-600" />
         </div>
@@ -415,7 +416,7 @@ export default function LandingPage() {
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
               Semua yang kamu butuhkan,{' '}
-              <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+              <span className="text-violet-300">
                 dalam satu tempat
               </span>
             </h2>
@@ -469,22 +470,22 @@ export default function LandingPage() {
                 Private by Default
               </div>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                100% Kepemilikan Data &{' '}
-                <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                  Privasi Mutlak
+                Kepemilikan Data &{' '}
+                <span className="text-emerald-300">
+                  Privasi sebagai Default
                 </span>
               </h2>
               <p className="text-zinc-400 text-base sm:text-lg leading-relaxed mb-8">
-                Tidak seperti platform lain yang memaksa upload dokumen ke katalog publik,
-                Nalira dibangun dengan arsitektur <strong className="text-zinc-200">Private by Default</strong>.
+                Nalira dimulai dari ruang kerja <strong className="text-zinc-200">Private by Default</strong>,
+                sehingga materi tetap berada di akun Anda sampai Anda memilih untuk membagikannya.
                 Audio diproses untuk transkripsi lalu tidak disimpan oleh aplikasi. Transkrip dan rangkuman tersimpan di akun Anda, dan materi hanya menjadi publik ketika Anda mengaktifkan link berbagi.
               </p>
 
               {/* Privacy Features List */}
               <div className="space-y-4">
                 {[
-                  { icon: <Lock className="w-5 h-5" />, title: 'Enkripsi End-to-End', desc: 'Data dienkripsi saat transit maupun saat tersimpan.' },
-                  { icon: <Shield className="w-5 h-5" />, title: 'Zero Data Selling', desc: 'Kami tidak menjual data Anda ke pihak ketiga. Titik.' },
+                  { icon: <Lock className="w-5 h-5" />, title: 'Enkripsi saat transit & tersimpan', desc: 'Data dilindungi saat dikirim dan saat tersimpan di layanan.' },
+                  { icon: <Shield className="w-5 h-5" />, title: 'Tidak menjual data pribadi', desc: 'Data akun Anda tidak dijadikan produk untuk pihak ketiga.' },
                   { icon: <Eye className="w-5 h-5" />, title: 'Kontrol Penuh Sharing', desc: 'Anda memutuskan siapa yang bisa melihat catatan Anda.' },
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-emerald-500/20 transition-colors duration-300">
@@ -503,48 +504,24 @@ export default function LandingPage() {
             {/* Right: Visual comparison card */}
             <div className="relative">
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 space-y-6 backdrop-blur-sm">
-                <h3 className="text-lg font-bold text-white text-center mb-2">Platform Lain vs Nalira</h3>
+                <h3 className="text-lg font-bold text-white text-center mb-2">Yang selalu kamu kendalikan</h3>
 
-                {/* Comparison items */}
-                {[
-                  { label: 'Dokumen dipublikasikan tanpa izin', other: true, notara: false },
-                  { label: 'Harus upload dokumen ke katalog publik', other: true, notara: false },
-                  { label: 'Data dijual ke pihak ketiga', other: true, notara: false },
-                  { label: 'Kontrol penuh atas sharing', other: false, notara: true },
-                  { label: 'Privasi sebagai fitur utama', other: false, notara: true },
-                ].map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-[1fr_80px_80px] gap-3 items-center py-2 border-b border-white/[0.04] last:border-0">
-                    <span className="text-sm text-zinc-300">{item.label}</span>
-                    <div className="flex justify-center">
-                      {item.other ? (
-                        <div className="w-7 h-7 rounded-full bg-rose-500/15 flex items-center justify-center">
-                          <X className="w-4 h-4 text-rose-400" />
-                        </div>
-                      ) : (
-                        <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                          <Check className="w-4 h-4 text-emerald-400" />
-                        </div>
-                      )}
+                {/* Privacy commitments */}
+                <div className="space-y-3">
+                  {[
+                    'Audio diproses untuk transkripsi',
+                    'Transkrip dan rangkuman tetap di akunmu',
+                    'Sharing hanya saat kamu mengaktifkannya',
+                    'Hapus materi dari ruang kerjamu',
+                    'Tidak ada penjualan data pribadi',
+                  ].map((label) => (
+                    <div key={label} className="flex items-center gap-3 py-2 border-b border-white/[0.04] last:border-0">
+                      <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+                      </div>
+                      <span className="text-sm text-zinc-300">{label}</span>
                     </div>
-                    <div className="flex justify-center">
-                      {item.notara ? (
-                        <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                          <Check className="w-4 h-4 text-emerald-400" />
-                        </div>
-                      ) : (
-                        <div className="w-7 h-7 rounded-full bg-rose-500/15 flex items-center justify-center">
-                          <X className="w-4 h-4 text-rose-400" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Column labels */}
-                <div className="grid grid-cols-[1fr_80px_80px] gap-3 pt-2">
-                  <span />
-                  <span className="text-xs text-zinc-500 text-center font-medium">Lainnya</span>
-                  <span className="text-xs text-violet-400 text-center font-bold">Nalira</span>
+                  ))}
                 </div>
               </div>
 
@@ -568,7 +545,7 @@ export default function LandingPage() {
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
               Pilih paket{' '}
-              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+              <span className="text-amber-300">
                 sesuai kebutuhanmu
               </span>
             </h2>
@@ -660,7 +637,7 @@ export default function LandingPage() {
             </div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
               Pertanyaan{' '}
-              <span className="bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
+              <span className="text-pink-300">
                 yang sering diajukan
               </span>
             </h2>
@@ -708,7 +685,7 @@ export default function LandingPage() {
           <div className="relative p-8 sm:p-12 rounded-3xl border border-violet-500/20 bg-gradient-to-b from-violet-500/[0.06] to-transparent">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Siap mengubah cara belajar &{' '}
-              <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">bekerja</span>
+              <span className="text-violet-300">bekerja</span>
               ?
             </h2>
             <p className="text-zinc-400 text-base sm:text-lg mb-8 max-w-lg mx-auto">
@@ -719,7 +696,7 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl text-base font-bold
                 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500
                 text-white shadow-2xl shadow-violet-500/30 hover:shadow-violet-500/50
-                transition-all duration-500 hover:scale-[1.04]"
+                transition-all duration-500 hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08070B]"
             >
               <Sparkles className="w-5 h-5" />
               {isAuthenticated ? 'Ke Dashboard' : 'Mulai Gratis Sekarang'}
@@ -740,7 +717,7 @@ export default function LandingPage() {
             <div>
               <NaliraBrand variant="horizontal" size={32} />
               <p className="text-sm text-zinc-500 mt-3 leading-relaxed">
-                AI-powered audio summarizer untuk pelajar & profesional. Rekam, transkrip, dan rangkum secara otomatis.
+                Ruang belajar dari rekaman untuk mahasiswa dan tim kecil. Rekam, transkrip, dan rangkum secara otomatis.
               </p>
             </div>
 
