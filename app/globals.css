@@ -2201,14 +2201,13 @@ body {
 
 .notara-study-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 14px;
-  transition: grid-template-columns 200ms ease;
 }
 
 .notara-study-canvas-boundary[data-lab-open="true"] .notara-study-layout {
   grid-template-columns: minmax(0, 1fr) minmax(300px, 370px);
+  gap: 14px;
 }
 
 .notara-study-stage { min-width: 0; }
@@ -2295,6 +2294,7 @@ body {
   font-weight: 700;
   line-height: 1.06;
   letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
 }
 
 .notara-title-editor { margin: 14px 0 12px; }
@@ -2404,7 +2404,8 @@ body {
   line-height: 1.78;
 }
 
-.notara-study-summary-content { max-width: 820px; margin: 0 auto; }
+.notara-document-body[hidden] { display: none; }
+.notara-study-summary-content { max-width: 760px; margin: 0 auto; }
 .notara-document-body h1,
 .notara-document-body h2,
 .notara-document-body h3 { font-family: Georgia, 'Times New Roman', serif; letter-spacing: -0.025em; }
@@ -2714,6 +2715,7 @@ body {
   .notara-title-edit-action { min-width: 44px; padding-inline: 10px; }
   .notara-document-title-row h1 { font-size: clamp(30px, 8.7vw, 35px); line-height: 1.08; letter-spacing: -0.035em; }
   .notara-document-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 9px 12px; }
+  .notara-document-meta > span { white-space: normal; overflow-wrap: anywhere; }
   .notara-study-course-control { grid-column: 1 / -1; min-width: 0; }
   .notara-study-course-control > button { width: 100%; max-width: 100%; justify-content: flex-start; }
   .notara-study-course-control > button span { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; }

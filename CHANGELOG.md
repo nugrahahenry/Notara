@@ -4,7 +4,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 ## [Unreleased]
 
-Nalira v0.19.8 memperbaiki kejujuran state Capture Journey saat rekaman aktif dan menjaga ikon langkah tetap konsisten.
+Nalira v0.19.9 memoles Study Canvas agar ruang baca memakai lebar penuh yang tersedia, konten tetap terukur, dan panel tab tetap semantik saat berpindah tampilan.
+
+## [0.19.9] - 2026-09-29
+### Fixed
+- Study Canvas tidak lagi menyisihkan kolom kosong untuk Study Dock yang belum dirender; slot dock tetap tersedia ketika benar-benar dibuka.
+- Rangkuman kini memakai lebar baca 760px agar paragraf panjang lebih nyaman dipindai.
+- Tab Rangkuman/Transkrip mempertahankan dua panel semantik dengan hanya panel aktif yang ditampilkan, sehingga relasi tab dan panel tetap stabil untuk keyboard serta pembaca layar.
+- Judul dan metadata panjang dapat membungkus dengan aman di viewport sempit tanpa mendorong layout keluar layar.
+
+### Quality
+- Perubahan tetap berada di Experience layer. Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio, atau data pengguna.
 
 ## [0.19.8] - 2026-09-29
 ### Fixed

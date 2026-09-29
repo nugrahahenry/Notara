@@ -107,8 +107,19 @@ test('Material Review tabs expose a complete keyboard and screen-reader contract
   assert.match(canvas, /id="study-tab-summary"[\s\S]*role="tab"[\s\S]*aria-controls="study-panel-summary"/);
   assert.match(canvas, /id="study-tab-transcript"[\s\S]*role="tab"[\s\S]*aria-controls="study-panel-transcript"/);
   assert.match(canvas, /ArrowRight|ArrowLeft/);
-  assert.match(canvas, /id=\{`study-panel-\$\{activeTab\}`\}[\s\S]*role="tabpanel"[\s\S]*aria-labelledby=\{`study-tab-\$\{activeTab\}`\}/);
+  assert.match(canvas, /\(\['summary', 'transcript'\] as const\)\.map/);
+  assert.match(canvas, /id=\{`study-panel-\$\{tab\}`\}[\s\S]*role="tabpanel"[\s\S]*aria-labelledby=\{`study-tab-\$\{tab\}`\}/);
+  assert.match(canvas, /hidden=\{tab !== activeTab\}/);
+  assert.match(css, /\.notara-document-body\[hidden\]\s*\{\s*display:\s*none/);
   assert.match(css, /\.notara-canvas-tabs button:focus-visible/);
+});
+
+test('Material Review keeps the reading surface full-width and paragraphs comfortably measured', () => {
+  const css = read('app/globals.css');
+  assert.match(css, /\.notara-study-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+  assert.match(css, /\.notara-study-canvas-boundary\[data-lab-open="true"\][\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(300px,\s*370px\)/);
+  assert.match(css, /\.notara-study-summary-content\s*\{[^}]*max-width:\s*760px/s);
+  assert.match(css, /\.notara-document-title-row h1\s*\{[^}]*overflow-wrap:\s*anywhere/s);
 });
 
 test('Guided transitions and material menus preserve intentional keyboard focus', () => {

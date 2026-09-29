@@ -371,15 +371,19 @@ export function StudyCanvasBoundary({
               )}
             </header>
 
-            <div
-              className="notara-document-body"
-              id={`study-panel-${activeTab}`}
-              role="tabpanel"
-              aria-labelledby={`study-tab-${activeTab}`}
-              tabIndex={0}
-            >
-              {content}
-            </div>
+            {(['summary', 'transcript'] as const).map((tab) => (
+              <div
+                key={tab}
+                className="notara-document-body"
+                id={`study-panel-${tab}`}
+                role="tabpanel"
+                aria-labelledby={`study-tab-${tab}`}
+                tabIndex={tab === activeTab ? 0 : -1}
+                hidden={tab !== activeTab}
+              >
+                {tab === activeTab ? content : null}
+              </div>
+            ))}
           </article>
 
           {children}
