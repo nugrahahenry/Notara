@@ -82,7 +82,7 @@ function getCheckGuidance(check: GuidedCheckReflection): string {
     return 'Tinjau kembali langkah yang masih terasa sebagian, lalu coba jelaskan tanpa membuka seluruh sumber.';
   }
   if (check.remainingQuestion.trim()) {
-    return 'Pertanyaanmu tetap tersimpan selama draft ini terbuka. Gunakan Tanya Materi untuk memperjelasnya.';
+    return 'Pertanyaanmu tetap tersimpan selama draft ini terbuka. Gunakan Tanya Nalira untuk memperjelasnya.';
   }
   return 'Coba jelaskan kembali inti dan contohnya tanpa membuka sumber. Tidak ada skor atau klaim penguasaan dari refleksi ini.';
 }
@@ -497,14 +497,14 @@ export function GuidedFoundationWorkspace({
                   <p>{getCheckGuidance(check)}</p>
                 </div>
                 <div className="notara-guided-tutor-handoff">
-                  <span>Pertanyaan tidak dikirim sebelum kamu menekan kirim di Tanya Materi.</span>
+                  <span>Pertanyaan tidak dikirim sebelum kamu menekan kirim di Tanya Nalira.</span>
                   <button
                     type="button"
                     className="notara-secondary-button"
                     disabled={!check.remainingQuestion.trim()}
                     onClick={() => onAskTutor(check.remainingQuestion)}
                   >
-                    Bawa ke Tanya Materi
+                    Bawa ke Tanya Nalira
                   </button>
                 </div>
               </div>
@@ -573,8 +573,8 @@ export function GuidedFoundationWorkspace({
           </article>
         </div>
 
-        <aside className="notara-guided-rail" aria-label="Sumber dan Tanya Materi">
-          <section className="notara-guided-tutor-card" aria-label="Tanya Materi dalam sesi">
+        <aside className="notara-guided-rail" aria-label="Sumber dan Tanya Nalira">
+          <section className="notara-guided-tutor-card" aria-label="Tanya Nalira dalam sesi">
             {tutor}
           </section>
 

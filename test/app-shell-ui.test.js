@@ -18,6 +18,7 @@ let sourceTabsModule;
 let journeyModule;
 let appShellModule;
 let ambientHeaderModule;
+let inlineTutorModule;
 let moduleLoadError;
 
 const originalResolveFilename = Module._resolveFilename;
@@ -41,6 +42,7 @@ try {
   journeyModule = require('../build/app/components/capture/CaptureJourney.js');
   appShellModule = require('../build/app/components/shell/AppShell.js');
   ambientHeaderModule = require('../build/app/components/workspace/WorkspaceAmbientHeader.js');
+  inlineTutorModule = require('../build/app/components/study-guide/InlineMaterialTutor.js');
 } catch (error) {
   moduleLoadError = error;
 } finally {
@@ -407,6 +409,61 @@ test('Tanya Nalira offers grounded starters, an accessible composer, and a recov
   assert.match(error, /Jawaban belum tersedia/);
   assert.match(error, /Muat ulang pertanyaan/);
   assert.doesNotMatch(error, /❌ Terjadi kesalahan/);
+});
+
+test('Study Canvas Tutor keeps material scope visible and recovers inline errors without auto-send', () => {
+  assert.ifError(moduleLoadError);
+
+  const renderTutor = (props = {}) => renderToStaticMarkup(
+    React.createElement(inlineTutorModule.InlineMaterialTutor, {
+      materialTitle: 'Gradient Descent',
+      messages: [],
+      threads: [],
+      activeThreadId: null,
+      input: '',
+      isSending: false,
+      isListening: false,
+      voiceNotSupported: false,
+      showHistory: false,
+      textareaRef: { current: null },
+      onInputChange: noop,
+      onSend: noop,
+      onToggleMic: noop,
+      onToggleHistory: noop,
+      onNewThread: noop,
+      onSelectThread: noop,
+      onDeleteThread: noop,
+      onClear: noop,
+      renderMessage: (content) => content,
+      formatThreadAge: (createdAt) => createdAt,
+      ...props,
+    }),
+  );
+
+  const ready = renderTutor();
+  assert.match(ready, /Tanya Nalira/);
+  assert.match(ready, /Materi aktif · Gradient Descent/);
+  assert.match(ready, /Siap menjawab/);
+  assert.match(ready, /data-chat-state="ready"/);
+
+  const thinking = renderTutor({
+    isSending: true,
+    messages: [{ id: 'assistant-pending', thread_id: 'thread-1', role: 'assistant', content: '', created_at: '2026-08-10T09:05:00.000Z' }],
+  });
+  assert.match(thinking, /Meninjau materi/);
+  assert.match(thinking, /aria-busy="true"/);
+  assert.match(thinking, /Nalira sedang menyusun jawaban/);
+
+  const error = renderTutor({
+    messages: [
+      { id: 'user-1', thread_id: 'thread-1', role: 'user', content: 'Jelaskan gradient descent.', created_at: '2026-08-10T09:04:00.000Z' },
+      { id: 'assistant-error', thread_id: 'thread-1', role: 'assistant', content: '❌ Provider tidak merespons.', created_at: '2026-08-10T09:05:00.000Z' },
+    ],
+  });
+  assert.match(error, /data-state="error"/);
+  assert.match(error, /Jawaban belum tersedia/);
+  assert.match(error, /Muat ulang pertanyaan/);
+  assert.doesNotMatch(error, /❌ Provider tidak merespons/);
 });
 
 test('workspace routes keep dense controls usable on narrow screens', () => {

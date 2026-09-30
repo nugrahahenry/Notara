@@ -8,6 +8,7 @@ import {
   Loader2,
   Mic,
   Plus,
+  RotateCcw,
   Send,
   Trash2,
 } from 'lucide-react';
@@ -70,6 +71,8 @@ export function InlineMaterialTutor({
   formatThreadAge,
 }: InlineMaterialTutorProps) {
   const visibleMessages = messages.filter((message) => message.id !== 'welcome');
+  const lastUserMessage = [...visibleMessages].reverse().find((message) => message.role === 'user');
+  const chatState = isSending ? 'thinking' : visibleMessages.length > 0 ? 'active' : 'ready';
   const headingId = surface === 'guided' ? 'guided-material-tutor-heading' : 'material-tutor-heading';
   const inputId = surface === 'guided' ? 'guided-material-tutor-input' : 'inline-material-tutor-input';
   const starterPromptLimit = surface === 'guided' ? 2 : starterPrompts.length;
@@ -88,36 +91,50 @@ export function InlineMaterialTutor({
   };
 
   return (
-    <section className="notara-inline-tutor" data-surface={surface} data-has-thread={visibleMessages.length > 0} aria-labelledby={headingId}>
+    <section
+      className="notara-inline-tutor"
+      data-surface={surface}
+      data-has-thread={visibleMessages.length > 0}
+      data-chat-state={chatState}
+      aria-busy={isSending}
+      aria-labelledby={headingId}
+    >
       <header className="notara-inline-tutor-heading">
         <div className="notara-inline-tutor-title">
           <span className="notara-inline-tutor-icon" aria-hidden="true">
             <SemanticIcon name="ask-nalira" size={20} />
           </span>
           <div>
-            <h2 id={headingId}>Tanya Materi</h2>
-            <p title={materialTitle}>Cakupan: {materialTitle}</p>
+            <h2 id={headingId}>Tanya Nalira</h2>
+            <p title={materialTitle}>Materi aktif · {materialTitle}</p>
           </div>
         </div>
-        <div className="notara-inline-tutor-actions">
-          <button type="button" onClick={onNewThread} className="notara-icon-button" aria-label="Mulai percakapan baru" title="Percakapan baru">
+        <div className="notara-inline-tutor-tools">
+          <span className="notara-inline-tutor-status" data-thinking={isSending} role="status" aria-live="polite">
+            <span aria-hidden="true" />
+            {isSending ? 'Meninjau materi' : 'Siap menjawab'}
+          </span>
+          <div className="notara-inline-tutor-actions">
+            <button type="button" onClick={onNewThread} className="notara-icon-button" aria-label="Mulai percakapan baru" title="Percakapan baru" disabled={isSending}>
             <Plus className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onToggleHistory}
-            className="notara-icon-button"
-            aria-expanded={showHistory}
-            aria-label={showHistory ? 'Tutup riwayat percakapan' : 'Buka riwayat percakapan'}
-            title={showHistory ? 'Tutup riwayat' : 'Buka riwayat'}
-          >
-            {showHistory ? <ArrowLeft className="h-4 w-4" /> : <History className="h-4 w-4" />}
-          </button>
-          {visibleMessages.length > 0 && !showHistory && (
-            <button type="button" onClick={onClear} className="notara-icon-button" aria-label="Hapus isi percakapan" title="Hapus percakapan">
-              <Trash2 className="h-4 w-4" />
             </button>
-          )}
+            <button
+              type="button"
+              onClick={onToggleHistory}
+              className="notara-icon-button"
+              aria-expanded={showHistory}
+              aria-label={showHistory ? 'Tutup riwayat percakapan' : 'Buka riwayat percakapan'}
+              title={showHistory ? 'Tutup riwayat' : 'Buka riwayat'}
+              disabled={isSending}
+            >
+              {showHistory ? <ArrowLeft className="h-4 w-4" /> : <History className="h-4 w-4" />}
+            </button>
+            {visibleMessages.length > 0 && !showHistory && (
+              <button type="button" onClick={onClear} className="notara-icon-button" aria-label="Hapus isi percakapan" title="Hapus percakapan" disabled={isSending}>
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -126,7 +143,7 @@ export function InlineMaterialTutor({
       </div>
 
       {showHistory ? (
-        <div className="notara-inline-tutor-history" aria-label="Riwayat Tanya Materi">
+        <div className="notara-inline-tutor-history" aria-label="Riwayat Tanya Nalira">
           {threads.length === 0 ? (
             <p>Belum ada riwayat percakapan untuk materi ini.</p>
           ) : (
@@ -154,13 +171,27 @@ export function InlineMaterialTutor({
           )}
 
           {visibleMessages.length > 0 && (
-            <div className="notara-inline-tutor-thread" aria-live="polite">
+            <div className="notara-inline-tutor-thread" aria-live="polite" aria-busy={isSending}>
               {visibleMessages.map((message) => (
-                <article key={message.id} data-role={message.role}>
+                <article
+                  key={message.id}
+                  data-role={message.role}
+                  data-state={message.role === 'assistant' && message.content.trimStart().startsWith('❌') ? 'error' : undefined}
+                >
                   <span>{message.role === 'assistant' ? 'Nalira' : 'Kamu'}</span>
                   <div>
                     {message.role === 'assistant' && !message.content ? (
                       <span className="notara-inline-tutor-thinking"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Nalira sedang menyusun jawaban…</span>
+                    ) : message.role === 'assistant' && message.content.trimStart().startsWith('❌') ? (
+                      <div className="notara-inline-tutor-error" role="alert">
+                        <strong>Jawaban belum tersedia</strong>
+                        <p>{message.content.trim().replace(/^❌\s*/, '')}</p>
+                        {lastUserMessage && (
+                          <button type="button" onClick={() => applyPrompt(lastUserMessage.content)} disabled={isSending}>
+                            <RotateCcw className="h-3.5 w-3.5" /> Muat ulang pertanyaan
+                          </button>
+                        )}
+                      </div>
                     ) : message.role === 'assistant' ? renderMessage(message.content) : message.content}
                   </div>
                 </article>

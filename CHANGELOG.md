@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.24.0] - 2026-09-30
+### Changed
+- Tutor inline pada Study Canvas kini konsisten memakai nama `Tanya Nalira`, menampilkan konteks materi aktif, dan memperlihatkan status kesiapan atau `Meninjau materi` saat request sedang berjalan.
+- Error jawaban pada Tutor inline kini menjadi state terpisah yang dapat dipulihkan dengan mengembalikan pertanyaan terakhir ke composer tanpa mengirim ulang otomatis.
+- Guided Learning dan Compare menyebut jalur pemindahan pertanyaan sebagai Tanya Nalira agar bahasa produk konsisten.
+
+### Quality
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio storage, atau speaker contract.
+- Verifikasi checkpoint: full test suite, ESLint, production build, `git diff --check`, dan Impeccable detector terarah.
+
 ## [0.23.0] - 2026-09-30
 ### Fixed
 - Kegagalan menyimpan hasil capture kini mempertahankan transkrip dan rangkuman yang sudah selesai diproses di tab aktif.

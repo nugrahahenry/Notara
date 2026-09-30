@@ -55,6 +55,7 @@
     "lib/runtime/health.ts",
     "lib/brand/identity.ts",
     "app/components/brand/BrandPrimitives.tsx",
+    "app/components/brand/SemanticIcon.tsx",
     "app/components/brand/ProductArtwork.tsx",
     "app/components/capture/RecordingSourcePicker.tsx",
     "app/components/capture/RecordingPanel.tsx",
@@ -69,6 +70,7 @@
     "app/components/workspace/SharedWorkspace.tsx",
     "app/components/workspace/NotaraWorkspace.tsx",
     "app/components/workspace/WorkspaceAmbientHeader.tsx",
+    "app/components/study-guide/InlineMaterialTutor.tsx",
     "app/components/guided/**/*.ts",
     "app/api/health/route.ts",
     "app/api/version/route.ts"
