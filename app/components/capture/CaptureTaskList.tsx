@@ -16,6 +16,7 @@ import {
   formatCaptureDuration,
   formatCaptureFileSize,
   getCaptureQueueSummary,
+  getCaptureRecoveryAction,
   getCaptureTaskPresentation,
   type CaptureTask,
   type CaptureTaskTone,
@@ -27,6 +28,7 @@ interface CaptureTaskListProps {
   onRemove: (index: number) => void;
   onRetry?: (taskId: string) => void;
   actionsDisabled?: boolean;
+  pendingSaveTaskId?: string;
 }
 
 const TONE_STYLES: Record<CaptureTaskTone, string> = {
@@ -61,6 +63,7 @@ export function CaptureTaskList({
   onRemove,
   onRetry,
   actionsDisabled = false,
+  pendingSaveTaskId,
 }: CaptureTaskListProps) {
   const queueSummary = getCaptureQueueSummary(tasks);
 
@@ -88,6 +91,7 @@ export function CaptureTaskList({
       <ol className="space-y-3">
         {tasks.map((task, index) => {
           const presentation = getCaptureTaskPresentation(task);
+          const recovery = getCaptureRecoveryAction(task, pendingSaveTaskId);
           const replaceInputId = `capture-replace-${task.id}`;
           const descriptionId = `capture-task-description-${task.id}`;
           const errorId = task.error ? `capture-task-error-${task.id}` : undefined;
@@ -194,14 +198,14 @@ export function CaptureTaskList({
                     <p
                       id={errorId}
                       role="alert"
-                      className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-xs font-semibold leading-relaxed text-[var(--danger-accent)]"
+                      className={`mt-3 rounded-xl border px-3 py-2.5 text-xs font-semibold leading-relaxed ${TONE_STYLES[presentation.tone]}`}
                     >
                       {task.error.message}
                     </p>
                   )}
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {presentation.canRetry && onRetry && !actionsDisabled && (
+                    {recovery !== 'none' && onRetry && (recovery === 'save' || !actionsDisabled) && (
                       <button
                         type="button"
                         onClick={() => onRetry(task.id)}
@@ -209,8 +213,8 @@ export function CaptureTaskList({
                         aria-describedby={errorId}
                       >
                         <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                        {task.error?.retryMode === 'save'
-                          ? 'Coba simpan lagi'
+                        {recovery === 'save'
+                          ? 'Lanjutkan penyimpanan'
                           : 'Coba lagi dari awal'}
                       </button>
                     )}

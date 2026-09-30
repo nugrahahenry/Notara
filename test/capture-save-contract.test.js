@@ -21,7 +21,9 @@ test('capture save failures keep the processed result available for a save-only 
   assert.match(source, /'save-failed'/);
   assert.match(source, /audio tidak akan dikirim ulang/);
   assert.match(source, /markCaptureTaskFailed\(captureTaskId,[\s\S]*'save'\)/);
-  assert.match(source, /task\.error\.retryMode === 'save'/);
+  assert.match(source, /hasUnsavedCaptureResult\(task\)/);
   assert.match(source, /pendingSummary\?\.captureTaskId === taskId/);
   assert.match(source, /if \(!canResumePendingSave\) setPendingSummary\(null\)/);
+  assert.match(source, /PendingCaptureNotice/);
+  assert.match(source, /hasUnsavedCaptureResult\(task\)/);
 });

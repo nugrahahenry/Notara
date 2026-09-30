@@ -61,6 +61,7 @@
     "app/components/capture/ProcessingView.tsx",
     "app/components/capture/CaptureSourceTabs.tsx",
     "app/components/capture/CaptureJourney.tsx",
+    "app/components/capture/PendingCaptureNotice.tsx",
     "app/components/shell/AppShell.tsx",
     "app/components/ui/OnboardingModal.tsx",
     "app/components/workspace/HomeWorkspace.tsx",

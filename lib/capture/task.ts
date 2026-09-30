@@ -235,9 +235,25 @@ export function isCaptureTaskActive(status: CaptureTaskStatus): boolean {
   return ACTIVE_STATUSES.has(status);
 }
 
+export function hasUnsavedCaptureResult(task: CaptureTask): boolean {
+  return task.status === 'awaiting_save' || task.status === 'saving' ||
+    (task.status === 'failed' && task.error?.retryMode === 'save');
+}
+
+export function getCaptureRecoveryAction(
+  task: CaptureTask,
+  pendingTaskId?: string,
+): 'save' | 'reprocess' | 'none' {
+  if (task.status === 'saving') return 'none';
+  if (hasUnsavedCaptureResult(task)) {
+    return task.id === pendingTaskId ? 'save' : 'none';
+  }
+  return task.status === 'failed' && task.error?.retryable === true ? 'reprocess' : 'none';
+}
+
 export function isCaptureQueueBusy(tasks: CaptureTask[]): boolean {
   return tasks.some(
-    (task) => isCaptureTaskActive(task.status) || task.status === 'awaiting_save',
+    (task) => isCaptureTaskActive(task.status) || hasUnsavedCaptureResult(task),
   );
 }
 
@@ -321,11 +337,12 @@ function getProgressPresentation(task: CaptureTask): Pick<
 }
 
 export function getCaptureTaskPresentation(task: CaptureTask): CaptureTaskPresentation {
+  const unsaved = hasUnsavedCaptureResult(task);
   const copy = task.error
     ? {
-        label: task.status === 'failed' ? STATUS_COPY.failed.label : 'Perlu diganti',
+        label: unsaved ? 'Hasil belum tersimpan' : task.status === 'failed' ? STATUS_COPY.failed.label : 'Perlu diganti',
         description: task.error.message,
-        tone: 'danger' as const,
+        tone: unsaved ? 'warning' as const : 'danger' as const,
       }
     : {
         ...STATUS_COPY[task.status],
@@ -338,11 +355,11 @@ export function getCaptureTaskPresentation(task: CaptureTask): CaptureTaskPresen
   return {
     ...copy,
     isActive,
-    isTerminal: ['succeeded', 'failed', 'cancelled'].includes(task.status),
+    isTerminal: !unsaved && ['succeeded', 'failed', 'cancelled'].includes(task.status),
     showSpinner: isActive,
     canRetry: task.status === 'failed' && task.error?.retryable === true,
-    canReplace: REPLACEABLE_STATUSES.has(task.status),
-    canRemove: REMOVABLE_STATUSES.has(task.status),
+    canReplace: !unsaved && REPLACEABLE_STATUSES.has(task.status),
+    canRemove: !unsaved && REMOVABLE_STATUSES.has(task.status),
     ...progress,
   };
 }
@@ -387,7 +404,7 @@ export function getCaptureQueueSummary(tasks: CaptureTask[]): CaptureQueueSummar
 }
 
 export function shouldWarnBeforeLeaving(tasks: CaptureTask[]): boolean {
-  return tasks.some((task) => LEAVE_WARNING_STATUSES.has(task.status));
+  return tasks.some((task) => LEAVE_WARNING_STATUSES.has(task.status) || hasUnsavedCaptureResult(task));
 }
 
 export function startCaptureTaskAttempt<TReference>(

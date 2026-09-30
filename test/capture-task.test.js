@@ -8,6 +8,8 @@ const {
   getCaptureMediaKind,
   getCaptureQueueSummary,
   getCaptureTaskPresentation,
+  getCaptureRecoveryAction,
+  hasUnsavedCaptureResult,
   getNextQueuedCaptureTask,
   isCaptureQueueBusy,
   patchCaptureTask,
@@ -211,6 +213,20 @@ test('capture save failures advertise a retry that reuses the processed summary'
   }));
 
   assert.equal(presentation.canRetry, true);
+});
+
+test('capture keeps unsaved results recoverable and warns before the tab disappears', () => {
+  const pending = fakeTaskAdapter({ status: 'awaiting_save' });
+  const failedSave = fakeTaskAdapter({
+    status: 'failed',
+    error: { code: 'save-failed', message: 'Belum tersimpan.', retryable: true, retryMode: 'save' },
+  });
+
+  assert.equal(hasUnsavedCaptureResult(pending), true);
+  assert.equal(hasUnsavedCaptureResult(failedSave), true);
+  assert.equal(getCaptureRecoveryAction(pending, pending.id), 'save');
+  assert.equal(getCaptureRecoveryAction(failedSave, failedSave.id), 'save');
+  assert.equal(shouldWarnBeforeLeaving([failedSave]), true);
 });
 
 test('capture success is terminal and never keeps a spinner or stale progress bar', () => {

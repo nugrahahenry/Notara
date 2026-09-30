@@ -25,6 +25,7 @@ import { VersionUpdateBanner } from '../components/ui/VersionUpdateBanner';
 import { CaptureSourceTabs } from '../components/capture/CaptureSourceTabs';
 import { CaptureJourney } from '../components/capture/CaptureJourney';
 import { CaptureTaskList } from '../components/capture/CaptureTaskList';
+import { PendingCaptureNotice } from '../components/capture/PendingCaptureNotice';
 import { ProcessingView } from '../components/capture/ProcessingView';
 import { RecordingPanel } from '../components/capture/RecordingPanel';
 import {
@@ -125,6 +126,7 @@ import {
   createSelectedCaptureTask,
   getNextQueuedCaptureTask,
   isCaptureQueueBusy,
+  hasUnsavedCaptureResult,
   patchCaptureTask,
   removeCaptureTask,
   shouldWarnBeforeLeaving,
@@ -2995,19 +2997,16 @@ export default function Home() {
     const taskIndex = captureTasks.findIndex((task) => task.id === taskId);
     if (taskIndex < 0) return;
     const task = captureTasks[taskIndex];
-    if (task.status !== 'failed' || task.error?.retryable !== true) return;
 
     if (
-      task.error.retryMode === 'save' &&
+      hasUnsavedCaptureResult(task) &&
       pendingSummary?.captureTaskId === taskId
     ) {
-      setCaptureTaskStage(taskId, 'awaiting_save', {
-        destinationLabel: task.destinationLabel,
-      });
-      setCurrentQueueIndex(taskIndex);
       setShowSaveFolderModal(true);
       return;
     }
+
+    if (task.status !== 'failed' || task.error?.retryable !== true) return;
 
     setPendingSummary(null);
     setShowSaveFolderModal(false);
@@ -3461,7 +3460,7 @@ export default function Home() {
       captureTasks.some(
         (task) =>
           task.id === pendingSummary.captureTaskId &&
-          task.error?.retryMode === 'save',
+          hasUnsavedCaptureResult(task),
       ),
   );
   const captureQueueBusy = isCaptureQueueBusy(captureTasksForDisplay);
@@ -4952,6 +4951,7 @@ export default function Home() {
                       onRemove={handleRemoveCaptureFile}
                       onRetry={handleRetryCaptureTask}
                       actionsDisabled
+                      pendingSaveTaskId={pendingSummary?.captureTaskId}
                     />
                   </div>
                 )}
@@ -5068,6 +5068,13 @@ export default function Home() {
                     hasInput={isRecordingMode ? Boolean(audioBlob) : uploadCaptureTasks.length > 0}
                   />
 
+                  {pendingSummary && canResumePendingSave && !showSaveFolderModal && (
+                    <PendingCaptureNotice
+                      title={pendingSummary.title}
+                      onResume={() => setShowSaveFolderModal(true)}
+                    />
+                  )}
+
                   {/* Upload vs Recording Selector Toggle */}
                   <CaptureSourceTabs
                     isRecordingMode={isRecordingMode}
@@ -5101,6 +5108,7 @@ export default function Home() {
                     onClearFiles={clearFile}
                     onRetryTask={handleRetryCaptureTask}
                     actionsDisabled={captureActionsDisabled}
+                    pendingSaveTaskId={pendingSummary?.captureTaskId}
                   />
                 ) : (
                   /* VOICE RECORD PANEL INTERFACE */
@@ -5142,6 +5150,7 @@ export default function Home() {
                           onRemove={handleRemoveCaptureFile}
                           onRetry={handleRetryCaptureTask}
                           actionsDisabled={captureActionsDisabled}
+                          pendingSaveTaskId={pendingSummary?.captureTaskId}
                         />
                       </div>
                     )}

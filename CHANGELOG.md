@@ -11,10 +11,12 @@ Pengembangan berikutnya belum dimulai.
 - Kegagalan menyimpan hasil capture kini mempertahankan transkrip dan rangkuman yang sudah selesai diproses di tab aktif.
 - Retry dari task yang gagal menyimpan hanya membuka kembali alur pemilihan folder; audio tidak dikirim ulang dan provider tidak dipanggil ulang.
 - Copy aksi retry membedakan kegagalan pemrosesan yang memang dimulai dari awal dari kegagalan penyimpanan yang dapat dilanjutkan.
+- Hasil yang belum tersimpan kini diberi notice persisten di Capture workspace dan tetap dapat dibuka kembali setelah modal ditutup selama tab masih aktif.
+- Navigasi keluar atau refresh saat hasil belum tersimpan diperlakukan sebagai state yang perlu diperingatkan, bukan sebagai kegagalan pemrosesan baru.
 
 ### Quality
 - Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio storage, atau speaker contract.
-- Verifikasi checkpoint: test suite, ESLint, production build, diff check, dan smoke UI capture terarah.
+- Verifikasi checkpoint: 313/313 tests, ESLint, production build, `git diff --check`, dan smoke UI capture terarah.
 
 ## [0.22.2] - 2026-09-30
 ### Fixed

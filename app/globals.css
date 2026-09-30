@@ -1911,6 +1911,36 @@ body {
 .notara-capture-journey li[data-state="current"] .notara-capture-journey__marker { border-color: var(--action-primary); background: var(--action-primary); color: var(--text-on-brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--action-primary) 12%, transparent); }
 .notara-capture-journey li[data-state="current"] .notara-capture-journey__copy small { color: var(--action-primary); font-weight: 700; }
 
+.notara-pending-capture {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0 auto 1.5rem;
+  max-width: 46rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid color-mix(in srgb, var(--review-accent) 42%, var(--border-subtle));
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--review-accent) 10%, var(--surface-elevated));
+  color: var(--review-accent);
+}
+.notara-pending-capture h2 { color: var(--text-primary); }
+.notara-pending-capture .notara-primary-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--action-primary);
+  padding: 0.625rem 0.875rem;
+  color: var(--text-on-brand);
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.notara-pending-capture .notara-primary-button:hover { background: var(--action-primary-hover); }
+.notara-pending-capture .notara-primary-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
 .notara-capture-mode-tabs {
   display: flex;
   gap: 0.25rem;
@@ -1941,6 +1971,8 @@ body {
 .notara-capture-mode-tabs button:disabled { cursor: not-allowed; opacity: 0.6; }
 
 @media (max-width: 640px) {
+  .notara-pending-capture { flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .notara-pending-capture .notara-primary-button { width: 100%; }
   .notara-capture-journey { margin-bottom: 1.25rem; padding-inline: 0; }
   .notara-capture-journey ol { gap: 0.25rem; }
   .notara-capture-journey li { gap: 0.4rem; }

@@ -27,6 +27,7 @@ interface UploadQueuePanelProps {
   onClearFiles: () => void;
   onRetryTask: (taskId: string) => void;
   actionsDisabled?: boolean;
+  pendingSaveTaskId?: string;
 }
 
 const DROP_COPY: Record<CaptureDragState, { title: string; description: string }> = {
@@ -58,6 +59,7 @@ export function UploadQueuePanel({
   onClearFiles,
   onRetryTask,
   actionsDisabled = false,
+  pendingSaveTaskId,
 }: UploadQueuePanelProps) {
   const files = tasks.map((task) => task.reference);
   const dropCopy = DROP_COPY[dragState];
@@ -84,6 +86,7 @@ export function UploadQueuePanel({
           multiple
           accept="audio/*,video/*,.mp3,.m4a,.wav,.mp4,.mov,.webm,.mkv,.ogg,.aac"
           className="hidden"
+          disabled={actionsDisabled}
           onChange={onFileChange}
         />
 
@@ -112,7 +115,7 @@ export function UploadQueuePanel({
           <button
             type="button"
             onClick={onBrowse}
-            disabled={queueIsFull}
+            disabled={queueIsFull || actionsDisabled}
             aria-describedby={notice ? 'capture-file-notice' : 'capture-file-hint'}
             className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--action-primary)] px-5 py-3 text-xs font-bold text-[var(--text-on-brand)] transition-colors hover:bg-[var(--action-primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -145,6 +148,7 @@ export function UploadQueuePanel({
             onRemove={onRemoveFile}
             onRetry={onRetryTask}
             actionsDisabled={actionsDisabled}
+            pendingSaveTaskId={pendingSaveTaskId}
           />
 
           <div className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-tool)] p-4 text-left sm:flex-row sm:items-center sm:justify-between">
@@ -154,6 +158,7 @@ export function UploadQueuePanel({
             <button
               type="button"
               onClick={onClearFiles}
+              disabled={actionsDisabled}
               className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3.5 text-xs font-bold text-[var(--text-tertiary)] transition-colors hover:border-[var(--danger-accent)] hover:text-[var(--danger-accent)]"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
