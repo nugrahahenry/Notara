@@ -2692,6 +2692,7 @@ body {
 }
 
 .notara-transcript-evidence-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.notara-transcript-source-version { color: var(--action-emphasis); font-weight: 800; }
 .notara-transcript-filter-row { display: flex; min-height: 68px; align-items: center; justify-content: space-between; gap: 16px; }
 .notara-transcript-filter-row > div { display: inline-flex; gap: 5px; border-radius: 12px; background: var(--surface-tool); padding: 4px; }
 .notara-transcript-filter-row button { min-height: 44px; border-radius: 9px; padding: 0 12px; color: var(--text-secondary); font-size: 11px; font-weight: 800; }

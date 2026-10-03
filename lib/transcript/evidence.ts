@@ -11,6 +11,20 @@ export const LOW_CONFIDENCE_THRESHOLD = -0.5;
 export const HIGH_NO_SPEECH_THRESHOLD = 0.6;
 
 export type TranscriptEvidenceFilter = 'all' | 'unclear';
+export type TranscriptSourceVersionState = 'active' | 'superseded' | 'revoked' | 'expired';
+
+export interface TranscriptSourceVersion {
+  id: string;
+  version: number;
+  sourceKind: 'transcript';
+  state: TranscriptSourceVersionState;
+  contentHash: string | null;
+  hashAlgorithm: 'sha256';
+  durationMs: number | null;
+  segmentCount: number;
+  transcriptCharacterCount: number;
+  createdAt: string;
+}
 
 export interface TranscriptEvidenceRun {
   id: string;
@@ -40,6 +54,7 @@ export interface TranscriptEvidenceSegment {
 
 export interface TranscriptEvidencePage {
   run: TranscriptEvidenceRun;
+  sourceVersion: TranscriptSourceVersion | null;
   segments: TranscriptEvidenceSegment[];
   contextAvailable: boolean;
   total: number;
@@ -48,6 +63,12 @@ export interface TranscriptEvidencePage {
 }
 
 const QUALITY_STATUSES = new Set<TranscriptQualityStatus>(['good', 'review', 'poor']);
+const SOURCE_VERSION_STATES = new Set<TranscriptSourceVersionState>([
+  'active',
+  'superseded',
+  'revoked',
+  'expired',
+]);
 const WARNING_CODES = new Set<TranscriptQualityWarningCode>([
   'too-few-words',
   'low-speech-density',
@@ -138,6 +159,56 @@ export function normalizeTranscriptEvidenceRun(value: unknown): TranscriptEviden
     segmentCount,
     transcriptCharacterCount,
     completedAt,
+  };
+}
+
+export function normalizeTranscriptSourceVersion(value: unknown): TranscriptSourceVersion | null {
+  const row = record(value);
+  if (!row) return null;
+
+  const id = typeof row.id === 'string' ? row.id : '';
+  const version = nonNegativeInteger(row.version);
+  const sourceKind = row.source_kind;
+  const state = row.state;
+  const contentHash = row.content_hash === null || row.content_hash === undefined
+    ? null
+    : typeof row.content_hash === 'string' && /^[0-9a-f]{64}$/i.test(row.content_hash)
+      ? row.content_hash.toLowerCase()
+      : null;
+  const hashAlgorithm = row.hash_algorithm;
+  const durationMs = row.duration_ms === null || row.duration_ms === undefined
+    ? null
+    : nonNegativeInteger(row.duration_ms);
+  const segmentCount = nonNegativeInteger(row.segment_count);
+  const transcriptCharacterCount = nonNegativeInteger(row.transcript_character_count);
+  const createdAt = typeof row.created_at === 'string' ? row.created_at : '';
+
+  if (
+    !id
+    || version === null
+    || version < 1
+    || sourceKind !== 'transcript'
+    || typeof state !== 'string'
+    || !SOURCE_VERSION_STATES.has(state as TranscriptSourceVersionState)
+    || hashAlgorithm !== 'sha256'
+    || segmentCount === null
+    || transcriptCharacterCount === null
+    || !createdAt
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    version,
+    sourceKind,
+    state: state as TranscriptSourceVersionState,
+    contentHash,
+    hashAlgorithm,
+    durationMs,
+    segmentCount,
+    transcriptCharacterCount,
+    createdAt,
   };
 }
 

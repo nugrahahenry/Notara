@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clock3,
   FileText,
+  GitBranch,
   Info,
   RefreshCw,
   SearchX,
@@ -215,6 +216,14 @@ export function TranscriptEvidenceReview({
       </section>
 
       <div className="notara-transcript-evidence-meta" aria-label="Cakupan transkrip">
+        {data.sourceVersion && (
+          <span
+            className="notara-transcript-source-version"
+            aria-label={`Versi sumber ${data.sourceVersion.version}, status ${data.sourceVersion.state}`}
+          >
+            <GitBranch className="h-4 w-4" aria-hidden="true" /> Versi sumber {data.sourceVersion.version}
+          </span>
+        )}
         <span><FileText className="h-4 w-4" aria-hidden="true" /> {new Intl.NumberFormat('id-ID').format(data.run.segmentCount)} bagian</span>
         {durationMs !== null && (
           <span><Clock3 className="h-4 w-4" aria-hidden="true" /> {formatTranscriptTimecode(durationMs)} rekaman</span>

@@ -8,6 +8,7 @@ const MAX_SEGMENT_TEXT_CHARACTERS = 20_000;
 const MAX_TRANSCRIPT_EVIDENCE_TEXT_CHARACTERS = 500_000;
 const MAX_REQUEST_ID_CHARACTERS = 128;
 const MAX_MODEL_NAME_CHARACTERS = 200;
+const SOURCE_HASH_SCHEMA = 'nalira-transcript-source-v1';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface TranscriptProcessingMetadata {
@@ -40,6 +41,26 @@ export interface TranscriptEvidenceRpcPayload {
     average_log_probability: number | null;
     no_speech_probability: number | null;
   }>;
+}
+
+export async function hashTranscriptEvidenceSegments(
+  segments: TranscriptEvidenceRpcPayload['p_segments'],
+): Promise<string | null> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) return null;
+
+  const canonical = JSON.stringify({
+    schema: SOURCE_HASH_SCHEMA,
+    segments,
+  });
+  const digest = await subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(canonical),
+  );
+
+  return Array.from(new Uint8Array(digest), (byte) => (
+    byte.toString(16).padStart(2, '0')
+  )).join('');
 }
 
 function requireBoundedText(

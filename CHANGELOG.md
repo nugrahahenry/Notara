@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.25.0] - 2026-10-03
+### Added
+- Fondasi `transcript_source_versions` owner-only untuk identitas versi sumber, lifecycle, dan fingerprint SHA-256 opsional pada evidence transkrip.
+- Hubungan source version ke summary revision tanpa mengubah kontrak apply/restore yang sudah ada.
+- Metadata versi sumber pada Transcript Evidence Review dan wrapper RPC yang kompatibel dengan client lama.
+
+### Security
+- Direct write source version tetap dicabut; pembacaan authenticated dibatasi RLS owner.
+- Zero raw-audio retention, neutral speaker state, dan batas public/share tetap dipertahankan.
+
+### Quality
+- Migration baru masih review-only dan belum diterapkan ke Supabase production.
+- Focused migration, RPC, compatibility, dan reader contract tests ditambahkan.
+
 ## [0.24.2] - 2026-10-03
 ### Fixed
 - Pesan Markdown pada Tanya Materi kini memakai token warna tema Nalira sehingga judul, penekanan, kode, kutipan, dan tabel tetap terbaca pada Light mode.

@@ -6,6 +6,7 @@ import { supabase } from './supabase';
 import type { Folder, Summary, CreateFolderInput, CreateSummaryInput, ChatMessage, StudyGroup, GroupMember, ChatThread } from './types';
 import {
   buildTranscriptEvidenceRpcPayload,
+  hashTranscriptEvidenceSegments,
   type TranscriptEvidenceInput,
 } from './transcript/persistence';
 
@@ -153,7 +154,26 @@ export async function persistTranscriptEvidence(
     return false;
   }
 
-  const { error } = await supabase.rpc('persist_transcript_evidence', payload);
+  const contentHash = await hashTranscriptEvidenceSegments(payload.p_segments);
+  const rpcPayload = contentHash
+    ? { ...payload, p_content_hash: contentHash }
+    : payload;
+  const rpcName = contentHash ? 'persist_transcript_evidence_v2' : 'persist_transcript_evidence';
+  let { error } = await supabase.rpc(rpcName, rpcPayload);
+
+  // Keep the existing evidence path usable while a deployment is waiting for
+  // the provenance migration. The fallback is limited to a missing RPC, not a
+  // quota, validation, or owner-boundary failure returned by the new wrapper.
+  if (
+    contentHash
+    && error
+    && (
+      error.code === 'PGRST202'
+      || /persist_transcript_evidence_v2.*not found|could not find the function/i.test(error.message)
+    )
+  ) {
+    ({ error } = await supabase.rpc('persist_transcript_evidence', payload));
+  }
 
   if (error) {
     console.error('Transcript evidence persistence failed.');

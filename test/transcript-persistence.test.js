@@ -240,5 +240,5 @@ test('capture routes expose evidence metadata and dashboard persists after summa
   assert.match(summarizeTranscriptRoute, /summaryModel:\s*GROQ_LLM_MODEL/);
   assert.match(dashboard, /offsetTranscriptSegments\(\s*data\.segments/);
   assert.match(dashboard, /persistTranscriptEvidence\(\s*newSummary\.id,\s*pendingSummary\.evidence/);
-  assert.match(db, /supabase\.rpc\('persist_transcript_evidence'/);
+  assert.match(db, /supabase\.rpc\([\s\S]*persist_transcript_evidence(?:_v2)?/);
 });

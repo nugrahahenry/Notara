@@ -5,6 +5,7 @@ import {
   TRANSCRIPT_EVIDENCE_PAGE_SIZE,
   normalizeTranscriptEvidenceRun,
   normalizeTranscriptEvidenceSegment,
+  normalizeTranscriptSourceVersion,
   type TranscriptEvidenceFilter,
   type TranscriptEvidencePage,
 } from './evidence';
@@ -28,6 +29,19 @@ const SEGMENT_FIELDS = [
   'text',
   'average_log_probability',
   'no_speech_probability',
+].join(',');
+
+const SOURCE_VERSION_FIELDS = [
+  'id',
+  'version',
+  'source_kind',
+  'state',
+  'content_hash',
+  'hash_algorithm',
+  'duration_ms',
+  'segment_count',
+  'transcript_character_count',
+  'created_at',
 ].join(',');
 
 export async function readTranscriptEvidencePage({
@@ -56,6 +70,20 @@ export async function readTranscriptEvidencePage({
 
   const run = normalizeTranscriptEvidenceRun(runRow);
   if (!run) return null;
+
+  let sourceVersion: TranscriptEvidencePage['sourceVersion'] = null;
+  try {
+    const { data: sourceVersionRow, error: sourceVersionError } = await supabase
+      .from('transcript_source_versions')
+      .select(SOURCE_VERSION_FIELDS)
+      .eq('processing_run_id', run.id)
+      .maybeSingle();
+    if (!sourceVersionError) {
+      sourceVersion = normalizeTranscriptSourceVersion(sourceVersionRow);
+    }
+  } catch {
+    // Legacy environments can keep rendering evidence before this migration.
+  }
 
   let query = supabase
     .from('transcript_segments')
@@ -91,6 +119,7 @@ export async function readTranscriptEvidencePage({
 
   return {
     run,
+    sourceVersion,
     contextAvailable,
     segments: segments.map((segment) => ({
       ...segment,
