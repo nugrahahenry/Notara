@@ -320,7 +320,7 @@ test('theme control exposes a direct, accessible choice for every appearance mod
   assert.match(stylesheet, /\[data-theme="dark"\] \.notara-brand-mark \.notara-brand-asset--dark/);
 });
 
-test('Tanya Nalira makes the streaming thinking state visible and truthful', () => {
+test('Tanya Materi makes the streaming thinking state visible and truthful', () => {
   assert.ifError(moduleLoadError);
 
   const thinking = renderToStaticMarkup(
@@ -351,7 +351,7 @@ test('Tanya Nalira makes the streaming thinking state visible and truthful', () 
   assert.match(thinking, /Nalira sedang menyusun jawaban/);
 });
 
-test('Tanya Nalira offers grounded starters, an accessible composer, and a recoverable error state', () => {
+test('Tanya Materi offers grounded starters, an accessible composer, and a recoverable error state', () => {
   assert.ifError(moduleLoadError);
 
   const empty = renderToStaticMarkup(
@@ -441,7 +441,8 @@ test('Study Canvas Tutor keeps material scope visible and recovers inline errors
   );
 
   const ready = renderTutor();
-  assert.match(ready, /Tanya Nalira/);
+  assert.match(ready, /Tanya Materi/);
+  assert.doesNotMatch(ready, /Tanya Nalira/);
   assert.match(ready, /Materi aktif · Gradient Descent/);
   assert.match(ready, /Siap menjawab/);
   assert.match(ready, /data-chat-state="ready"/);

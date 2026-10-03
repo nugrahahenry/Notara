@@ -6,6 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.24.1] - 2026-10-03
+### Fixed
+- Tutor yang berada di dalam Study Canvas dan Guided Learning kini memakai nama `Tanya Materi`, sehingga jelas terpisah dari `Tanya Nalira` global yang dapat mencari konteks lintas materi.
+- Label riwayat, rail Guided, dan aksi membawa pertanyaan mengikuti batas materi aktif tanpa mengubah kontrak kirim, thread, atau pemulihan error.
+
+### Quality
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio storage, atau speaker contract.
+- Verifikasi checkpoint: full test suite, ESLint, TypeScript, production build, `git diff --check`, detector Impeccable terarah, dan smoke read-only Chrome Henry.
+
 ## [0.24.0] - 2026-09-30
 ### Changed
 - Tutor inline pada Study Canvas kini konsisten memakai nama `Tanya Nalira`, menampilkan konteks materi aktif, dan memperlihatkan status kesiapan atau `Meninjau materi` saat request sedang berjalan.

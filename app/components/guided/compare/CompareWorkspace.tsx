@@ -293,7 +293,7 @@ export function CompareWorkspace({
                 disabled={!currentDraft.notes.remainingQuestion.trim()}
                 onClick={() => onAskTutor(currentDraft.notes.remainingQuestion.trim())}
               >
-                Bawa ke Tanya Nalira
+                Bawa ke Tanya Materi
               </button>
             </div>
           </div>

@@ -73,6 +73,7 @@ export function InlineMaterialTutor({
   const visibleMessages = messages.filter((message) => message.id !== 'welcome');
   const lastUserMessage = [...visibleMessages].reverse().find((message) => message.role === 'user');
   const chatState = isSending ? 'thinking' : visibleMessages.length > 0 ? 'active' : 'ready';
+  const tutorName = 'Tanya Materi';
   const headingId = surface === 'guided' ? 'guided-material-tutor-heading' : 'material-tutor-heading';
   const inputId = surface === 'guided' ? 'guided-material-tutor-input' : 'inline-material-tutor-input';
   const starterPromptLimit = surface === 'guided' ? 2 : starterPrompts.length;
@@ -105,7 +106,7 @@ export function InlineMaterialTutor({
             <SemanticIcon name="ask-nalira" size={20} />
           </span>
           <div>
-            <h2 id={headingId}>Tanya Nalira</h2>
+            <h2 id={headingId}>{tutorName}</h2>
             <p title={materialTitle}>Materi aktif · {materialTitle}</p>
           </div>
         </div>
@@ -143,7 +144,7 @@ export function InlineMaterialTutor({
       </div>
 
       {showHistory ? (
-        <div className="notara-inline-tutor-history" aria-label="Riwayat Tanya Nalira">
+        <div className="notara-inline-tutor-history" aria-label={`Riwayat ${tutorName}`}>
           {threads.length === 0 ? (
             <p>Belum ada riwayat percakapan untuk materi ini.</p>
           ) : (
