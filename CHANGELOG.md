@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.25.1] - 2026-10-03
+### Fixed
+- Memperkuat keterbacaan Tanya Nalira pada Light mode dan panel sempit: scope controls, focus state, placeholder, status thinking, dan jawaban panjang kini lebih aman terhadap overflow.
+- Menambahkan overflow terkontrol untuk kode, tabel, dan gambar serta menghormati `prefers-reduced-motion`.
+- Tidak mengubah API, database, provider, audio, speaker, atau migration production.
+
 ## [0.25.0] - 2026-10-03
 ### Added
 - Fondasi `transcript_source_versions` owner-only untuk identitas versi sumber, lifecycle, dan fingerprint SHA-256 opsional pada evidence transkrip.

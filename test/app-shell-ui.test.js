@@ -486,6 +486,11 @@ test('workspace routes keep dense controls usable on narrow screens', () => {
 
   assert.match(stylesheet, /\.notara-filter-tabs \{ display: flex; width: 100%; max-width: 100%; overflow-x: auto; \}/);
   assert.match(stylesheet, /\.notara-scope-foundation > button \{ flex: 1 1 calc\(50% - 8px\); \}/);
+  assert.match(stylesheet, /\.notara-scope-foundation \{[^}]*border: 1px solid var\(--border-subtle\);[^}]*background: var\(--surface-tool\);/s);
+  assert.match(stylesheet, /\.notara-conversation-message-body \{[^}]*overflow-wrap: anywhere;[^}]*word-break: break-word;/s);
+  assert.match(stylesheet, /\.notara-conversation-message-body pre \{[^}]*overflow-x: auto;[^}]*white-space: pre-wrap/s);
+  assert.match(stylesheet, /\.notara-central-composer textarea::placeholder \{[^}]*color: var\(--text-tertiary\);/s);
+  assert.match(stylesheet, /prefers-reduced-motion: reduce[\s\S]*notara-conversation-status\[data-thinking="true"\] > span/);
   assert.match(stylesheet, /\.notara-conversation-starters \{ grid-template-columns: 1fr; \}/);
   assert.match(stylesheet, /\.notara-central-composer > button \{ right: 16px; top: 22px; \}/);
 });
