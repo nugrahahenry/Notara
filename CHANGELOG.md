@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.24.2] - 2026-10-03
+### Fixed
+- Pesan Markdown pada Tanya Materi kini memakai token warna tema Nalira sehingga judul, penekanan, kode, kutipan, dan tabel tetap terbaca pada Light mode.
+- Bubble percakapan dan isi jawaban kini mengecil dengan benar pada viewport sempit; kata panjang, heading, tabel, dan blok kode tidak lagi mendorong Tutor keluar layar.
+- Header Tutor pada mobile membungkus status dan kontrol dengan rapi ketika ruang horizontal terbatas.
+
+### Quality
+- Tidak ada perubahan schema, migration, endpoint, provider, authentication, billing, audio storage, atau speaker contract.
+- Verifikasi checkpoint: full test suite, ESLint, TypeScript, production build, `git diff --check`, dan detector Impeccable terarah.
+
 ## [0.24.1] - 2026-10-03
 ### Fixed
 - Tutor yang berada di dalam Study Canvas dan Guided Learning kini memakai nama `Tanya Materi`, sehingga jelas terpisah dari `Tanya Nalira` global yang dapat mencari konteks lintas materi.

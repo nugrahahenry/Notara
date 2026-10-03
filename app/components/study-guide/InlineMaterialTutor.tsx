@@ -180,7 +180,7 @@ export function InlineMaterialTutor({
                   data-state={message.role === 'assistant' && message.content.trimStart().startsWith('❌') ? 'error' : undefined}
                 >
                   <span>{message.role === 'assistant' ? 'Nalira' : 'Kamu'}</span>
-                  <div>
+                  <div className="notara-inline-tutor-message">
                     {message.role === 'assistant' && !message.content ? (
                       <span className="notara-inline-tutor-thinking"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Nalira sedang menyusun jawaban…</span>
                     ) : message.role === 'assistant' && message.content.trimStart().startsWith('❌') ? (

@@ -467,6 +467,20 @@ test('Study Canvas Tutor keeps material scope visible and recovers inline errors
   assert.doesNotMatch(error, /❌ Provider tidak merespons/);
 });
 
+test('material tutor keeps Markdown readable across themes and narrow widths', () => {
+  const tutor = fs.readFileSync(path.join(__dirname, '..', 'app', 'components', 'study-guide', 'InlineMaterialTutor.tsx'), 'utf8');
+  const stylesheet = fs.readFileSync(path.join(__dirname, '..', 'app', 'globals.css'), 'utf8');
+  const dashboard = fs.readFileSync(path.join(__dirname, '..', 'app', 'dashboard', 'page.tsx'), 'utf8');
+  const markdown = dashboard.slice(dashboard.indexOf('const renderMarkdown'), dashboard.indexOf('const openWorkspace'));
+
+  assert.match(tutor, /className="notara-inline-tutor-message"/);
+  assert.match(stylesheet, /\.notara-inline-tutor-thread article > div \{[^}]*min-width: 0;[^}]*overflow-wrap: anywhere;[^}]*word-break: break-word/s);
+  assert.match(stylesheet, /\.notara-inline-tutor-message pre \{[^}]*overflow-x: auto;[^}]*white-space: pre-wrap/s);
+  assert.match(markdown, /text-\[var\(--text-primary\)\]/);
+  assert.match(markdown, /text-\[var\(--text-secondary\)\]/);
+  assert.doesNotMatch(markdown, /text-white|text-zinc-200|text-violet-300/);
+});
+
 test('workspace routes keep dense controls usable on narrow screens', () => {
   const stylesheet = fs.readFileSync(path.join(__dirname, '..', 'app', 'globals.css'), 'utf8');
 

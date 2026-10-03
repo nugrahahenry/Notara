@@ -3840,10 +3840,10 @@ export default function Home() {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
       
-      html = html.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-violet-300 font-mono text-xs font-semibold">$1</code>');
-      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
-      html = html.replace(/\*([^*]+)\*/g, '<em class="italic text-zinc-200">$1</em>');
-      html = html.replace(/_([^_]+)_/g, '<em class="italic text-zinc-200">$1</em>');
+      html = html.replace(/`([^`]+)`/g, '<code class="rounded border border-[var(--border-subtle)] bg-[var(--surface-tool)] px-1.5 py-0.5 font-mono text-xs font-semibold text-[var(--action-emphasis)]">$1</code>');
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-[var(--text-primary)]">$1</strong>');
+      html = html.replace(/\*([^*]+)\*/g, '<em class="italic text-[var(--text-secondary)]">$1</em>');
+      html = html.replace(/_([^_]+)_/g, '<em class="italic text-[var(--text-secondary)]">$1</em>');
       
       return html;
     };
@@ -3890,7 +3890,7 @@ export default function Home() {
                 {headers.map((h, hi) => (
                   <th
                     key={hi}
-                    className="px-4 py-3 text-left text-xs font-bold text-violet-300 uppercase tracking-wider"
+                    className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[var(--action-emphasis)]"
                     dangerouslySetInnerHTML={{ __html: parseInline(h) }}
                   />
                 ))}
@@ -3902,7 +3902,7 @@ export default function Home() {
                 return (
                   <tr
                     key={ri}
-                    className={ri % 2 === 0 ? 'bg-white/[0.01]' : 'bg-white/[0.03]'}
+                    className={ri % 2 === 0 ? 'bg-[var(--surface-tool)]' : 'bg-[var(--surface-elevated)]'}
                   >
                     {cells.map((cell, ci) => (
                       <td
@@ -3969,7 +3969,7 @@ export default function Home() {
         flushList(`h2-${i}`);
         elements.push(
           <h2 key={`h2-${i}`} className="mb-4 mt-8 flex items-center gap-2 text-xl font-bold text-[var(--brand-primary)] md:text-2xl">
-            <span className="h-2 w-2 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 inline-block"></span>
+            <span className="inline-block h-2 w-2 rounded-full bg-[var(--action-primary)]"></span>
             {cleanLine.replace('## ', '')}
           </h2>
         );
@@ -3990,7 +3990,7 @@ export default function Home() {
         flushList(`bq-${i}`);
         const content = cleanLine.replace(/^>\s+/, '');
         elements.push(
-          <blockquote key={`bq-${i}`} className="my-4 rounded-r-xl border-l-4 border-[var(--brand-primary)] bg-[var(--nav-selected)] px-4 py-3 italic text-[var(--text-secondary)]">
+          <blockquote key={`bq-${i}`} className="my-4 rounded-xl border border-[var(--knowledge-accent)] bg-[var(--nav-selected)] px-4 py-3 italic text-[var(--text-secondary)]">
             <p dangerouslySetInnerHTML={{ __html: parseInline(content) }} />
           </blockquote>
         );
@@ -4017,7 +4017,7 @@ export default function Home() {
         const num = cleanLine.match(/^\d+/)?.[0] || '1';
         elements.push(
           <div key={`ol-${i}`} className="flex gap-3 items-start my-2.5 pl-2">
-            <span className="flex-shrink-0 h-6 w-6 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 font-bold text-xs flex items-center justify-center mt-0.5">
+            <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--info-soft)] text-xs font-bold text-[var(--action-emphasis)]">
               {num}
             </span>
             <p 

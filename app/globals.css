@@ -3510,7 +3510,7 @@ body {
   padding: 18px;
   box-shadow: 0 14px 42px color-mix(in srgb, var(--text-primary) 7%, transparent);
 }
-.notara-inline-tutor-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.notara-inline-tutor-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .notara-inline-tutor-title { display: flex; min-width: 0; align-items: flex-start; gap: 11px; }
 .notara-inline-tutor-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: var(--nav-selected); color: var(--brand-primary); }
 .notara-inline-tutor-title h2 { margin-top: 2px; color: var(--text-primary); font-size: 16px; font-weight: 850; }
@@ -3525,12 +3525,17 @@ body {
 .notara-inline-tutor-starters { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .notara-inline-tutor-starters button { min-height: 44px; border: 1px solid var(--border-subtle); border-radius: 999px; background: var(--surface-elevated); padding: 7px 11px; color: var(--text-secondary); font-size: 10px; text-align: left; }
 .notara-inline-tutor-starters button:hover { border-color: var(--border-strong); color: var(--text-primary); }
-.notara-inline-tutor-thread { display: grid; gap: 13px; margin-top: 16px; }
-.notara-inline-tutor-thread article { display: grid; max-width: 86%; gap: 4px; }
+.notara-inline-tutor-thread { display: grid; min-width: 0; gap: 13px; margin-top: 16px; }
+.notara-inline-tutor-thread article { display: grid; min-width: 0; max-width: 86%; gap: 4px; }
 .notara-inline-tutor-thread article[data-role="user"] { justify-self: end; }
 .notara-inline-tutor-thread article > span { color: var(--text-tertiary); font-size: 9px; font-weight: 800; }
 .notara-inline-tutor-thread article[data-role="user"] > span { text-align: right; }
-.notara-inline-tutor-thread article > div { border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-elevated); padding: 11px 12px; color: var(--text-secondary); font-size: 12px; line-height: 1.65; }
+.notara-inline-tutor-thread article > div { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-elevated); padding: 11px 12px; color: var(--text-secondary); font-size: 12px; line-height: 1.65; }
+.notara-inline-tutor-message { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+.notara-inline-tutor-message > * { max-width: 100%; }
+.notara-inline-tutor-message pre { max-width: 100%; overflow-x: auto; white-space: pre-wrap; }
+.notara-inline-tutor-message img { max-width: 100%; height: auto; }
+.notara-inline-tutor-message table { max-width: 100%; }
 .notara-inline-tutor-thread article[data-role="user"] > div { border-color: color-mix(in srgb, var(--brand-primary) 22%, var(--border-subtle)); background: var(--nav-selected); color: var(--nav-selected-text); }
 .notara-inline-tutor-thread article[data-state="error"] > div { border-color: color-mix(in srgb, var(--danger-accent) 30%, var(--border-subtle)); background: color-mix(in srgb, var(--danger-accent) 7%, var(--surface-elevated)); }
 .notara-inline-tutor-thinking { display: inline-flex; align-items: center; gap: 6px; color: var(--text-tertiary); }
@@ -3585,7 +3590,10 @@ body {
   .notara-theme-chevron { display: none; }
   .notara-sidebar-scroll { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
   .notara-inline-tutor { margin-top: 22px; border-radius: 16px; padding: 14px; }
-  .notara-inline-tutor-heading { align-items: center; }
+  .notara-inline-tutor-heading { align-items: flex-start; flex-wrap: wrap; }
+  .notara-inline-tutor-title { flex: 1 1 180px; }
+  .notara-inline-tutor-tools { width: 100%; justify-content: space-between; }
+  .notara-inline-tutor-actions { margin-left: auto; }
   .notara-inline-tutor-tools { gap: 4px; }
   .notara-inline-tutor-status { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .notara-inline-tutor-title p { max-width: 52vw; }
