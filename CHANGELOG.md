@@ -14,7 +14,12 @@ Pengembangan berikutnya belum dimulai.
 ### Quality
 - Menambahkan tes perilaku pada client compiled untuk fingerprint, retry, fallback, validation-before-write, dan propagasi error tanpa credential atau network.
 - Menjadikan tes pembacaan evidence permanen: scope material/run, metadata sumber, pagination, filter, legacy fallback, empty state, dan kegagalan annotation.
-- Tidak menambah migration, provider call, raw audio retention, atau perubahan database produksi. Pengujian simpan Capture v2 baru di produksi tetap terpisah.
+- Patch aplikasi tidak menambah migration, provider call otomatis, raw audio retention, atau perubahan schema produksi.
+
+### Acceptance — 2026-10-07
+- Satu batch QA dengan audio sintetis 14 detik lulus di produksi: transkrip/rangkuman, simpan privat, baca ulang setelah refresh, dan satu jawaban Tanya Materi yang tetap tersimpan.
+- Query metadata baca-saja pada materi uji membuktikan fingerprint SHA-256 non-null, tenant sesuai pemilik, sumber aktif versi 1, serta tiga segmen tersimpan sesuai metadata. Tidak ada migration ulang atau perubahan grants.
+- Batch memakai tepat tiga panggilan Groq yang disetujui, tanpa retry atau upgrade berbayar. Bukti ini bukan benchmark akurasi kelas panjang, diarization, atau jaminan layanan gratis tanpa batas. SonarCloud gagal/cancelled tetap menjadi caveat CI terpisah.
 
 ## [0.25.2] - 2026-10-07
 ### Fixed
