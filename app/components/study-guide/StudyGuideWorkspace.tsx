@@ -18,6 +18,7 @@ import {
 import { StudyCanvasBoundary } from '../workspace/StudyCanvasBoundary';
 import { toStudyGuideMaterial } from './adapter';
 import { InlineMaterialTutor } from './InlineMaterialTutor';
+import { LearningPosition } from './LearningPosition';
 
 type CanvasProps = ComponentProps<typeof StudyCanvasBoundary>;
 type TutorProps = ComponentProps<typeof InlineMaterialTutor>;
@@ -166,6 +167,7 @@ export function StudyGuideWorkspace({
         onBack={onBack}
         {...canvasProps}
         content={activeTab === 'summary' ? summaryContent : transcriptContent}
+        journeyPosition={<LearningPosition stage="review" />}
         headerExtension={(
           <GuidedEntryCard
             eligibility={eligibility}

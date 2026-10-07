@@ -23,6 +23,7 @@
     "lib/capture/source.ts",
     "lib/capture/task.ts",
     "lib/chat/thread-state.ts",
+    "lib/chat/tutor-presentation.ts",
     "lib/chat/context.ts",
     "lib/chat/sse.ts",
     "lib/auth/redirect.ts",

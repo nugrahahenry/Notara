@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.26.0] - 2026-10-07
+### Added
+- Posisi Materi → Tujuan → Rute → Sesi belajar ditampilkan konsisten tanpa menyatakan completion, nilai, atau progress tersimpan.
+- Tombol lanjut sesi menyebut nama langkah berikutnya. Tutor menampilkan status menunggu, jawaban masuk, jawaban tersedia, atau error berdasarkan keadaan request/message yang nyata.
+
+### Fixed
+- Recovery error lama memuat pertanyaan yang mendahuluinya, bukan pertanyaan terbaru dari thread.
+- Composer menahan draft kosong, request yang sedang berjalan, Shift+Enter, dan keyboard komposisi agar tidak terkirim tanpa sengaja.
+- Draft yang dimuat dari Guided atau saran pertanyaan menyesuaikan tinggi textarea; bantuan keyboard dan label belum-dikirim lebih jelas.
+- Teks Tutor diperbesar, judul materi dapat membungkus, status mobile tidak dipotong, dan pengumuman streaming tidak membaca ulang seluruh percakapan.
+- Tidak mengubah API, schema, RLS, provider, raw-audio retention, atau state Guided yang tetap sementara.
+
 ## [0.25.3] - 2026-10-07
 ### Fixed
 - Fallback evidence ke RPC lama tidak lagi dipicu pesan missing-function generik yang menutupi kode error izin, validasi, kuota, atau konflik retry.

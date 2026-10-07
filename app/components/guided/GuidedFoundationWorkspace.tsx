@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { SemanticIcon, type NaliraSemanticIconName } from '../brand/SemanticIcon';
+import { LearningPosition } from '../study-guide/LearningPosition';
 import { CompareWorkspace } from './compare/CompareWorkspace';
 import { createCompareDraft } from './compare/compare-state';
 import { canBuildComparePair, createCompareSourceBundle } from './compare/source-blocks';
@@ -228,6 +229,7 @@ export function GuidedFoundationWorkspace({
           </button>
         </header>
 
+        <LearningPosition stage="objective" />
         <div className="notara-guided-stage-shell">
           <header className="notara-guided-stage-heading">
             <h1 id="guided-objective-heading" ref={headingRef} tabIndex={-1}>Apa tujuan belajarmu?</h1>
@@ -331,6 +333,7 @@ export function GuidedFoundationWorkspace({
           </button>
         </header>
 
+        <LearningPosition stage="route" />
         <div className="notara-guided-stage-shell">
           <header className="notara-guided-stage-heading">
             <h1 id="guided-route-heading" ref={headingRef} tabIndex={-1}>Lima langkah untuk tujuanmu</h1>
@@ -406,6 +409,7 @@ export function GuidedFoundationWorkspace({
         </button>
       </header>
 
+      <LearningPosition stage="session" />
       <GuidedContextStrip
         materialTitle={materialTitle}
         courseName={courseName}
@@ -566,7 +570,7 @@ export function GuidedFoundationWorkspace({
                   className="notara-primary-button"
                   onClick={() => onEvent({ type: 'GO_TO_NODE', index: activeNodeIndex + 1 })}
                 >
-                  Langkah berikutnya <ArrowRight className="h-4 w-4" />
+                  Lanjut: {route.nodes[activeNodeIndex + 1].title} <ArrowRight className="h-4 w-4" />
                 </button>
               )}
             </footer>

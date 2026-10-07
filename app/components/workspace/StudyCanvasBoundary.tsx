@@ -45,6 +45,7 @@ export interface StudyCanvasBoundaryProps {
   onCopy: () => void;
   content: ReactNode;
   headerExtension?: ReactNode;
+  journeyPosition?: ReactNode;
   children?: ReactNode;
 }
 
@@ -80,6 +81,7 @@ export function StudyCanvasBoundary({
   onCopy,
   content,
   headerExtension,
+  journeyPosition,
   children,
 }: StudyCanvasBoundaryProps) {
   const [isRenaming, setIsRenaming] = useState(false);
@@ -221,6 +223,7 @@ export function StudyCanvasBoundary({
         </div>
       </header>
 
+      {journeyPosition}
       <div className="notara-study-layout">
         <div className="notara-study-stage">
           <article className="notara-editorial-canvas nl-surface-reading" data-nl-surface="reading">

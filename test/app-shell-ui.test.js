@@ -451,9 +451,17 @@ test('Study Canvas Tutor keeps material scope visible and recovers inline errors
     isSending: true,
     messages: [{ id: 'assistant-pending', thread_id: 'thread-1', role: 'assistant', content: '', created_at: '2026-08-10T09:05:00.000Z' }],
   });
-  assert.match(thinking, /Meninjau materi/);
+  assert.match(thinking, /Menunggu jawaban/);
+  assert.match(thinking, /data-chat-state="thinking"/);
   assert.match(thinking, /aria-busy="true"/);
   assert.match(thinking, /Nalira sedang menyusun jawaban/);
+
+  const responding = renderTutor({
+    isSending: true,
+    messages: [{ id: 'assistant-streaming', thread_id: 'thread-1', role: 'assistant', content: 'Gradient descent menyesuaikan parameter.', created_at: '2026-08-10T09:05:00.000Z' }],
+  });
+  assert.match(responding, /Jawaban sedang masuk/);
+  assert.match(responding, /data-chat-state="responding"/);
 
   const error = renderTutor({
     messages: [

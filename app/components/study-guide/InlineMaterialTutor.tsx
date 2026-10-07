@@ -1,6 +1,6 @@
 'use client';
 
-import type { KeyboardEvent, ReactNode, RefObject } from 'react';
+import { useEffect, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import {
   ArrowLeft,
   Clock3,
@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { ChatMessage, ChatThread } from '@/lib/types';
+import { canSubmitTutor, getTutorPresentation, getTutorRecoveryQuestion, isTutorError, isTutorSubmitKey } from '@/lib/chat/tutor-presentation';
 import { SemanticIcon } from '../brand/SemanticIcon';
 
 interface InlineMaterialTutorProps {
@@ -71,23 +72,31 @@ export function InlineMaterialTutor({
   formatThreadAge,
 }: InlineMaterialTutorProps) {
   const visibleMessages = messages.filter((message) => message.id !== 'welcome');
-  const lastUserMessage = [...visibleMessages].reverse().find((message) => message.role === 'user');
-  const chatState = isSending ? 'thinking' : visibleMessages.length > 0 ? 'active' : 'ready';
+  const presentation = getTutorPresentation(visibleMessages, isSending);
   const tutorName = 'Tanya Materi';
   const headingId = surface === 'guided' ? 'guided-material-tutor-heading' : 'material-tutor-heading';
   const inputId = surface === 'guided' ? 'guided-material-tutor-input' : 'inline-material-tutor-input';
+  const inputHelpId = `${inputId}-help`;
   const starterPromptLimit = surface === 'guided' ? 2 : starterPrompts.length;
   const visibleStarterPrompts = starterPrompts.slice(0, starterPromptLimit);
 
+  useEffect(() => {
+    const field = textareaRef.current;
+    if (!field) return;
+    field.style.height = 'auto';
+    field.style.height = `${Math.min(field.scrollHeight, 144)}px`;
+  }, [input, showHistory, textareaRef]);
+
   const applyPrompt = (prompt: string) => {
+    if (isSending) return;
     onInputChange(prompt);
     window.requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (isTutorSubmitKey(event.key, event.shiftKey, event.nativeEvent.isComposing, event.nativeEvent.keyCode)) {
       event.preventDefault();
-      onSend();
+      if (canSubmitTutor(input, isSending)) onSend();
     }
   };
 
@@ -96,7 +105,7 @@ export function InlineMaterialTutor({
       className="notara-inline-tutor"
       data-surface={surface}
       data-has-thread={visibleMessages.length > 0}
-      data-chat-state={chatState}
+      data-chat-state={presentation.state}
       aria-busy={isSending}
       aria-labelledby={headingId}
     >
@@ -111,9 +120,9 @@ export function InlineMaterialTutor({
           </div>
         </div>
         <div className="notara-inline-tutor-tools">
-          <span className="notara-inline-tutor-status" data-thinking={isSending} role="status" aria-live="polite">
+          <span className="notara-inline-tutor-status" data-thinking={isSending} data-state={presentation.state} role="status" aria-live="polite" aria-atomic="true">
             <span aria-hidden="true" />
-            {isSending ? 'Meninjau materi' : 'Siap menjawab'}
+            {presentation.label}
           </span>
           <div className="notara-inline-tutor-actions">
             <button type="button" onClick={onNewThread} className="notara-icon-button" aria-label="Mulai percakapan baru" title="Percakapan baru" disabled={isSending}>
@@ -166,29 +175,31 @@ export function InlineMaterialTutor({
           {visibleMessages.length === 0 && (
             <div className="notara-inline-tutor-starters" aria-label="Saran pertanyaan">
               {visibleStarterPrompts.map((prompt) => (
-                <button key={prompt} type="button" onClick={() => applyPrompt(prompt)}>{prompt}</button>
+                <button key={prompt} type="button" onClick={() => applyPrompt(prompt)} disabled={isSending}>{prompt}</button>
               ))}
             </div>
           )}
 
           {visibleMessages.length > 0 && (
-            <div className="notara-inline-tutor-thread" aria-live="polite" aria-busy={isSending}>
-              {visibleMessages.map((message) => (
+            <div className="notara-inline-tutor-thread" role="log" aria-label="Percakapan materi" aria-live="off" aria-busy={isSending}>
+              {visibleMessages.map((message, index) => {
+                const recoveryQuestion = getTutorRecoveryQuestion(visibleMessages, index);
+                return (
                 <article
                   key={message.id}
                   data-role={message.role}
-                  data-state={message.role === 'assistant' && message.content.trimStart().startsWith('❌') ? 'error' : undefined}
+                  data-state={isTutorError(message) ? 'error' : undefined}
                 >
                   <span>{message.role === 'assistant' ? 'Nalira' : 'Kamu'}</span>
                   <div className="notara-inline-tutor-message">
                     {message.role === 'assistant' && !message.content ? (
                       <span className="notara-inline-tutor-thinking"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Nalira sedang menyusun jawaban…</span>
-                    ) : message.role === 'assistant' && message.content.trimStart().startsWith('❌') ? (
+                    ) : isTutorError(message) ? (
                       <div className="notara-inline-tutor-error" role="alert">
                         <strong>Jawaban belum tersedia</strong>
                         <p>{message.content.trim().replace(/^❌\s*/, '')}</p>
-                        {lastUserMessage && (
-                          <button type="button" onClick={() => applyPrompt(lastUserMessage.content)} disabled={isSending}>
+                        {recoveryQuestion && (
+                          <button type="button" onClick={() => applyPrompt(recoveryQuestion)} disabled={isSending}>
                             <RotateCcw className="h-3.5 w-3.5" /> Muat ulang pertanyaan
                           </button>
                         )}
@@ -196,7 +207,8 @@ export function InlineMaterialTutor({
                     ) : message.role === 'assistant' ? renderMessage(message.content) : message.content}
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -204,7 +216,7 @@ export function InlineMaterialTutor({
             className="notara-inline-tutor-composer"
             onSubmit={(event) => {
               event.preventDefault();
-              onSend();
+              if (canSubmitTutor(input, isSending)) onSend();
             }}
           >
             <label htmlFor={inputId}>Tulis pertanyaan tentang materi ini</label>
@@ -214,12 +226,10 @@ export function InlineMaterialTutor({
                 ref={textareaRef}
                 rows={1}
                 value={input}
-                onChange={(event) => {
-                  onInputChange(event.target.value);
-                  event.currentTarget.style.height = 'auto';
-                  event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 144)}px`;
-                }}
+                onChange={(event) => onInputChange(event.target.value)}
                 onKeyDown={handleKeyDown}
+                aria-describedby={inputHelpId}
+                enterKeyHint="send"
                 disabled={isSending}
                 placeholder={isListening ? 'Sedang mendengarkan…' : 'Tanya bagian yang masih belum jelas…'}
               />
@@ -243,6 +253,10 @@ export function InlineMaterialTutor({
                 {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
             </div>
+            <p id={inputHelpId} className="notara-inline-tutor-input-help">
+              <span>{input.trim() ? 'Draft pertanyaan · belum dikirim' : 'Pertanyaan hanya untuk materi aktif ini'}</span>
+              <span>Enter kirim · Shift+Enter baris baru</span>
+            </p>
           </form>
         </>
       )}
