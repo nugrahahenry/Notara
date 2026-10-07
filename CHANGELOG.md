@@ -8,13 +8,17 @@ Pengembangan berikutnya belum dimulai.
 
 ## [0.25.2] - 2026-10-07
 ### Fixed
-- Migration provenance yang belum diterapkan kini menyembunyikan source metadata revoked/superseded/expired, mengikat revision ke source milik material/owner yang sama, dan mencabut akses langsung ke fungsi trigger.
+- Source provenance kini menyembunyikan metadata revoked/superseded/expired, mengikat revision ke source milik material/owner yang sama, dan mencabut akses langsung ke fungsi trigger.
 - Retry v2 tidak dapat menimpa fingerprint atau memberi fingerprint baru kepada evidence berbeda. Fingerprint tetap metadata client, bukan attestation provider.
 - Durasi desimal dipertahankan; durasi legacy yang invalid atau melampaui batas tidak menggagalkan backfill/evidence save.
 
 ### Quality
 - Menambahkan rehearsal PostgreSQL lokal dengan data dummy: seluruh migration chain, fresh install, upgrade, rollback, owner A/B/anonymous, immutable retry, deletion cascade, dan empat retry bersamaan.
 - Rehearsal tidak membaca `.env`, tidak menerima remote URL, dan hanya dapat memakai cluster terpisah di loopback. Supabase production, provider, audio, dan billing tidak disentuh.
+
+### Rollout — 2026-10-07
+- Operator mengonfirmasi audit Supabase production 23/23 lulus; screenshot sebelumnya menunjukkan schema source, RLS, RPC hardened, dan FK tenant tersedia. Migration tidak perlu diulang.
+- Audit read-only permanen tersedia di `supabase/verification/source-provenance.sql` dengan pemeriksaan backfill, grants, trigger, dan tenant boundary. Draft SQL sementara dikonsolidasikan; QA UI pemilik setelah migration dan publikasi build masih pending.
 
 ## [0.25.1] - 2026-10-03
 ### Fixed

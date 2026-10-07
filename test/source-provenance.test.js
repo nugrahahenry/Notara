@@ -88,3 +88,20 @@ test('database rehearsal cannot target a remote project or reuse application cre
   assert.match(runner, /length: 4/);
   assert.doesNotMatch(runner, /SUPABASE_URL|DATABASE_URL|dotenv|readFileSync\([^\n]*\.env/);
 });
+
+test('published production audit is read-only, bounded, and never exports material text', () => {
+  const sql = read('supabase/verification/source-provenance.sql');
+  assert.match(sql, /BEGIN READ ONLY;/);
+  assert.match(sql, /SET LOCAL statement_timeout = '5s';/);
+  assert.match(sql, /AS audit_status/);
+  assert.match(sql, /AS failed_checks/);
+  assert.match(sql, /'all_runs_backfilled'/);
+  assert.match(sql, /'revisions_backfilled'/);
+  assert.match(sql, /'authenticated_no_direct_write'/);
+  assert.match(sql, /'v2_immutable_retry_guard'/);
+  assert.equal((sql.match(/UNION ALL SELECT/g) ?? []).length + 1, 23);
+  const statements = sql.replace(/--[^\n]*/g, '').replace(/'(?:''|[^'])*'/g, "''");
+  assert.doesNotMatch(statements, /\b(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|GRANT|REVOKE|TRUNCATE)\b/i);
+  assert.doesNotMatch(sql, /\.(transcript|content|summary)\b|\bto_jsonb\s*\(/i);
+  assert.doesNotMatch(sql, /SUPABASE_.*KEY|DATABASE_URL|auth\.users|storage\.objects/);
+});
