@@ -33,9 +33,11 @@ test('release metadata keeps the server-only billing rollout gate documented', (
   const readme = read('README.md');
   const changelog = read('CHANGELOG.md');
 
-  assert.equal(packageJson.version, '0.25.2');
+  assert.match(packageJson.version, /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/);
   assert.equal(packageLock.version, packageJson.version);
   assert.equal(packageLock.packages[''].version, packageJson.version);
+  assert.ok(readme.includes(`Nalira v${packageJson.version}`));
+  assert.ok(changelog.includes(`## [${packageJson.version}] - `));
   assert.match(readme, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(readme, /server-only/i);
   assert.match(changelog, /## \[0\.10\.0\] - 2026-08-21/);

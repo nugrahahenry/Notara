@@ -169,7 +169,10 @@ export async function persistTranscriptEvidence(
     && error
     && (
       error.code === 'PGRST202'
-      || /persist_transcript_evidence_v2.*not found|could not find the function/i.test(error.message)
+      || (
+        !error.code
+        && /^(?:could not find the function\s+(?:public\.)?persist_transcript_evidence_v2\b|(?:function\s+)?(?:public\.)?persist_transcript_evidence_v2\b[^\n]*\bnot found\b)/i.test(error.message)
+      )
     )
   ) {
     ({ error } = await supabase.rpc('persist_transcript_evidence', payload));

@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.25.3] - 2026-10-07
+### Fixed
+- Fallback evidence ke RPC lama tidak lagi dipicu pesan missing-function generik yang menutupi kode error izin, validasi, kuota, atau konflik retry.
+- Kompatibilitas tetap tersedia untuk kode schema-cache missing RPC dan pesan tanpa kode yang menyebut fungsi v2 public secara tepat; fungsi lain atau nama berakhiran tambahan tidak diterima.
+
+### Quality
+- Menambahkan tes perilaku pada client compiled untuk fingerprint, retry, fallback, validation-before-write, dan propagasi error tanpa credential atau network.
+- Menjadikan tes pembacaan evidence permanen: scope material/run, metadata sumber, pagination, filter, legacy fallback, empty state, dan kegagalan annotation.
+- Tidak menambah migration, provider call, raw audio retention, atau perubahan database produksi. Pengujian simpan Capture v2 baru di produksi tetap terpisah.
+
 ## [0.25.2] - 2026-10-07
 ### Fixed
 - Source provenance kini menyembunyikan metadata revoked/superseded/expired, mengikat revision ke source milik material/owner yang sama, dan mencabut akses langsung ke fungsi trigger.
@@ -18,7 +28,7 @@ Pengembangan berikutnya belum dimulai.
 
 ### Rollout — 2026-10-07
 - Operator mengonfirmasi audit Supabase production 23/23 lulus; screenshot sebelumnya menunjukkan schema source, RLS, RPC hardened, dan FK tenant tersedia. Migration tidak perlu diulang.
-- Audit read-only permanen tersedia di `supabase/verification/source-provenance.sql` dengan pemeriksaan backfill, grants, trigger, dan tenant boundary. Draft SQL sementara dikonsolidasikan; QA UI pemilik setelah migration dan publikasi build masih pending.
+- Audit read-only permanen tersedia di `supabase/verification/source-provenance.sql` dengan pemeriksaan backfill, grants, trigger, dan tenant boundary. Draft SQL sementara dikonsolidasikan. Build v0.25.2 dan QA baca pemilik telah diverifikasi: AI1/Fintech menampilkan versi sumber, pagination/filter berfungsi, dan materi lama mempertahankan fallback. Penyimpanan Capture v2 baru belum diuji di produksi.
 
 ## [0.25.1] - 2026-10-03
 ### Fixed

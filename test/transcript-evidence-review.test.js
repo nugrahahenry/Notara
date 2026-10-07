@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 
 const projectRoot = path.resolve(__dirname, '..');
 
@@ -106,4 +107,162 @@ test('Study Canvas exposes evidence only for a durable owner summary', () => {
   assert.match(review, /Halaman \{data\.page\} dari \{totalPages\}/);
   assert.match(review, /Versi sumber \{data\.sourceVersion\.version\}/);
   assert.doesNotMatch(review, /dosen|mahasiswa|speaker|playAudio|seek/i);
+});
+
+// These query doubles test client behavior, not RLS. Owner/tenant authorization
+// remains covered by the independent PostgreSQL rehearsal and hosted audit.
+function evidenceReaderFixture(options = {}) {
+  const calls = [];
+  const errors = [];
+  let annotationArguments = null;
+  const run = {
+    id: 'synthetic-run', quality_status: 'good', quality_report: {},
+    segment_count: 120, transcript_character_count: 1000,
+    completed_at: '2026-10-07T10:00:00.000Z',
+  };
+  const version = {
+    id: 'synthetic-source', version: 1, source_kind: 'transcript', state: 'active',
+    content_hash: null, hash_algorithm: 'sha256', duration_ms: 10000,
+    segment_count: 120, transcript_character_count: 1000,
+    created_at: '2026-10-07T10:00:00.000Z',
+  };
+  const supabase = {
+    from(table) {
+      assert.ok(['processing_runs', 'transcript_source_versions', 'transcript_segments'].includes(table));
+      const call = { table, filters: [] };
+      calls.push(call);
+      return {
+        select(fields, settings) { call.fields = fields; call.settings = settings; return this; },
+        eq(key, value) { call.filters.push([key, value]); return this; },
+        order(key, settings) { call.order = [key, JSON.parse(JSON.stringify(settings))]; return this; },
+        or(value) { call.or = value; return this; },
+        async maybeSingle() {
+          if (table === 'processing_runs') {
+            return { data: options.missingRun ? null : run, error: options.runError ?? null };
+          }
+          if (options.sourceThrows) throw new Error('Synthetic missing legacy source table.');
+          return { data: options.sourceError ? null : version, error: options.sourceError ?? null };
+        },
+        async range(from, to) {
+          call.range = [from, to];
+          return {
+            data: options.empty ? [] : [{
+              id: from + 1, ordinal: from, start_ms: from * 1000, end_ms: from * 1000 + 1000,
+              text: 'Synthetic transcript fixture.', average_log_probability: -0.1,
+              no_speech_probability: 0.01,
+            }],
+            error: options.segmentError ?? null,
+            count: options.empty ? 0 : 120,
+          };
+        },
+      };
+    },
+  };
+  const readerModule = { exports: {} };
+  vm.runInNewContext(read('build/lib/transcript/evidence-reader.js'), {
+    module: readerModule,
+    exports: readerModule.exports,
+    console: { error: (...parts) => errors.push(parts.join(' ')) },
+    require(name) {
+      if (name === '../supabase') return { supabase };
+      if (name === './evidence') return require('../build/lib/transcript/evidence.js');
+      if (name === './context-reader') {
+        return {
+          async readLatestTranscriptContextAnnotations(...args) {
+            annotationArguments = JSON.parse(JSON.stringify(args));
+            if (options.annotationsError) throw new Error('Synthetic annotation failure.');
+            return new Map();
+          },
+        };
+      }
+      throw new Error(`Unexpected evidence reader import: ${name}`);
+    },
+  }, { filename: 'build/lib/transcript/evidence-reader.js' });
+  return {
+    read: readerModule.exports.readTranscriptEvidencePage, calls, errors,
+    annotations: () => annotationArguments,
+  };
+}
+
+const READER_ARGS = { summaryId: 'synthetic-summary', page: 1, filter: 'all' };
+
+test('evidence reader executes summary-scoped queries and normalizes source metadata', async () => {
+  const fixture = evidenceReaderFixture();
+  const page = await fixture.read(READER_ARGS);
+  assert.equal(page.sourceVersion.version, 1);
+  assert.equal(page.sourceVersion.contentHash, null);
+  assert.deepEqual(fixture.calls[0].filters, [['summary_id', READER_ARGS.summaryId]]);
+  assert.deepEqual(fixture.calls[1].filters, [['processing_run_id', 'synthetic-run']]);
+  assert.deepEqual(fixture.calls[2].filters, [['processing_run_id', 'synthetic-run']]);
+  assert.deepEqual(fixture.annotations(), [READER_ARGS.summaryId, [1]]);
+  assert.equal(page.segments[0].currentContext, null);
+});
+
+test('evidence reader executes non-overlapping ordered pages with exact counts', async () => {
+  const { TRANSCRIPT_EVIDENCE_PAGE_SIZE: size } = require('../build/lib/transcript/evidence.js');
+  for (const pageNumber of [1, 2]) {
+    const fixture = evidenceReaderFixture();
+    const page = await fixture.read({ ...READER_ARGS, page: pageNumber });
+    const query = fixture.calls.find((call) => call.table === 'transcript_segments');
+    assert.deepEqual(query.range, [(pageNumber - 1) * size, pageNumber * size - 1]);
+    assert.deepEqual(query.order, ['ordinal', { ascending: true }]);
+    assert.equal(query.settings.count, 'exact');
+    assert.equal(page.total, 120);
+    assert.equal(page.page, pageNumber);
+  }
+});
+
+test('evidence reader executes the unclear filter and bounds ordinary pagination inputs', async () => {
+  const fixture = evidenceReaderFixture();
+  const page = await fixture.read({ ...READER_ARGS, filter: 'unclear', page: -1, pageSize: 150 });
+  const query = fixture.calls.find((call) => call.table === 'transcript_segments');
+  assert.match(query.or, /average_log_probability\.lte.*no_speech_probability\.gte/);
+  assert.deepEqual(query.range, [0, 99]);
+  assert.equal(page.page, 1);
+  assert.equal(page.pageSize, 100);
+});
+
+test('evidence reader keeps the transcript available when legacy source metadata is absent', async () => {
+  for (const options of [{ sourceError: { code: '42P01' } }, { sourceThrows: true }]) {
+    const fixture = evidenceReaderFixture(options);
+    const page = await fixture.read(READER_ARGS);
+    assert.equal(page.sourceVersion, null);
+    assert.equal(page.segments.length, 1);
+    assert.equal(page.contextAvailable, true);
+  }
+});
+
+test('evidence reader stops after an absent run and never fabricates source metadata', async () => {
+  const fixture = evidenceReaderFixture({ missingRun: true });
+  assert.equal(await fixture.read(READER_ARGS), null);
+  assert.equal(fixture.calls.length, 1);
+  assert.equal(fixture.annotations(), null);
+});
+
+test('evidence reader propagates run and segment failures and does not log raw fixture details', async () => {
+  for (const [options, message] of [
+    [{ runError: { message: 'Synthetic private run details.' } }, 'run-read-failed'],
+    [{ segmentError: { message: 'Synthetic private segment details.' } }, 'segment-read-failed'],
+  ]) {
+    const fixture = evidenceReaderFixture(options);
+    await assert.rejects(fixture.read(READER_ARGS), { message });
+    assert.equal(fixture.annotations(), null);
+    assert.deepEqual(fixture.errors, []);
+  }
+});
+
+test('evidence reader exposes annotation unavailability while preserving readable segments', async () => {
+  const fixture = evidenceReaderFixture({ annotationsError: true });
+  const page = await fixture.read(READER_ARGS);
+  assert.equal(page.contextAvailable, false);
+  assert.equal(page.segments.length, 1);
+  assert.deepEqual(fixture.errors, ['[transcript-context] annotations unavailable']);
+});
+
+test('evidence reader returns an empty page without an invented segment or count', async () => {
+  const fixture = evidenceReaderFixture({ empty: true });
+  const page = await fixture.read(READER_ARGS);
+  assert.equal(page.total, 0);
+  assert.equal(page.segments.length, 0);
+  assert.deepEqual(fixture.annotations(), [READER_ARGS.summaryId, []]);
 });
