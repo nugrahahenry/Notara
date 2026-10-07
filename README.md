@@ -1,6 +1,6 @@
 # Nalira
 
-> Status: Nalira v0.25.1 memperhalus keterbacaan Tanya Nalira pada Light mode dan panel sempit, termasuk jawaban panjang, placeholder, focus state, status thinking, dan reduced motion. Fondasi provenance source v0.25.0 tetap owner-only: setiap evidence run memiliki versi sumber stabil, fingerprint SHA-256 opsional, lifecycle state, dan hubungan aman ke summary revision tanpa menyimpan audio atau identitas speaker. Study Canvas tetap memakai Tanya Materi untuk tutor inline dan Tanya Nalira untuk chat global. Transcript Context Review tetap berbasis teks, review-first, append-only, dan tidak mengubah rangkuman otomatis. Gate Speaker Context tetap implementation-blocked karena benchmark provider gagal dan audio production lane belum disetujui. Migration baru belum diterapkan ke Supabase production dan tidak ada deployment otomatis. Terakhir diverifikasi lokal: 3 Oktober 2026.
+> Status: Nalira v0.25.2 memperkuat migration provenance yang belum diterapkan: lifecycle metadata dibatasi RLS, revision terikat material/owner, retry fingerprint immutable, dan durasi legacy aman. Rehearsal PostgreSQL lokal menggunakan data dummy mencakup fresh install, upgrade, rollback, isolasi owner, dan retry bersamaan. UI Tanya Nalira tetap membawa perbaikan keterbacaan v0.25.1. Transcript Context Review tetap text-only dan review-first; speaker/diarization masih implementation-blocked. Migration source provenance belum diterapkan ke Supabase production. Terakhir diverifikasi lokal: 7 Oktober 2026.
 > Nama folder, package, domain Vercel, env key, CSS selector, dan storage key tertentu masih memakai identifier legacy `notara` untuk menjaga kompatibilitas. Jangan rename identifier tersebut tanpa checkpoint migrasi teknis terpisah.
 > Sumber kebenaran runtime: route aplikasi dan migrasi Supabase.
 > Perbarui dokumen ini ketika alur pengguna, stack, konfigurasi, atau status keamanan berubah.
@@ -116,6 +116,29 @@ npm run build
 ```
 
 ## Database dan deployment
+
+### Rehearsal source provenance lokal
+
+`npm run test:db:source` adalah suite opsional untuk PostgreSQL 18, bukan perintah deploy. Suite hanya menerima cluster dummy dengan user `nalira_rehearsal` pada `127.0.0.1:55439`, mengabaikan semua environment `PG*`, dan tidak membaca `.env.local`. Ia membuat serta menghapus hanya database sementara yang dibuat oleh eksekusi tersebut. Auth Supabase disimulasikan untuk SQL/RLS; GoTrue, PostgREST, dan login browser belum termasuk acceptance ini.
+
+Untuk menyiapkan cluster kosong pada Windows, jalankan dari root repo dengan PostgreSQL 18 terpasang. Jangan memakai direktori data PostgreSQL existing. `initdb` harus menolak direktori yang sudah berisi cluster; jangan menghapusnya agar perintah dapat dipaksakan.
+
+```powershell
+$pgBin = 'C:\Program Files\PostgreSQL\18\bin'
+$rehearsalDir = Join-Path (Get-Location) '.private\postgres-rehearsal'
+New-Item -ItemType Directory -Path $rehearsalDir -ErrorAction Stop
+& "$pgBin\initdb.exe" -D "$rehearsalDir\data" -U nalira_rehearsal -A trust --encoding=UTF8 --locale=C
+& "$pgBin\pg_ctl.exe" -D "$rehearsalDir\data" -l "$rehearsalDir\server.log" -o '-h 127.0.0.1 -p 55439' -w -t 15 start
+```
+
+Authentication `trust` hanya untuk cluster dummy loopback ini, bukan konfigurasi produksi. Setelah startup berhasil, jalankan test dan selalu hentikan cluster, termasuk ketika test gagal:
+
+```powershell
+try { npm.cmd run test:db:source }
+finally { & "$pgBin\pg_ctl.exe" -D "$rehearsalDir\data" -m fast -w -t 15 stop }
+```
+
+Lulus rehearsal lokal tidak otomatis mengizinkan migration produksi. Verifikasi versi PostgreSQL target, security advisor, rollout approval, dan integration acceptance tetap diperlukan. Project staging cloud opsional untuk uji integrasi browser/Auth; tidak wajib untuk mengulang SQL rehearsal lokal.
 
 - Untuk menyamakan database baru/lama, gunakan `supabase/migrations/20260719_catchup.sql`, lalu verifikasi dengan `20260719_catchup_verify.sql`. Hardening billing berada di `supabase/migrations/20260813125948_harden_billing_security.sql`.
 - Evidence transkrip berada di `supabase/migrations/20260818181455_persist_transcript_evidence.sql` dan sudah aktif di project Supabase production. RLS owner-only, grant authenticated, RPC persistence, serta satu Capture nyata telah diverifikasi; perubahan berikutnya tetap harus diuji pada project yang benar.

@@ -62,3 +62,29 @@ test('source version reader remains compatible with legacy evidence environments
   assert.match(reader, /catch \{[\s\S]*Legacy environments can keep rendering evidence/);
   assert.match(reader, /sourceVersion,/);
 });
+
+test('source provenance enforces lifecycle, immutable retries, and tenant-bound revisions', () => {
+  const sql = readMigration();
+  assert.match(sql, /USING \([\s\S]*state = 'active'[\s\S]*expires_at > statement_timestamp\(\)/);
+  assert.match(sql, /FOREIGN KEY \(source_version_id, summary_id, user_id\)/);
+  assert.match(sql, /ON DELETE SET NULL \(source_version_id\)/);
+  assert.match(sql, /v_stored_segments IS DISTINCT FROM v_input_segments/);
+  assert.match(sql, /v_existing_hash IS DISTINCT FROM LOWER\(p_content_hash\)/);
+  assert.match(sql, /IF v_existing_hash IS NULL AND p_content_hash IS NOT NULL THEN/);
+  assert.match(sql, /FOR UPDATE/);
+  assert.match(sql, /REVOKE EXECUTE ON FUNCTION private\.create_transcript_source_version\(\)/);
+  assert.match(sql, /REVOKE EXECUTE ON FUNCTION private\.attach_summary_revision_source_version\(\)/);
+  assert.match(sql, /CHAR_LENGTH\(run\.quality_report ->> 'durationSec'\) <= 20/);
+  assert.match(sql, /NUMERIC <= 86400/);
+});
+
+test('database rehearsal cannot target a remote project or reuse application credentials', () => {
+  const runner = read('test/database/rehearse-source.js');
+  assert.match(runner, /'-h', '127\.0\.0\.1', '-p', '55439', '-U', 'nalira_rehearsal'/);
+  assert.match(runner, /!\/\^PG\/i\.test\(key\)/);
+  assert.match(runner, /CREATE DATABASE \$\{db\}/);
+  assert.match(runner, /DROP DATABASE \$\{db\} WITH \(FORCE\)/);
+  assert.match(runner, /for \(const mode of \['fresh', 'upgrade'\]\)/);
+  assert.match(runner, /length: 4/);
+  assert.doesNotMatch(runner, /SUPABASE_URL|DATABASE_URL|dotenv|readFileSync\([^\n]*\.env/);
+});

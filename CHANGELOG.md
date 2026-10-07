@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) · Versi: [SemV
 
 Pengembangan berikutnya belum dimulai.
 
+## [0.25.2] - 2026-10-07
+### Fixed
+- Migration provenance yang belum diterapkan kini menyembunyikan source metadata revoked/superseded/expired, mengikat revision ke source milik material/owner yang sama, dan mencabut akses langsung ke fungsi trigger.
+- Retry v2 tidak dapat menimpa fingerprint atau memberi fingerprint baru kepada evidence berbeda. Fingerprint tetap metadata client, bukan attestation provider.
+- Durasi desimal dipertahankan; durasi legacy yang invalid atau melampaui batas tidak menggagalkan backfill/evidence save.
+
+### Quality
+- Menambahkan rehearsal PostgreSQL lokal dengan data dummy: seluruh migration chain, fresh install, upgrade, rollback, owner A/B/anonymous, immutable retry, deletion cascade, dan empat retry bersamaan.
+- Rehearsal tidak membaca `.env`, tidak menerima remote URL, dan hanya dapat memakai cluster terpisah di loopback. Supabase production, provider, audio, dan billing tidak disentuh.
+
 ## [0.25.1] - 2026-10-03
 ### Fixed
 - Memperkuat keterbacaan Tanya Nalira pada Light mode dan panel sempit: scope controls, focus state, placeholder, status thinking, dan jawaban panjang kini lebih aman terhadap overflow.

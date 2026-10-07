@@ -54,7 +54,11 @@ CREATE POLICY "Owners can read transcript source versions"
 ON public.transcript_source_versions
 FOR SELECT
 TO authenticated
-USING ((SELECT auth.uid()) = user_id);
+USING (
+  (SELECT auth.uid()) = user_id
+  AND state = 'active'
+  AND (expires_at IS NULL OR expires_at > statement_timestamp())
+);
 
 REVOKE ALL ON TABLE public.transcript_source_versions
   FROM PUBLIC, anon, authenticated, service_role;
@@ -80,8 +84,13 @@ SELECT
   'transcript',
   'active',
   CASE
-    WHEN (run.quality_report ->> 'durationSec') ~ '^[0-9]+(\\.[0-9]+)?$'
-      THEN ROUND(((run.quality_report ->> 'durationSec')::NUMERIC) * 1000)::BIGINT
+    WHEN CHAR_LENGTH(run.quality_report ->> 'durationSec') <= 20
+      AND (run.quality_report ->> 'durationSec') ~ '^[0-9]+([.][0-9]+)?$'
+    THEN CASE
+      WHEN (run.quality_report ->> 'durationSec')::NUMERIC <= 86400
+        THEN ROUND(((run.quality_report ->> 'durationSec')::NUMERIC) * 1000)::BIGINT
+      ELSE NULL
+    END
     ELSE NULL
   END,
   run.segment_count,
@@ -108,8 +117,13 @@ BEGIN
   WHERE summary_id = NEW.summary_id;
 
   v_duration_ms := CASE
-    WHEN (NEW.quality_report ->> 'durationSec') ~ '^[0-9]+(\\.[0-9]+)?$'
-      THEN ROUND(((NEW.quality_report ->> 'durationSec')::NUMERIC) * 1000)::BIGINT
+    WHEN CHAR_LENGTH(NEW.quality_report ->> 'durationSec') <= 20
+      AND (NEW.quality_report ->> 'durationSec') ~ '^[0-9]+([.][0-9]+)?$'
+    THEN CASE
+      WHEN (NEW.quality_report ->> 'durationSec')::NUMERIC <= 86400
+        THEN ROUND(((NEW.quality_report ->> 'durationSec')::NUMERIC) * 1000)::BIGINT
+      ELSE NULL
+    END
     ELSE NULL
   END;
 
@@ -137,6 +151,9 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION private.create_transcript_source_version()
+  FROM PUBLIC, anon, authenticated, service_role;
+
 DROP TRIGGER IF EXISTS processing_runs_create_transcript_source_version
   ON public.processing_runs;
 CREATE TRIGGER processing_runs_create_transcript_source_version
@@ -151,9 +168,9 @@ ALTER TABLE public.summary_revisions
 
 ALTER TABLE public.summary_revisions
   ADD CONSTRAINT summary_revisions_source_version_fkey
-  FOREIGN KEY (source_version_id)
-  REFERENCES public.transcript_source_versions (id)
-  ON DELETE SET NULL;
+  FOREIGN KEY (source_version_id, summary_id, user_id)
+  REFERENCES public.transcript_source_versions (id, summary_id, user_id)
+  ON DELETE SET NULL (source_version_id);
 
 CREATE INDEX idx_summary_revisions_source_version
   ON public.summary_revisions (summary_id, source_version_id);
@@ -179,6 +196,7 @@ BEGIN
     WHERE source.summary_id = NEW.summary_id
       AND source.user_id = NEW.user_id
       AND source.state = 'active'
+      AND (source.expires_at IS NULL OR source.expires_at > statement_timestamp())
     ORDER BY source.version DESC
     LIMIT 1;
   END IF;
@@ -186,6 +204,9 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION private.attach_summary_revision_source_version()
+  FROM PUBLIC, anon, authenticated, service_role;
 
 DROP TRIGGER IF EXISTS summary_revisions_attach_source_version
   ON public.summary_revisions;
@@ -215,6 +236,10 @@ AS $$
 DECLARE
   v_user_id UUID := (SELECT auth.uid());
   v_run_id UUID;
+  v_source_id UUID;
+  v_existing_hash TEXT;
+  v_stored_segments JSONB;
+  v_input_segments JSONB;
 BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Authentication required.' USING ERRCODE = '28000';
@@ -236,14 +261,51 @@ BEGIN
     p_segments
   );
 
-  UPDATE public.transcript_source_versions
-  SET content_hash = COALESCE(LOWER(p_content_hash), content_hash)
+  SELECT id, content_hash
+  INTO v_source_id, v_existing_hash
+  FROM public.transcript_source_versions
   WHERE processing_run_id = v_run_id
     AND user_id = v_user_id
-    AND state = 'active';
+    AND state = 'active'
+    AND (expires_at IS NULL OR expires_at > statement_timestamp())
+  FOR UPDATE;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Transcript source version was not created.' USING ERRCODE = '55000';
+  END IF;
+
+  -- Legacy persistence is idempotent even when a later payload differs. Never
+  -- fingerprint a new payload while silently returning an older evidence run.
+  SELECT COALESCE(JSONB_AGG(JSONB_BUILD_OBJECT(
+    'start_ms', segment.start_ms, 'end_ms', segment.end_ms, 'text', segment.text,
+    'average_log_probability', segment.average_log_probability,
+    'no_speech_probability', segment.no_speech_probability
+  ) ORDER BY segment.ordinal), '[]'::JSONB)
+  INTO v_stored_segments
+  FROM public.transcript_segments AS segment
+  WHERE segment.processing_run_id = v_run_id;
+
+  SELECT COALESCE(JSONB_AGG(JSONB_BUILD_OBJECT(
+    'start_ms', (segment.value ->> 'start_ms')::BIGINT,
+    'end_ms', (segment.value ->> 'end_ms')::BIGINT,
+    'text', BTRIM(segment.value ->> 'text'),
+    'average_log_probability', (segment.value ->> 'average_log_probability')::DOUBLE PRECISION,
+    'no_speech_probability', (segment.value ->> 'no_speech_probability')::DOUBLE PRECISION
+  ) ORDER BY segment.ordinal), '[]'::JSONB)
+  INTO v_input_segments
+  FROM JSONB_ARRAY_ELEMENTS(p_segments) WITH ORDINALITY AS segment(value, ordinal);
+
+  IF v_stored_segments IS DISTINCT FROM v_input_segments
+    OR (v_existing_hash IS NOT NULL AND p_content_hash IS NOT NULL
+      AND v_existing_hash IS DISTINCT FROM LOWER(p_content_hash))
+  THEN
+    RAISE EXCEPTION 'Source fingerprint conflicts with immutable evidence.' USING ERRCODE = '23505';
+  END IF;
+
+  IF v_existing_hash IS NULL AND p_content_hash IS NOT NULL THEN
+    UPDATE public.transcript_source_versions
+    SET content_hash = LOWER(p_content_hash)
+    WHERE id = v_source_id;
   END IF;
 
   RETURN v_run_id;
